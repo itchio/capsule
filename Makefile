@@ -1,6 +1,8 @@
 
 .PHONY: all test main libfake
 
+RUN_CMD := ./main
+
 MAIN_CFLAGS := $(shell sdl2-config --cflags) $(shell pkg-config --cflags glew)
 MAIN_LDFLAGS := $(shell sdl2-config --libs) $(shell pkg-config --libs glew)
 
@@ -22,7 +24,7 @@ AR := ar
 
 test: all
 ifeq ($(UNAME_S),Linux)
-	LD_LIBRARY_PATH="${PWD}" LD_PRELOAD="${PWD}/libfake.so" MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=150 gdb ./main
+	LD_PRELOAD="${PWD}/libfake.so" MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=150 ${RUN_CMD}
 endif
 ifeq ($(UNAME_S),Darwin)
 	DYLD_FORCE_FLAT_NAMESPACE=1 DYLD_INSERT_LIBRARIES="${PWD}/libfake.dylib" ./main
