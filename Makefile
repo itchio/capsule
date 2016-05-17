@@ -6,11 +6,11 @@ MAIN_LDFLAGS := $(shell sdl2-config --libs)
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
-	LIB_CFLAGS := -shared -fPIC
+	LIB_CFLAGS := -shared -fPIC -D_CAPSULE_LINUX
 	LIB_EXT := .so
 endif
 ifeq ($(UNAME_S),Darwin)
-	LIB_CFLAGS := -dynamiclib
+	LIB_CFLAGS := -dynamiclib -D_CAPSULE_OSX
 	LIB_EXT := .dylib
 endif
 CC := clang

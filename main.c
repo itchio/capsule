@@ -2,6 +2,14 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 
+void assert (const char *msg, void *cond) {
+  if (cond) {
+    return;
+  }
+  fprintf(stderr, "Assertion failed: %s\n", msg);
+  exit(1);
+}
+
 int main(int argc, char *argv[]) {
   printf("[main] Calling SDL_Init\n");
   SDL_Init(SDL_INIT_VIDEO);
@@ -13,8 +21,17 @@ int main(int argc, char *argv[]) {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
+  SDL_Window* window = SDL_CreateWindow("opengl-inject-poc", 100, 100, 800, 600, SDL_WINDOW_OPENGL);
+  assert("Window created correctly", window);
+
+  SDL_GLContext context = SDL_GL_CreateContext(window);
+  assert("OpenGL context created correctly", context);
+
   printf("[main] Sleeping for a second\n");
   SDL_Delay(1000);
+
+  printf("[main] Deleting OpenGL context\n");
+  SDL_GL_DeleteContext(context);
 
   printf("[main] Quitting\n");
   SDL_Quit();
