@@ -6,3 +6,5 @@
 /*.dll
 /frames
 *.dSYM
+/*.rawvideo
+/*.mp4

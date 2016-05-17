@@ -117,6 +117,8 @@ void* dlopen (const char * filename, int flag) {
 typedef void (*glReadPixelsType)(int, int, int, int, int, int, void*);
 glReadPixelsType glReadPixels;
 
+FILE *outFile;
+
 void libfake_captureFrame () {
   int width = FRAME_WIDTH;
   int height = FRAME_HEIGHT;
@@ -135,33 +137,29 @@ void libfake_captureFrame () {
   }
   glReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
   
-  char frameName[512];
-  bzero(frameName, 512);
-  sprintf(frameName, "frames/frame%03d.raw", frameNumber);
-  frameNumber++;
+  if (!outFile) {
+    outFile = fopen("capsule.rawvideo", "wb");
+    assert("Opened output file", !!outFile);
+  }
 
-  FILE *f = fopen(frameName, "wb");
-  assert("Opened", !!f);
-
-  fwrite(frameData, 1, frameDataSize, f);
-  fclose(f);
-  fprintf(stderr, "[libfake] Saving %s\n", frameName);
+  fwrite(frameData, 1, frameDataSize, outFile);
+  fprintf(stderr, "[libfake] Saving frame %d\n", frameNumber);
 
   if (frameNumber > 60) {
     fprintf(stderr, "Captured 60 frames, going down.\n");
+    fclose(outFile);
     exit(0);
   }
+  frameNumber++;
 }
 
 #ifdef CAPSULE_LINUX
 void glXSwapBuffers (void *a, void *b) {
-  fprintf(stderr, "[libfake] In glXSwapBuffers\n");
   libfake_captureFrame();
   return _realglXSwapBuffers(a, b);
 }
 
 int glXQueryExtension (void *a, void *b, void *c) {
-  fprintf(stderr, "[libfake] in glXQueryExtension\n");
   return _realglXQueryExtension(a, b, c);
 }
 #endif
