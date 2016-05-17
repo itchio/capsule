@@ -5,7 +5,7 @@
 #define LIBSDL2_FILENAME "SDL2.dll"
 #elif defined(__APPLE__)
 #define LIBSDL2_FILENAME "libSDL2.dylib"
-#elif defined(__linux__) or defined(__unix__)
+#elif defined(__linux__) || defined(__unix__)
 #define LIBSDL2_FILENAME "libSDL2.so"
 #else
 #error Unsupported platform
