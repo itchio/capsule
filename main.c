@@ -39,7 +39,7 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-  SDL_Window* window = SDL_CreateWindow("opengl-inject-poc", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 512, 512, SDL_WINDOW_OPENGL);
+  SDL_Window* window = SDL_CreateWindow("opengl-inject-poc", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
   assert("Window created correctly", !!window);
 
   SDL_GLContext context = SDL_GL_CreateContext(window);

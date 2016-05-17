@@ -91,7 +91,7 @@ void* glXGetProcAddressARB (const char *name) {
     return &glXSwapBuffers;
   }
 
-  fprintf(stderr, "[libfake] In glXGetProcAddressARB: %s\n", name);
+  /* fprintf(stderr, "[libfake] In glXGetProcAddressARB: %s\n", name); */
 #endif
 
   return _realglXGetProcAddressARB(name);
@@ -113,9 +113,10 @@ void* dlopen (const char * filename, int flag) {
 
 #define GL_RGB 6407
 #define GL_UNSIGNED_BYTE 5121
+#define GL_VIEWPORT 2978
 
 typedef void (*glReadPixelsType)(int, int, int, int, int, int, void*);
-glReadPixelsType glReadPixels;
+glReadPixelsType realglReadPixels;
 
 FILE *outFile;
 
@@ -125,17 +126,26 @@ void libfake_captureFrame () {
   int components = 3;
   int format = GL_RGB;
 
-  size_t frameDataSize = FRAME_WIDTH * FRAME_HEIGHT * components;
+  int viewport[4];
+  glGetIntegerv(GL_VIEWPORT, viewport);
+  fprintf(stderr, "[libfake] Buffer resolution = %d %d %d %d\n", viewport[0], viewport[1], viewport[2], viewport[3]);
+
+  if (viewport[2] > 0 && viewport[3] > 0) {
+    width = viewport[2];
+    height = viewport[3];
+  }
+
+  size_t frameDataSize = width * height * components;
   if (!frameData) {
     frameData = malloc(frameDataSize);
   }
   
-  if (!glReadPixels) {
+  if (!realglReadPixels) {
     ensure_real_dlopen();
-    glReadPixels = dlsym(gl_handle, "glReadPixels");
-    assert("Got glReadPixels address", !!glReadPixels);
+    realglReadPixels = dlsym(gl_handle, "glReadPixels");
+    assert("Got glReadPixels address", !!realglReadPixels);
   }
-  glReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
+  realglReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
   
   if (!outFile) {
     outFile = fopen("capsule.rawvideo", "wb");
