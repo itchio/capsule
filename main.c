@@ -101,8 +101,47 @@ int main(int argc, char *argv[]) {
     assert("Fragment shader compiled", status == GL_TRUE);
   }
 
-  printf("[main] Sleeping for a second\n");
-  SDL_Delay(1000);
+  GLuint shaderProgram = glCreateProgram();
+  glAttachShader(shaderProgram, vertexShader);
+  glAttachShader(shaderProgram, fragmentShader);
+
+  glBindFragDataLocation(shaderProgram, 0, "outColor");
+
+  glLinkProgram(shaderProgram);
+
+  glUseProgram(shaderProgram);
+
+  GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+  glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+
+  glEnableVertexAttribArray(posAttrib);
+
+  GLuint vao;
+  glGenVertexArrays(1, &vao);
+
+  SDL_Event windowEvent;
+
+  for (;;) {
+    if (SDL_PollEvent(&windowEvent)) {
+      if (windowEvent.type == SDL_QUIT) {
+        printf("[main] Window closed, quitting...\n");
+        break;
+      }
+    }
+
+
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glBindVertexArray(vao);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    printf("[main] Finally swapping buffers\n");
+    SDL_GL_SwapWindow(window);
+
+    printf("[main] Sleeping for a little while\n");
+    SDL_Delay(50);
+  }
 
   printf("[main] Deleting OpenGL context\n");
   SDL_GL_DeleteContext(context);
