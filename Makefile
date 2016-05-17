@@ -3,7 +3,7 @@
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
-	LD_FLAGS := -shared
+	LD_FLAGS := -shared -fPIC
 	LD_EXT := .so
 endif
 ifeq ($(UNAME_S),Darwin)
