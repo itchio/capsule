@@ -11,12 +11,13 @@
 #error Unsupported platform
 #endif
 
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
 #include <stdint.h>
 #include <string.h>
+
+#include <GL/glew.h>
 
 extern const char *SDL_GetError();
 
@@ -41,8 +42,37 @@ int glXQueryExtension (void *a, void *b, void *c) {
 typedef void (*glXSwapBuffersType)(void*, void*);
 glXSwapBuffersType _realglXSwapBuffers;
 
+#define FRAME_WIDTH 512
+#define FRAME_HEIGHT 512
+char *frameData;
+int frameNumber = 0;
+
 void fake_glXSwapBuffers (void *a, void *b) {
   printf("[libfake] In glXSwapBuffers\n");
+
+  int width = FRAME_WIDTH;
+  int height = FRAME_HEIGHT;
+  int components = 4;
+  GLenum format = GL_RGBA;
+
+  size_t frameDataSize = FRAME_WIDTH * FRAME_HEIGHT * components;
+  if (!frameData) {
+    frameData = malloc(frameDataSize);
+  }
+  
+  glReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
+  
+  char frameName[512];
+  bzero(frameName, 512);
+  sprintf(frameName, "frames/frame%d.raw", frameNumber);
+  frameNumber++;
+
+  FILE *f = fopen(frameName, "wb");
+  assert("Opened", !!f);
+
+  fwrite(frameData, 1, frameDataSize, f);
+  fclose(f);
+
   return _realglXSwapBuffers(a, b);
 }
 
