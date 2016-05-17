@@ -62,22 +62,22 @@ void *gl_handle;
 void ensure_real_dlopen() {
 #ifdef CAPSULE_LINUX
   if (!real_dlopen) {
-    printf("[libfake] Getting real dlopen\n");
+    fprintf(stderr, "[libfake] Getting real dlopen\n");
     real_dlopen = dlsym(RTLD_NEXT, "dlopen");
-    printf("[libfake] Real dlopen = %p\n", real_dlopen);
-    printf("[libfake] Our  dlopen = %p\n", &dlopen);
+    fprintf(stderr, "[libfake] Real dlopen = %p\n", real_dlopen);
+    fprintf(stderr, "[libfake] Our  dlopen = %p\n", &dlopen);
   }
 #endif
 
   if (!gl_handle) {
-    printf("[libfake] Loading real opengl from %s\n", DEFAULT_OPENGL);
+    fprintf(stderr, "[libfake] Loading real opengl from %s\n", DEFAULT_OPENGL);
 #ifdef CAPSULE_LINUX
     gl_handle = real_dlopen(DEFAULT_OPENGL, (RTLD_NOW|RTLD_LOCAL));
 #else
     gl_handle = dlopen(DEFAULT_OPENGL, (RTLD_NOW|RTLD_LOCAL));
 #endif
     assert("Loaded real OpenGL lib", !!gl_handle);
-    printf("[libfake] Loaded opengl!\n");
+    fprintf(stderr, "[libfake] Loaded opengl!\n");
   }
 }
 
@@ -86,12 +86,12 @@ void* glXGetProcAddressARB (const char *name) {
   ensure_real_dlopen();
 
   if (strcmp(name, "glXSwapBuffers") == 0) {
-    printf("[libfake] In glXGetProcAddressARB: %s\n", name);
-    printf("[libfake] Returning fake glXSwapBuffers\n");
+    fprintf(stderr, "[libfake] In glXGetProcAddressARB: %s\n", name);
+    fprintf(stderr, "[libfake] Returning fake glXSwapBuffers\n");
     return &glXSwapBuffers;
   }
 
-  printf("[libfake] In glXGetProcAddressARB: %s\n", name);
+  fprintf(stderr, "[libfake] In glXGetProcAddressARB: %s\n", name);
 #endif
 
   return _realglXGetProcAddressARB(name);
@@ -99,11 +99,11 @@ void* glXGetProcAddressARB (const char *name) {
 
 #ifdef CAPSULE_LINUX
 void* dlopen (const char * filename, int flag) {
-  printf("[libfake] In dlopen(%s, %d)\n", filename, flag);
+  fprintf(stderr, "[libfake] In dlopen(%s, %d)\n", filename, flag);
   ensure_real_dlopen();
 
   if (strstr(filename, "libGL.so")) {
-    printf("[libfake] Faking libGL\n");
+    fprintf(stderr, "[libfake] Faking libGL\n");
     return real_dlopen(NULL, RTLD_NOW|RTLD_LOCAL);
   } else {
     return real_dlopen(filename, flag);
@@ -145,54 +145,54 @@ void libfake_captureFrame () {
 
   fwrite(frameData, 1, frameDataSize, f);
   fclose(f);
-  printf("[libfake] Saving %s\n", frameName);
+  fprintf(stderr, "[libfake] Saving %s\n", frameName);
 
   if (frameNumber > 60) {
-    printf("Captured 60 frames, going down.\n");
+    fprintf(stderr, "Captured 60 frames, going down.\n");
     exit(0);
   }
 }
 
 #ifdef CAPSULE_LINUX
 void glXSwapBuffers (void *a, void *b) {
-  printf("[libfake] In glXSwapBuffers\n");
+  fprintf(stderr, "[libfake] In glXSwapBuffers\n");
   libfake_captureFrame();
   return _realglXSwapBuffers(a, b);
 }
 
 int glXQueryExtension (void *a, void *b, void *c) {
-  printf("[libfake] in glXQueryExtension\n");
+  fprintf(stderr, "[libfake] in glXQueryExtension\n");
   return _realglXQueryExtension(a, b, c);
 }
 #endif
 
 void __attribute__((constructor)) libfake_load() {
-  printf("[libfake] Initializing...\n");
+  fprintf(stderr, "[libfake] Initializing...\n");
 
 #ifdef CAPSULE_LINUX
-  printf("[libfake] Loading real OpenGL lib...\n");
+  fprintf(stderr, "[libfake] Loading real OpenGL lib...\n");
   ensure_real_dlopen();
 
-  printf("[libfake] Getting glXQueryExtension adress\n");
+  fprintf(stderr, "[libfake] Getting glXQueryExtension adress\n");
   _realglXQueryExtension = dlsym(gl_handle, "glXQueryExtension");
   assert("Got glXQueryExtension", !!_realglXQueryExtension);
-  printf("[libfake] Got glXQueryExtension adress: %p\n", _realglXQueryExtension);
+  fprintf(stderr, "[libfake] Got glXQueryExtension adress: %p\n", _realglXQueryExtension);
 
-  printf("[libfake] Getting glXSwapBuffers adress\n");
+  fprintf(stderr, "[libfake] Getting glXSwapBuffers adress\n");
   _realglXSwapBuffers = dlsym(gl_handle, "glXSwapBuffers");
   assert("Got glXSwapBuffers", !!_realglXSwapBuffers);
-  printf("[libfake] Got glXSwapBuffers adress: %p\n", _realglXSwapBuffers);
+  fprintf(stderr, "[libfake] Got glXSwapBuffers adress: %p\n", _realglXSwapBuffers);
 
-  printf("[libfake] Getting glXGetProcAddressARB address\n");
+  fprintf(stderr, "[libfake] Getting glXGetProcAddressARB address\n");
   _realglXGetProcAddressARB = dlsym(gl_handle, "glXGetProcAddressARB");
   assert("Got glXGetProcAddressARB", !!_realglXGetProcAddressARB);
-  printf("[libfake] Got glXGetProcAddressARB adress: %p\n", _realglXGetProcAddressARB);
+  fprintf(stderr, "[libfake] Got glXGetProcAddressARB adress: %p\n", _realglXGetProcAddressARB);
 #endif
 
-  printf("[libfake] All systems go.\n");
+  fprintf(stderr, "[libfake] All systems go.\n");
 }
 
 void __attribute__((destructor)) libfake_unload() {
-  printf("[libfake] Winding down...\n");
+  fprintf(stderr, "[libfake] Winding down...\n");
 }
 
