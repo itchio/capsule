@@ -15,8 +15,8 @@ ifeq ($(UNAME_S),Linux)
 endif
 ifeq ($(UNAME_S),Darwin)
   	MAIN_CFLAGS := ${MAIN_CFLAGS} -framework OpenGL
-	LIB_CFLAGS := -D_CAPSULE_OSX
-	LIB_LDFLAGS := -dynamiclib -ldl
+	LIB_CFLAGS := -fPIC -D_CAPSULE_OSX
+	LIB_LDFLAGS := -dynamiclib -ldl -framework Cocoa
 	LIB_EXT := .dylib
 endif
 CC := clang
@@ -28,7 +28,7 @@ ifeq ($(UNAME_S),Linux)
 	LD_PRELOAD="${PWD}/libfake.so" MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=150 ${RUN_CMD}
 endif
 ifeq ($(UNAME_S),Darwin)
-	DYLD_FORCE_FLAT_NAMESPACE=1 DYLD_INSERT_LIBRARIES="${PWD}/libfake.dylib" ./main
+	DYLD_FORCE_FLAT_NAMESPACE=1 DYLD_INSERT_LIBRARIES="${PWD}/libfake.dylib" DYLD_LIBRARY_PATH="${PWD}" ${RUN_CMD}
 endif
 
 all: main libfake
@@ -42,4 +42,4 @@ ifeq ($(UNAME_S),Darwin)
 	${CC} -c ${LIB_CFLAGS} libfake_cocoa.m
 endif
 	${AR} rcs libfake.a libfake*.o
-	${CC} ${LIB_CFLAGS} -ldl libfake*.o -o libfake${LIB_EXT} ${LIB_LDFLAGS}
+	${CC} ${LIB_CFLAGS} libfake*.o -o libfake${LIB_EXT} ${LIB_LDFLAGS}

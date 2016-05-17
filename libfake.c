@@ -3,10 +3,13 @@
 
 #if defined(_WIN32)
 #define LIBSDL2_FILENAME "SDL2.dll"
+#define DEFAULT_OPENGL "opengl32.dll"
 #elif defined(__APPLE__)
 #define LIBSDL2_FILENAME "libSDL2.dylib"
+#define DEFAULT_OPENGL "/System/Library/Frameworks/OpenGL.framework/Libraries/libGL.dylib"
 #elif defined(__linux__) || defined(__unix__)
 #define LIBSDL2_FILENAME "libSDL2.so"
+#define DEFAULT_OPENGL "libGL.so.1"
 #else
 #error Unsupported platform
 #endif
@@ -19,15 +22,15 @@
 
 #include <GL/glew.h>
 
-extern const char *SDL_GetError();
+/* extern const char *SDL_GetError(); */
 
 static void assert (const char *msg, int cond) {
   if (cond) {
     return;
   }
   fprintf(stderr, "[main] Assertion failed: %s\n", msg);
-  const char *err = SDL_GetError();
-  fprintf(stderr, "[main] Last SDL GetError: %s\n", err);
+  /* const char *err = SDL_GetError(); */
+  /* fprintf(stderr, "[main] Last SDL GetError: %s\n", err); */
   exit(1);
 }
 
@@ -60,18 +63,18 @@ void fake_glXSwapBuffers (void *a, void *b) {
     frameData = malloc(frameDataSize);
   }
   
-  glReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
+  /* glReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData); */
   
-  char frameName[512];
-  bzero(frameName, 512);
-  sprintf(frameName, "frames/frame%03d.raw", frameNumber);
-  frameNumber++;
+  /* char frameName[512]; */
+  /* bzero(frameName, 512); */
+  /* sprintf(frameName, "frames/frame%03d.raw", frameNumber); */
+  /* frameNumber++; */
 
-  FILE *f = fopen(frameName, "wb");
-  assert("Opened", !!f);
+  /* FILE *f = fopen(frameName, "wb"); */
+  /* assert("Opened", !!f); */
 
-  fwrite(frameData, 1, frameDataSize, f);
-  fclose(f);
+  /* fwrite(frameData, 1, frameDataSize, f); */
+  /* fclose(f); */
 
   if (frameNumber > 60) {
     printf("Captured 60 frames, going down.\n");
@@ -90,11 +93,22 @@ void ensure_real_dlopen() {
     printf("[libfake] Getting real dlopen\n");
     real_dlopen = dlsym(RTLD_NEXT, "dlopen");
     printf("[libfake] Real dlopen = %p\n", real_dlopen);
+    printf("[libfake] Our  dlopen = %p\n", &dlopen);
   }
 
   if (!gl_handle) {
-    gl_handle = real_dlopen("libGL.so.1", (RTLD_NOW|RTLD_LOCAL));
+    printf("[libfake] Loading libmath from %s\n", "libm.dylib");
+    void *m_handle = real_dlopen("libm.dylib", (RTLD_NOW|RTLD_LOCAL));
+    printf("[libfake] Succesfully loaded libm? %d\n", !!m_handle);
+
+    printf("[libfake] Loading ourselves from %s\n", "libfake.dylib");
+    void *f_handle = real_dlopen("libfake.dylib", (RTLD_NOW|RTLD_LOCAL));
+    printf("[libfake] Succesfully loaded libfake? %d\n", !!f_handle);
+
+    printf("[libfake] Loading real opengl from %s\n", DEFAULT_OPENGL);
+    gl_handle = real_dlopen(DEFAULT_OPENGL, (RTLD_NOW|RTLD_LOCAL));
     assert("Loaded real OpenGL lib", !!gl_handle);
+    printf("[libfake] Loaded opengl!\n");
   }
 }
 
@@ -110,7 +124,7 @@ void* glXGetProcAddressARB (const char *name) {
   return dlsym(gl_handle, name);
 }
 
-void* dlopen (const char * filename, int flag) {
+void* _dlopen (const char * filename, int flag) {
   printf("[libfake] In dlopen(%s, %d)\n", filename, flag);
   ensure_real_dlopen();
 
@@ -128,12 +142,14 @@ void __attribute__((constructor)) libfake_load() {
   printf("[libfake] Loading real OpenGL lib...\n");
   ensure_real_dlopen();
 
+#if defined(__linux__) || defined(__unix__)
   printf("[libfake] Getting glXQueryExtension adress\n");
   _realglXQueryExtension = dlsym(gl_handle, "glXQueryExtension");
   assert("Got glXQueryExtension", !!_realglXQueryExtension);
 
   _realglXSwapBuffers = dlsym(gl_handle, "glXSwapBuffers");
   assert("Got glXSwapBuffers", !!_realglXSwapBuffers);
+#endif
 
   printf("[libfake] All systems go.\n");
 }
