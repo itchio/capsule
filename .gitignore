@@ -1,4 +1,6 @@
 /main
+/*.a
+/*.o
 /*.so
 /*.dylib
 /*.dll
