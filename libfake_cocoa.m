@@ -15,14 +15,6 @@
 
         Class class = [self class];
 
-        /* int i=0; */
-        /* unsigned int mc = 0; */
-        /* Method * mlist = class_copyMethodList(self, &mc); */
-        /* NSLog(@"%d methods", mc); */
-        /* for (i=0; i < mc; i++) { */
-        /*   NSLog(@"Method no #%d: %s", i, sel_getName(method_getName(mlist[i]))); */
-        /* } */
-
         SEL originalSelector = @selector(flushBuffer);
         SEL swizzledSelector = @selector(xxx_flushBuffer);
 

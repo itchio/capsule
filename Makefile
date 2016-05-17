@@ -9,13 +9,13 @@ MAIN_LDFLAGS := $(shell sdl2-config --libs) $(shell pkg-config --libs glew)
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
   	MAIN_CFLAGS := ${MAIN_CFLAGS} -lGL
-	LIB_CFLAGS := -fPIC -D_CAPSULE_LINUX
+	LIB_CFLAGS := -fPIC
 	LIB_LDFLAGS := -shared -ldl
 	LIB_EXT := .so
 endif
 ifeq ($(UNAME_S),Darwin)
   	MAIN_CFLAGS := ${MAIN_CFLAGS} -framework OpenGL
-	LIB_CFLAGS := -fPIC -D_CAPSULE_OSX
+	LIB_CFLAGS := -fPIC
 	LIB_LDFLAGS := -dynamiclib -ldl -framework Cocoa
 	LIB_EXT := .dylib
 endif
