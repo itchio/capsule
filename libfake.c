@@ -105,8 +105,8 @@ void ensure_opengl () {
   }
 }
 
-void* glXGetProcAddressARB (const char *name) {
 #ifdef CAPSULE_LINUX
+void* glXGetProcAddressARB (const char *name) {
   if (strcmp(name, "glXSwapBuffers") == 0) {
     fprintf(stderr, "[libfake] In glXGetProcAddressARB: %s\n", name);
     fprintf(stderr, "[libfake] Returning fake glXSwapBuffers\n");
@@ -114,11 +114,11 @@ void* glXGetProcAddressARB (const char *name) {
   }
 
   /* fprintf(stderr, "[libfake] In glXGetProcAddressARB: %s\n", name); */
-#endif
 
   ensure_opengl();
   return _realglXGetProcAddressARB(name);
 }
+#endif
 
 #ifdef CAPSULE_LINUX
 void* dlopen (const char * filename, int flag) {
