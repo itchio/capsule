@@ -2,4 +2,4 @@
 CC := clang
 
 all:
-	${CC} main.c -o main
+	${CC} -lm main.c -o main
