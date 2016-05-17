@@ -10,7 +10,7 @@ ifeq ($(UNAME_S),Darwin)
 	LD_FLAGS := -dynamiclib
 	LD_EXT := .dylib
 endif
-CC := clang
+CC := clang -std=gnu99
 
 test: all
 ifeq ($(UNAME_S),Linux)
@@ -26,4 +26,4 @@ main:
 	${CC} -lm main.c -o main
 
 libfake:
-	${CC} ${LD_FLAGS} libfake.c -o libfake${LD_EXT}
+	${CC} ${LD_FLAGS} -ldl libfake.c -o libfake${LD_EXT}
