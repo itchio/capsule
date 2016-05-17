@@ -53,13 +53,17 @@ int main(int argc, char *argv[]) {
     -0.5f, -0.5f  // Vertex 3 (X, Y)
   };
 
+  printf("[main] Making a vertex array object...\n");
+  GLuint vao;
+  glGenVertexArrays(1, &vao);
+  glBindVertexArray(vao);
+
   printf("[main] Making a vertex buffer...\n");
   GLuint vbo;
   glGenBuffers(1, &vbo);
-  printf("[main] Vertex buffer: %u\n", vbo);
-
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
+  printf("[main] Uploading vertex data to GPU...\n");
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
   char* vertexSource = malloc(SHADER_LEN);
@@ -116,9 +120,6 @@ int main(int argc, char *argv[]) {
 
   glEnableVertexAttribArray(posAttrib);
 
-  GLuint vao;
-  glGenVertexArrays(1, &vao);
-
   SDL_Event windowEvent;
 
   for (;;) {
@@ -133,6 +134,7 @@ int main(int argc, char *argv[]) {
     glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBindVertexArray(vao);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
