@@ -1,5 +1,5 @@
 
-.PHONY: all main libfake
+.PHONY: all test main libfake
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
@@ -11,6 +11,14 @@ ifeq ($(UNAME_S),Darwin)
 	LD_EXT := .dylib
 endif
 CC := clang
+
+test: all
+ifeq ($(UNAME_S),Linux)
+	LD_PRELOAD="${PWD}/libfake.so" ./main
+endif
+ifeq ($(UNAME_S),Darwin)
+	DYLD_INSERT_LIBRARIES="${PWD}/libfake.dylib" ./main
+endif
 
 all: main libfake
 
