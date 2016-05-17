@@ -23,6 +23,16 @@ static SDL_Init_Func Original_SDL_Init;
 typedef void (*SDL_GL_SwapWindow_Func)(void *);
 static SDL_GL_SwapWindow_Func Original_SDL_GL_SwapWindow;
 
+static void assert (const char *msg, int cond) {
+  if (cond) {
+    return;
+  }
+  fprintf(stderr, "[main] Assertion failed: %s\n", msg);
+  const char *err = SDL_GetError();
+  fprintf(stderr, "[main] Last SDL GetError: %s\n", err);
+  exit(1);
+}
+
 int SDL_Init (uint32_t flags) {
   printf("[libfake] in SDL_Init\n");
   if (!Original_SDL_Init) {
@@ -69,11 +79,56 @@ void glFinish () {
   printf("[libfake] In glFinish\n");
 }
 
-void glxSwapBuffers () {
-  printf("[libfake] In glxSwapBuffers\n");
+typedef int (*glXQueryExtensionType)(void*, void*, void*);
+glXQueryExtensionType _realglXQueryExtension;
+
+int glXQueryExtension (void *d, int *a, int *b) {
+  printf("[libfake] In glXQueryExtension with %p, %p, %p\n", d, a, b);
+  printf("[libfake] In glXQueryExtension with %d, %d\n", *a, *b);
+  int retval = _realglXQueryExtension(d, a, b);
+  printf("[libfake] retval: %d\n", retval);
+  return retval;
+}
+
+void glXChooseVisual () {
+  printf("[libfake] In glXChooseVisual\n");
+}
+
+void glXCreateContext () {
+  printf("[libfake] In glXCreateContext\n");
+}
+
+void glXDestroyContext () {
+  printf("[libfake] In glXDestroyContext\n");
+}
+
+void glXMakeCurrent () {
+  printf("[libfake] In glXMakeCurrent\n");
+}
+
+void glXSwapBuffers () {
+  printf("[libfake] In glXSwapBuffers\n");
+}
+
+void glXGetProcAddress () {
+  printf("[libfake] In glXGetProcAddress\n");
 }
 
 void __attribute__((constructor)) libfake_load() {
+  printf("[libfake] Initializing...\n");
+
+  printf("[libfake] Loading real OpenGL lib...\n");
+  void *handle = dlopen("libGL.so", (RTLD_NOW|RTLD_GLOBAL));
+  assert("Loaded real OpenGL lib", !!handle);
+
+  printf("[libfake] Getting glXQueryExtension adress\n");
+  _realglXQueryExtension = dlsym(handle, "glXQueryExtension");
+  assert("Got glXQueryExtension", !!_realglXQueryExtension);
+  printf("[libfake] glXQueryExtension their address: %p\n", _realglXQueryExtension);
+  printf("[libfake] glXQueryExtension ourss address: %p\n", &glXQueryExtension);
+
+  // dlclose(handle);
+
   printf("[libfake] All systems go.\n");
 }
 

@@ -7,11 +7,13 @@
 
 #define SHADER_LEN 4096
 
-void assert (const char *msg, int cond) {
+static void assert (const char *msg, int cond) {
   if (cond) {
     return;
   }
   fprintf(stderr, "[main] Assertion failed: %s\n", msg);
+  const char *err = SDL_GetError();
+  fprintf(stderr, "[main] Last SDL GetError: %s\n", err);
   exit(1);
 }
 
@@ -26,7 +28,7 @@ void readFile (char *target, const char *path) {
   return;
 }
 
-int main(int argc, char *argv[]) {
+int main() {
   printf("[main] Calling SDL_Init\n");
   SDL_Init(SDL_INIT_VIDEO);
   printf("[main] Returned from SDL_Init\n");

@@ -8,13 +8,13 @@ UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
   	MAIN_CFLAGS := ${MAIN_CFLAGS} -lGL
 	LIB_CFLAGS := -fPIC -D_CAPSULE_LINUX
-	LIB_LDFLAGS := -shared 
+	LIB_LDFLAGS := -shared -ldl
 	LIB_EXT := .so
 endif
 ifeq ($(UNAME_S),Darwin)
   	MAIN_CFLAGS := ${MAIN_CFLAGS} -framework OpenGL
 	LIB_CFLAGS := -D_CAPSULE_OSX
-	LIB_LDFLAGS := -dynamiclib
+	LIB_LDFLAGS := -dynamiclib -ldl
 	LIB_EXT := .dylib
 endif
 CC := clang
@@ -22,7 +22,7 @@ AR := ar
 
 test: all
 ifeq ($(UNAME_S),Linux)
-	LD_PRELOAD="${PWD}/libfake.so" MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=150 ./main
+	LD_LIBRARY_PATH="${PWD}" LD_PRELOAD="${PWD}/libfake.so" MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=150 gdb ./main
 endif
 ifeq ($(UNAME_S),Darwin)
 	DYLD_FORCE_FLAT_NAMESPACE=1 DYLD_INSERT_LIBRARIES="${PWD}/libfake.dylib" ./main
