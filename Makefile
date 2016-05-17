@@ -3,10 +3,12 @@
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
-    LD_EXT := .so
+	LD_FLAGS := -shared
+	LD_EXT := .so
 endif
 ifeq ($(UNAME_S),Darwin)
-    LD_EXT := .dylib
+	LD_FLAGS := -dynamiclib
+	LD_EXT := .dylib
 endif
 CC := clang
 
@@ -17,4 +19,4 @@ main:
 
 libfake:
 	${CC} -c libfake.c -o libfake.o
-	${CC} -dynamiclib libfake.o -o libfake${LD_EXT}
+	${CC} ${LD_FLAGS} libfake.o -o libfake${LD_EXT}
