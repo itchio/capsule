@@ -12,10 +12,12 @@ ifeq ($(UNAME_S),Linux)
 endif
 ifeq ($(UNAME_S),Darwin)
   	MAIN_CFLAGS := ${MAIN_CFLAGS} -framework OpenGL
-	LIB_CFLAGS := -dynamiclib -D_CAPSULE_OSX
+	LIB_CFLAGS := -D_CAPSULE_OSX
+	LIB_LDFLAGS := -dynamiclib
 	LIB_EXT := .dylib
 endif
 CC := clang
+AR := ar
 
 test: all
 ifeq ($(UNAME_S),Linux)
@@ -31,4 +33,9 @@ main:
 	${CC} ${MAIN_CFLAGS} main.c -o main ${MAIN_LDFLAGS}
 
 libfake:
-	${CC} ${LIB_CFLAGS} -ldl libfake.c -o libfake${LIB_EXT}
+	${CC} -c ${LIB_CFLAGS} libfake.c
+ifeq ($(UNAME_S),Darwin)
+	${CC} -c ${LIB_CFLAGS} libfake_cocoa.m
+endif
+	${AR} rcs libfake.a libfake*.o
+	${CC} ${LIB_CFLAGS} -ldl libfake*.o -o libfake${LIB_EXT} ${LIB_LDFLAGS}
