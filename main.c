@@ -71,12 +71,12 @@ int main() {
   char* vertexSource = malloc(SHADER_LEN);
   bzero(vertexSource, SHADER_LEN);
   readFile(vertexSource, "shader.vert");
-  printf("vertex source: %s\n", vertexSource);
+  /* printf("vertex source: %s\n", vertexSource); */
 
   char* fragmentSource = malloc(SHADER_LEN);
   bzero(fragmentSource, SHADER_LEN);
   readFile(fragmentSource, "shader.frag");
-  printf("fragment source: %s\n", fragmentSource);
+  /* printf("fragment source: %s\n", fragmentSource); */
 
   GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vertexShader, 1, (void*) &vertexSource, NULL);
