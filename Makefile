@@ -10,7 +10,7 @@ ifeq ($(UNAME_S),Darwin)
 	LD_FLAGS := -dynamiclib
 	LD_EXT := .dylib
 endif
-CC := clang -std=gnu99
+CC := clang
 
 test: all
 ifeq ($(UNAME_S),Linux)
