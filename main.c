@@ -154,10 +154,8 @@ int main(int argc, char *argv[]) {
 
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    printf("[main] Finally swapping buffers\n");
     SDL_GL_SwapWindow(window);
 
-    printf("[main] Sleeping for a little while\n");
     SDL_Delay(16);
   }
 

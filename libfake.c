@@ -49,20 +49,28 @@ int SDL_Init (uint32_t flags) {
   return retval;
 }
 
-void SDL_GL_SwapWindow (void* win) {
-  printf("[libfake] In SDL_GL_SwapWindow\n");
-  if (!Original_SDL_GL_SwapWindow) {
-    void *handle = dlopen(LIBSDL2_FILENAME, RTLD_LOCAL | RTLD_NOW);
+/* void SDL_GL_SwapWindow (void* win) { */
+/*   printf("[libfake] In SDL_GL_SwapWindow\n"); */
+/*   if (!Original_SDL_GL_SwapWindow) { */
+/*     void *handle = dlopen(LIBSDL2_FILENAME, RTLD_LOCAL | RTLD_NOW); */
 
-    Original_SDL_GL_SwapWindow = dlsym(handle, "SDL_GL_SwapWindow");
-    printf("[libfake] org sdl init = %p\n", Original_SDL_GL_SwapWindow);
+/*     Original_SDL_GL_SwapWindow = dlsym(handle, "SDL_GL_SwapWindow"); */
+/*     printf("[libfake] org sdl init = %p\n", Original_SDL_GL_SwapWindow); */
 
-    dlclose(handle);
-  }
+/*     dlclose(handle); */
+/*   } */
 
-  printf("[libfake] Calling original SDL_GL_SwapWindow\n");
-  Original_SDL_GL_SwapWindow(win);
-  printf("[libfake] Original SDL_GL_SwapWindow returend.\n");
+/*   printf("[libfake] Calling original SDL_GL_SwapWindow\n"); */
+/*   Original_SDL_GL_SwapWindow(win); */
+/*   printf("[libfake] Original SDL_GL_SwapWindow returend.\n"); */
+/* } */
+
+void glFinish () {
+  printf("[libfake] In glFinish\n");
+}
+
+void glxSwapBuffers () {
+  printf("[libfake] In glxSwapBuffers\n");
 }
 
 void __attribute__((constructor)) libfake_load() {
