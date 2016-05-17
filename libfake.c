@@ -1,5 +1,6 @@
 
 #define _GNU_SOURCE
+#include "libfake.h"
 
 #if defined(_WIN32)
 #define LIBSDL2_FILENAME "SDL2.dll"
@@ -67,7 +68,11 @@ void ensure_real_dlopen() {
 
   if (!gl_handle) {
     printf("[libfake] Loading real opengl from %s\n", DEFAULT_OPENGL);
+#ifdef CAPSULE_LINUX
     gl_handle = real_dlopen(DEFAULT_OPENGL, (RTLD_NOW|RTLD_LOCAL));
+#else
+    gl_handle = dlopen(DEFAULT_OPENGL, (RTLD_NOW|RTLD_LOCAL));
+#endif
     assert("Loaded real OpenGL lib", !!gl_handle);
     printf("[libfake] Loaded opengl!\n");
   }
@@ -107,7 +112,7 @@ void* dlopen (const char * filename, int flag) {
 typedef void (*glReadPixelsType)(int, int, int, int, int, int, void*);
 glReadPixelsType glReadPixels;
 
-void captureFrame () {
+void libfake_captureFrame () {
   int width = FRAME_WIDTH;
   int height = FRAME_HEIGHT;
   int components = 3;
@@ -119,6 +124,7 @@ void captureFrame () {
   }
   
   if (!glReadPixels) {
+    ensure_real_dlopen();
     glReadPixels = dlsym(gl_handle, "glReadPixels");
     assert("Got glReadPixels address", !!glReadPixels);
   }
@@ -145,7 +151,7 @@ void captureFrame () {
 #ifdef CAPSULE_LINUX
 void fake_glXSwapBuffers (void *a, void *b) {
   printf("[libfake] In glXSwapBuffers\n");
-  captureFrame();
+  libfake_captureFrame();
   return _realglXSwapBuffers(a, b);
 }
 

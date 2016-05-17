@@ -1,4 +1,5 @@
 
+#include "libfake.h"
 #include <OpenGL/OpenGL.h>
 
 #import <Cocoa/Cocoa.h>
@@ -16,7 +17,7 @@
         Class class = [self class];
 
         SEL originalSelector = @selector(flushBuffer);
-        SEL swizzledSelector = @selector(xxx_flushBuffer);
+        SEL swizzledSelector = @selector(libfake_flushBuffer);
 
         Method originalMethod = class_getInstanceMethod(class, originalSelector);
         Method swizzledMethod = class_getInstanceMethod(class, swizzledSelector);
@@ -38,8 +39,9 @@
     });
   }
 
-- (void)xxx_flushBuffer {
-  [self xxx_flushBuffer];
+- (void)libfake_flushBuffer {
+  libfake_captureFrame();
+  [self libfake_flushBuffer];
   NSLog(@"flushBuffer: %@", self);
 }
 

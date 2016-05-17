@@ -5,3 +5,4 @@
 /*.dylib
 /*.dll
 /frames
+*.dSYM
