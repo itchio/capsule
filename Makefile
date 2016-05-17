@@ -17,7 +17,7 @@ ifeq ($(UNAME_S),Linux)
 	LD_PRELOAD="${PWD}/libfake.so" ./main
 endif
 ifeq ($(UNAME_S),Darwin)
-	DYLD_INSERT_LIBRARIES="${PWD}/libfake.dylib" ./main
+	DYLD_FORCE_FLAT_NAMESPACE=1 DYLD_INSERT_LIBRARIES="${PWD}/libfake.dylib" ./main
 endif
 
 all: main libfake
