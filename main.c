@@ -2,11 +2,14 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 
+#define GLEW_STATIC
+#include <GL/glew.h>
+
 void assert (const char *msg, void *cond) {
   if (cond) {
     return;
   }
-  fprintf(stderr, "Assertion failed: %s\n", msg);
+  fprintf(stderr, "[main] Assertion failed: %s\n", msg);
   exit(1);
 }
 
@@ -26,6 +29,15 @@ int main(int argc, char *argv[]) {
 
   SDL_GLContext context = SDL_GL_CreateContext(window);
   assert("OpenGL context created correctly", context);
+
+  printf("[main] Initializing glew...\n");
+  glewExperimental = GL_TRUE;
+  glewInit();
+
+  printf("[main] Making a vertex buffer...\n");
+  GLuint vertexBuffer;
+  glGenBuffers(1, &vertexBuffer);
+  printf("[main] Vertex buffer: %u\n", vertexBuffer);
 
   printf("[main] Sleeping for a second\n");
   SDL_Delay(1000);

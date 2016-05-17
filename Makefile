@@ -1,8 +1,8 @@
 
 .PHONY: all test main libfake
 
-MAIN_CFLAGS := $(shell sdl2-config --cflags)
-MAIN_LDFLAGS := $(shell sdl2-config --libs)
+MAIN_CFLAGS := $(shell sdl2-config --cflags) $(shell pkg-config --cflags glew)
+MAIN_LDFLAGS := $(shell sdl2-config --libs) $(shell pkg-config --libs glew)
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
