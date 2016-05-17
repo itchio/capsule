@@ -23,6 +23,7 @@ CC := clang
 AR := ar
 
 test: all
+	mkdir -p frames
 ifeq ($(UNAME_S),Linux)
 	LD_PRELOAD="${PWD}/libfake.so" MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=150 ${RUN_CMD}
 endif

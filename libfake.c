@@ -52,8 +52,8 @@ void fake_glXSwapBuffers (void *a, void *b) {
 
   int width = FRAME_WIDTH;
   int height = FRAME_HEIGHT;
-  int components = 4;
-  GLenum format = GL_RGBA;
+  int components = 3;
+  GLenum format = GL_RGB;
 
   size_t frameDataSize = FRAME_WIDTH * FRAME_HEIGHT * components;
   if (!frameData) {
@@ -64,7 +64,7 @@ void fake_glXSwapBuffers (void *a, void *b) {
   
   char frameName[512];
   bzero(frameName, 512);
-  sprintf(frameName, "frames/frame%d.raw", frameNumber);
+  sprintf(frameName, "frames/frame%03d.raw", frameNumber);
   frameNumber++;
 
   FILE *f = fopen(frameName, "wb");
@@ -74,7 +74,7 @@ void fake_glXSwapBuffers (void *a, void *b) {
   fclose(f);
 
   if (frameNumber > 60) {
-    fprintf("Captured 60 frames, going down.");
+    printf("Captured 60 frames, going down.\n");
     exit(0);
   }
 
