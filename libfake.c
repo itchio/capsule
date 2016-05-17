@@ -44,6 +44,9 @@ glXQueryExtensionType _realglXQueryExtension;
 
 typedef void (*glXSwapBuffersType)(void*, void*);
 glXSwapBuffersType _realglXSwapBuffers;
+
+typedef void* (*glXGetProcAddressARBType)(char*);
+glXGetProcAddressARBType _realglXGetProcAddressARB;
 #endif
 
 #define FRAME_WIDTH 512
@@ -82,9 +85,11 @@ void* glXGetProcAddressARB (const char *name) {
     printf("[libfake] Returning fake glXSwapBuffers\n");
     return &fake_glXSwapBuffers;
   }
+
+  printf("[libfake] In glXGetProcAddressARB: %s\n", name);
 #endif
 
-  return dlsym(gl_handle, name);
+  return _realglXGetProcAddressARB(name);
 }
 
 #ifdef CAPSULE_LINUX
@@ -167,9 +172,15 @@ void __attribute__((constructor)) libfake_load() {
   assert("Got glXQueryExtension", !!_realglXQueryExtension);
   printf("[libfake] Got glXQueryExtension adress: %p\n", _realglXQueryExtension);
 
+  printf("[libfake] Getting glXSwapBuffers adress\n");
   _realglXSwapBuffers = dlsym(gl_handle, "glXSwapBuffers");
   assert("Got glXSwapBuffers", !!_realglXSwapBuffers);
   printf("[libfake] Got glXSwapBuffers adress: %p\n", _realglXSwapBuffers);
+
+  printf("[libfake] Getting glXGetProcAddressARB address\n");
+  _realglXGetProcAddressARB = dlsym(gl_handle, "glXGetProcAddressARB");
+  assert("Got glXGetProcAddressARB", !!_realglXGetProcAddressARB);
+  printf("[libfake] Got glXGetProcAddressARB adress: %p\n", _realglXGetProcAddressARB);
 #endif
 
   printf("[libfake] All systems go.\n");
