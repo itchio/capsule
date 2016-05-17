@@ -1,6 +1,17 @@
 
 #define _GNU_SOURCE
 
+#if defined(_CAPSULE_WINDOWS)
+#define LIBSDL2_FILENAME "SDL2.dll"
+#elif defined(_CAPSULE_OSX)
+#define LIBSDL2_FILENAME "libSDL2.dylib"
+#elif defined(_CAPSULE_LINUX)
+#define LIBSDL2_FILENAME "libSDL2.so"
+#else
+#error Define LIBSDL2_FILENAME for your platform
+#endif
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
@@ -12,7 +23,7 @@ static SDL_Init_Func Original_SDL_Init;
 int SDL_Init (uint32_t flags) {
     printf("[libfake] in SDL_Init\n");
     if (!Original_SDL_Init) {
-      void *handle = dlopen("libSDL2.dylib", RTLD_LOCAL | RTLD_NOW);
+      void *handle = dlopen(LIBSDL2_FILENAME, RTLD_LOCAL | RTLD_NOW);
 
       Original_SDL_Init = dlsym(handle, "SDL_Init");
       printf("[libfake] org sdl init = %p\n", Original_SDL_Init);
