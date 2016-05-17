@@ -18,5 +18,4 @@ main:
 	${CC} -lm main.c -o main
 
 libfake:
-	${CC} -c libfake.c -o libfake.o
-	${CC} ${LD_FLAGS} libfake.o -o libfake${LD_EXT}
+	${CC} ${LD_FLAGS} libfake.c -o libfake${LD_EXT}
