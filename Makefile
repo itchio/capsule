@@ -1,7 +1,7 @@
 
 .PHONY: all test main libfake
 
-RUN_CMD := ./main
+RUN_CMD := ${GDB} ./main
 
 MAIN_CFLAGS := $(shell sdl2-config --cflags) $(shell pkg-config --cflags glew)
 MAIN_LDFLAGS := $(shell sdl2-config --libs) $(shell pkg-config --libs glew)
