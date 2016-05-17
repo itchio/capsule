@@ -1,9 +1,14 @@
 
 #include <stdio.h>
-#include <math.h>
+#include <SDL2/SDL.h>
 
-int main () {
-  double v = cos(2.0 * M_PI);
-  printf("v = %.2f\n", v);
+int main(int argc, char *argv[]) {
+  printf("[main] Calling SDL_Init\n");
+  SDL_Init(SDL_INIT_EVERYTHING);
+  printf("[main] Returned from SDL_Init\n");
+
+  SDL_Delay(1000);
+
+  SDL_Quit();
   return 0;
 }

@@ -1,14 +1,17 @@
 
 .PHONY: all test main libfake
 
+MAIN_CFLAGS := $(shell sdl2-config --cflags)
+MAIN_LDFLAGS := $(shell sdl2-config --libs)
+
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
-	LD_FLAGS := -shared -fPIC
-	LD_EXT := .so
+	LIB_CFLAGS := -shared -fPIC
+	LIB_EXT := .so
 endif
 ifeq ($(UNAME_S),Darwin)
-	LD_FLAGS := -dynamiclib
-	LD_EXT := .dylib
+	LIB_CFLAGS := -dynamiclib
+	LIB_EXT := .dylib
 endif
 CC := clang
 
@@ -23,7 +26,7 @@ endif
 all: main libfake
 
 main:
-	${CC} -lm main.c -o main
+	${CC} ${MAIN_CFLAGS} main.c -o main ${MAIN_LDFLAGS}
 
 libfake:
-	${CC} ${LD_FLAGS} -ldl libfake.c -o libfake${LD_EXT}
+	${CC} ${LIB_CFLAGS} -ldl libfake.c -o libfake${LIB_EXT}
