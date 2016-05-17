@@ -116,7 +116,10 @@ void* dlopen (const char * filename, int flag) {
 #define GL_VIEWPORT 2978
 
 typedef void (*glReadPixelsType)(int, int, int, int, int, int, void*);
-glReadPixelsType realglReadPixels;
+glReadPixelsType _realglReadPixels;
+
+typedef void* (*glGetIntegervType)(int, int*);
+glGetIntegervType _realglGetIntegerv;
 
 FILE *outFile;
 
@@ -126,8 +129,14 @@ void libfake_captureFrame () {
   int components = 3;
   int format = GL_RGB;
 
+  if (!_realglGetIntegerv) {
+    ensure_real_dlopen();
+    _realglGetIntegerv = dlsym(gl_handle, "glGetIntegerv");
+    assert("Got glGetIntegerv address", !!_realglGetIntegerv);
+  }
+
   int viewport[4];
-  glGetIntegerv(GL_VIEWPORT, viewport);
+  _realglGetIntegerv(GL_VIEWPORT, viewport);
   fprintf(stderr, "[libfake] Buffer resolution = %d %d %d %d\n", viewport[0], viewport[1], viewport[2], viewport[3]);
 
   if (viewport[2] > 0 && viewport[3] > 0) {
@@ -140,12 +149,12 @@ void libfake_captureFrame () {
     frameData = malloc(frameDataSize);
   }
   
-  if (!realglReadPixels) {
+  if (!_realglReadPixels) {
     ensure_real_dlopen();
-    realglReadPixels = dlsym(gl_handle, "glReadPixels");
-    assert("Got glReadPixels address", !!realglReadPixels);
+    _realglReadPixels = dlsym(gl_handle, "glReadPixels");
+    assert("Got glReadPixels address", !!_realglReadPixels);
   }
-  realglReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
+  _realglReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
   
   if (!outFile) {
     outFile = fopen("capsule.rawvideo", "wb");
@@ -153,13 +162,9 @@ void libfake_captureFrame () {
   }
 
   fwrite(frameData, 1, frameDataSize, outFile);
-  fprintf(stderr, "[libfake] Saving frame %d\n", frameNumber);
+  fflush(outFile);
+  fprintf(stderr, "[libfake] Saved frame %d\n", frameNumber);
 
-  if (frameNumber > 60) {
-    fprintf(stderr, "Captured 60 frames, going down.\n");
-    fclose(outFile);
-    exit(0);
-  }
   frameNumber++;
 }
 
