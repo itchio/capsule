@@ -22,7 +22,7 @@ AR := ar
 
 test: all
 ifeq ($(UNAME_S),Linux)
-	LD_PRELOAD="${PWD}/libfake.so" ./main
+	LD_PRELOAD="${PWD}/libfake.so" MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=150 ./main
 endif
 ifeq ($(UNAME_S),Darwin)
 	DYLD_FORCE_FLAT_NAMESPACE=1 DYLD_INSERT_LIBRARIES="${PWD}/libfake.dylib" ./main
