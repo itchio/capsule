@@ -37,7 +37,7 @@ static void assert (const char *msg, int cond) {
 }
 
 #ifdef CAPSULE_LINUX
-void fake_glXSwapBuffers (void *a, void *b);
+void glXSwapBuffers (void *a, void *b);
 
 typedef int (*glXQueryExtensionType)(void*, void*, void*);
 glXQueryExtensionType _realglXQueryExtension;
@@ -45,7 +45,7 @@ glXQueryExtensionType _realglXQueryExtension;
 typedef void (*glXSwapBuffersType)(void*, void*);
 glXSwapBuffersType _realglXSwapBuffers;
 
-typedef void* (*glXGetProcAddressARBType)(char*);
+typedef void* (*glXGetProcAddressARBType)(const char*);
 glXGetProcAddressARBType _realglXGetProcAddressARB;
 #endif
 
@@ -83,7 +83,7 @@ void* glXGetProcAddressARB (const char *name) {
   if (strcmp(name, "glXSwapBuffers") == 0) {
     printf("[libfake] In glXGetProcAddressARB: %s\n", name);
     printf("[libfake] Returning fake glXSwapBuffers\n");
-    return &fake_glXSwapBuffers;
+    return &glXSwapBuffers;
   }
 
   printf("[libfake] In glXGetProcAddressARB: %s\n", name);
@@ -148,7 +148,7 @@ void captureFrame () {
 }
 
 #ifdef CAPSULE_LINUX
-void fake_glXSwapBuffers (void *a, void *b) {
+void glXSwapBuffers (void *a, void *b) {
   printf("[libfake] In glXSwapBuffers\n");
   captureFrame();
   return _realglXSwapBuffers(a, b);
