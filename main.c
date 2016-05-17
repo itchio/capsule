@@ -120,9 +120,22 @@ int main(int argc, char *argv[]) {
 
   glEnableVertexAttribArray(posAttrib);
 
+  GLint uniColor = glGetUniformLocation(shaderProgram, "triangleColor");
+
   SDL_Event windowEvent;
+  float x = 1.0;
+  float dx = 0.02f;
 
   for (;;) {
+    x += dx;
+    if (x < 0.0f) {
+      dx = -dx;
+      x = 0.0f;
+    } else if (x > 1.0f) {
+      dx = -dx;
+      x = 1.0f;
+    }
+
     if (SDL_PollEvent(&windowEvent)) {
       if (windowEvent.type == SDL_QUIT) {
         printf("[main] Window closed, quitting...\n");
@@ -131,18 +144,21 @@ int main(int argc, char *argv[]) {
     }
 
 
-    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.98f, 0.36f, 0.36f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBindVertexArray(vao);
+
+    glUniform3f(uniColor, 0.98f * x, 0.36f * x, 0.36f * x);
+
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
     printf("[main] Finally swapping buffers\n");
     SDL_GL_SwapWindow(window);
 
     printf("[main] Sleeping for a little while\n");
-    SDL_Delay(50);
+    SDL_Delay(16);
   }
 
   printf("[main] Deleting OpenGL context\n");
