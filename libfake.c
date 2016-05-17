@@ -124,10 +124,16 @@ void* glXGetProcAddressARB (const char *name) {
 void* dlopen (const char * filename, int flag) {
   ensure_real_dlopen();
 
-  if (strstr(filename, "libGL.so.1")) {
-    fprintf(stderr, "[libfake] Faking libGL for %s\n", filename);
+  if (filename != NULL && strstr(filename, "libGL.so.1")) {
     load_opengl(filename);
-    return real_dlopen(NULL, RTLD_NOW|RTLD_LOCAL);
+
+    if (!strcmp(filename, "libGL.so.1")) {
+      fprintf(stderr, "[libfake] Faking libGL for %s\n", filename);
+      return real_dlopen(NULL, RTLD_NOW|RTLD_LOCAL);
+    } else {
+      fprintf(stderr, "[libfake] Looks like a real libGL? %s\n", filename);
+      return real_dlopen(filename, flag);
+    }
   } else {
     pid_t pid = getpid();
     fprintf(stderr, "[libfake] pid %d, dlopen(%s, %d)\n", pid, filename, flag);
