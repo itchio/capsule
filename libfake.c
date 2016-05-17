@@ -73,6 +73,11 @@ void fake_glXSwapBuffers (void *a, void *b) {
   fwrite(frameData, 1, frameDataSize, f);
   fclose(f);
 
+  if (frameNumber > 60) {
+    fprintf("Captured 60 frames, going down.");
+    exit(0);
+  }
+
   return _realglXSwapBuffers(a, b);
 }
 
