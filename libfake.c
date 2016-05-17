@@ -16,6 +16,8 @@
 #define LIBSDL2_FILENAME "libSDL2.so"
 #define DEFAULT_OPENGL "libGL.so.1"
 #define CAPSULE_LINUX
+#include <sys/types.h>
+#include <unistd.h>
 
 #else
 #error Unsupported platform
@@ -99,14 +101,16 @@ void* glXGetProcAddressARB (const char *name) {
 
 #ifdef CAPSULE_LINUX
 void* dlopen (const char * filename, int flag) {
-  fprintf(stderr, "[libfake] In dlopen(%s, %d)\n", filename, flag);
-  ensure_real_dlopen();
-
-  if (strstr(filename, "libGL.so")) {
-    fprintf(stderr, "[libfake] Faking libGL\n");
+  /* if (strstr(filename, "libGL.so.1")) { */
+  if (!strcmp(filename, "libGL.so.1")) {
+    fprintf(stderr, "[libfake] Faking libGL for %s\n", filename);
     return real_dlopen(NULL, RTLD_NOW|RTLD_LOCAL);
   } else {
-    return real_dlopen(filename, flag);
+    pid_t pid = getpid();
+    fprintf(stderr, "[libfake] pid %d, dlopen(%s, %d)\n", pid, filename, flag);
+    void *res = real_dlopen(filename, flag);
+    fprintf(stderr, "[libfake] pid %d, dlopen(%s, %d): %p\n", pid, filename, flag, res);
+    return res;
   }
 }
 #endif
@@ -137,11 +141,14 @@ void libfake_captureFrame () {
 
   int viewport[4];
   _realglGetIntegerv(GL_VIEWPORT, viewport);
-  fprintf(stderr, "[libfake] Buffer resolution = %d %d %d %d\n", viewport[0], viewport[1], viewport[2], viewport[3]);
 
   if (viewport[2] > 0 && viewport[3] > 0) {
     width = viewport[2];
     height = viewport[3];
+  }
+
+  if (frameNumber % 60 == 0) {
+    fprintf(stderr, "[libfake] Saved %d frames. Current resolution = %dx%d\n", frameNumber, width, height);
   }
 
   size_t frameDataSize = width * height * components;
@@ -163,7 +170,6 @@ void libfake_captureFrame () {
 
   fwrite(frameData, 1, frameDataSize, outFile);
   fflush(outFile);
-  fprintf(stderr, "[libfake] Saved frame %d\n", frameNumber);
 
   frameNumber++;
 }
@@ -180,7 +186,8 @@ int glXQueryExtension (void *a, void *b, void *c) {
 #endif
 
 void __attribute__((constructor)) libfake_load() {
-  fprintf(stderr, "[libfake] Initializing...\n");
+  pid_t pid = getpid();
+  fprintf(stderr, "[libfake] Initializing (pid %d)...\n", pid);
 
 #ifdef CAPSULE_LINUX
   fprintf(stderr, "[libfake] Loading real OpenGL lib...\n");
