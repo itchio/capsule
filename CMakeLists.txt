@@ -35,3 +35,5 @@ target_link_libraries(main libfake ${SDL2_LIBRARY} glew)
 
 add_dependencies(libfake MologieDetours)
 add_dependencies(libfake glew)
+
+MESSAGE(STATUS "glew_LIBRARY:         " ${glew_LIBRARY})
