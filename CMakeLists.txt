@@ -2,11 +2,15 @@ cmake_minimum_required(VERSION 2.8)
 
 project(libfake)
 
+set(SDL2_DIR, deps)
+# includes cmake/FindSDL2.cmake
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
 find_package(OpenGL REQUIRED)
+find_package(SDL2 REQUIRED)
 
 set(MAIN_SRC
-    main.cpp
-    main.h)
+    main.cpp)
 
 set(LIBFAKE_SRC
     libfake.cpp

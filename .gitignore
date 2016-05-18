@@ -9,3 +9,5 @@
 *.rawvideo
 *.mp4
 *.swp
+/build
+/deps
