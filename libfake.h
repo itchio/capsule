@@ -44,7 +44,7 @@ extern "C" {
 LIBFAKE_DLL void libfake_hello ();
 #endif
 
-void libfake_captureFrame ();
+void __stdcall libfake_captureFrame ();
 
 #ifdef __cplusplus
 }

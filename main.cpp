@@ -34,6 +34,11 @@ void readFile (char *target, const char *path) {
 }
 
 int main(int argc, char **argv) {
+#ifdef _WIN32
+	setvbuf(stdout, NULL, _IONBF, 0);
+	setvbuf(stderr, NULL, _IONBF, 0);
+#endif
+
   fprintf(stderr, "[main] Calling SDL_Init\n");
   SDL_Init(SDL_INIT_VIDEO);
   fprintf(stderr, "[main] Returned from SDL_Init\n");

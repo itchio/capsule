@@ -10,7 +10,8 @@
 *.mp4
 *.swp
 /build
-/deps
+/deps32
+/deps64
 
 CMakeCache.txt
 CMakeFiles

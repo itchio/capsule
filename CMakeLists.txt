@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project(libfake)
 
-set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps)
+set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps32)
 
 # includes cmake/FindSDL2.cmake
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)

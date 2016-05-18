@@ -26,7 +26,7 @@
   fprintf(stderr, "[libfake] "); \
   fprintf(stderr, __VA_ARGS__); }
 
-static void assert (const char *msg, int cond) {
+static void __stdcall assert (const char *msg, int cond) {
   if (cond) {
     return;
   }
@@ -40,11 +40,11 @@ static void assert (const char *msg, int cond) {
 #define WIN32_LEAN_AND_MEAN 
 #include <windows.h>
 
-typedef void (*glSwapBuffersType)(void*);
+typedef void (__stdcall *glSwapBuffersType)(void*);
 glSwapBuffersType _glSwapBuffers;
 MologieDetours::Detour<glSwapBuffersType>* detour_glSwapBuffers = NULL;
 
-void _fakeSwapBuffers (void *hdc) {
+void __stdcall _fakeSwapBuffers (void *hdc) {
   libfake_log("In fakeSwapBuffers\n");
   libfake_captureFrame();
   // assert("Installed hook", Mhook_Unhook(_glSwapBuffers));
@@ -53,11 +53,44 @@ void _fakeSwapBuffers (void *hdc) {
   // assert("Installed hook", Mhook_SetHook(_glSwapBuffers, _fakeSwapBuffers));
 }
 
+LIBHANDLE gl_handle;
+
+typedef void(__stdcall *glReadPixelsType)(int, int, int, int, int, int, void*);
+glReadPixelsType _realglReadPixels;
+
+typedef void* (__stdcall *glGetIntegervType)(int, int*);
+glGetIntegervType _realglGetIntegerv;
+
+void __stdcall load_opengl (const char *);
+
+void __stdcall ensure_opengl() {
+	if (!gl_handle) {
+		load_opengl(DEFAULT_OPENGL);
+	}
+}
+
+void __stdcall ensure_own_opengl() {
+	if (!_realglGetIntegerv) {
+		ensure_opengl();
+		_realglGetIntegerv = (glGetIntegervType)dlsym(gl_handle, "glGetIntegerv");
+		return;
+		assert("Got glGetIntegerv address", !!_realglGetIntegerv);
+	}
+
+	if (!_realglReadPixels) {
+		ensure_opengl();
+		_realglReadPixels = (glReadPixelsType)dlsym(gl_handle, "glReadPixels");
+		assert("Got glReadPixels address", !!_realglReadPixels);
+	}
+}
+
 LIBFAKE_DLL void libfake_hello () {
   libfake_log("Hello from libfake!\n");
   HMODULE mh = GetModuleHandle("opengl32.dll");
   libfake_log("OpenGL handle: %p\n", mh);
   if (mh) {
+	ensure_own_opengl();
+
     _glSwapBuffers = (glSwapBuffersType) GetProcAddress(mh, "wglSwapBuffers");
     libfake_log("SwapBuffers handle: %p\n", _glSwapBuffers);
 
@@ -65,7 +98,7 @@ LIBFAKE_DLL void libfake_hello () {
       libfake_log("Attempting to install glSwapBuffers hook\n");
       // assert("Installed hook", Mhook_SetHook(_glSwapBuffers, _fakeSwapBuffers));
       try {
-        detour_glSwapBuffers = new MologieDetours::Detour<glSwapBuffersType>(_glSwapBuffers, _fakeSwapBuffers);
+        detour_glSwapBuffers = new MologieDetours::Detour<glSwapBuffersType>(_glSwapBuffers, &_fakeSwapBuffers);
       } catch (MologieDetours::DetourException &e) {
         libfake_log("While installing detour: %s\n", e.what());
       }
@@ -103,9 +136,8 @@ int frameNumber = 0;
 
 typedef void* (*dlopen_type)(const char*, int);
 dlopen_type real_dlopen;
-LIBHANDLE gl_handle;
 
-void ensure_real_dlopen() {
+void __stdcall ensure_real_dlopen() {
 #ifdef CAPSULE_LINUX
   if (!real_dlopen) {
     libfake_log("Getting real dlopen\n");
@@ -114,7 +146,7 @@ void ensure_real_dlopen() {
 #endif
 }
 
-void load_opengl (const char *openglPath) {
+void __stdcall load_opengl (const char *openglPath) {
   libfake_log("Loading real opengl from %s\n", openglPath);
 #ifdef CAPSULE_LINUX
   ensure_real_dlopen();
@@ -141,12 +173,6 @@ void load_opengl (const char *openglPath) {
   assert("Got glXGetProcAddressARB", !!_realglXGetProcAddressARB);
   libfake_log("Got glXGetProcAddressARB adress: %p\n", _realglXGetProcAddressARB);
 #endif
-}
-
-void ensure_opengl () {
-  if (!gl_handle) {
-    load_opengl(DEFAULT_OPENGL);
-  }
 }
 
 #ifdef CAPSULE_LINUX
@@ -192,25 +218,15 @@ void* dlopen (const char * filename, int flag) {
 #define GL_UNSIGNED_BYTE 5121
 #define GL_VIEWPORT 2978
 
-typedef void (*glReadPixelsType)(int, int, int, int, int, int, void*);
-glReadPixelsType _realglReadPixels;
-
-typedef void* (*glGetIntegervType)(int, int*);
-glGetIntegervType _realglGetIntegerv;
-
 FILE *outFile;
 
-void libfake_captureFrame () {
+void __stdcall libfake_captureFrame () {
   int width = FRAME_WIDTH;
   int height = FRAME_HEIGHT;
   int components = 3;
   int format = GL_RGB;
 
-  if (!_realglGetIntegerv) {
-    ensure_opengl();
-    _realglGetIntegerv = (glGetIntegervType) dlsym(gl_handle, "glGetIntegerv");
-    assert("Got glGetIntegerv address", !!_realglGetIntegerv);
-  }
+  ensure_own_opengl();
 
   int viewport[4];
   _realglGetIntegerv(GL_VIEWPORT, viewport);
@@ -227,12 +243,6 @@ void libfake_captureFrame () {
   size_t frameDataSize = width * height * components;
   if (!frameData) {
     frameData = (char*) malloc(frameDataSize);
-  }
-
-  if (!_realglReadPixels) {
-    ensure_opengl();
-    _realglReadPixels = (glReadPixelsType) dlsym(gl_handle, "glReadPixels");
-    assert("Got glReadPixels address", !!_realglReadPixels);
   }
   _realglReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
 
