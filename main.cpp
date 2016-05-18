@@ -89,7 +89,11 @@ int main(int argc, char **argv) {
   /* fprintf(stderr, "fragment source: %s\n", fragmentSource); */
 
   GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+#ifdef _WIN32
   glShaderSource(vertexShader, 1, (const GLchar* const*) &vertexSource, NULL);
+#else
+  glShaderSource(vertexShader, 1, (const GLchar**) &vertexSource, NULL);
+#endif
   glCompileShader(vertexShader);
 
   GLint status;
@@ -104,7 +108,11 @@ int main(int argc, char **argv) {
   }
 
   GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+#ifdef _WIN32
   glShaderSource(fragmentShader, 1, (const GLchar* const*) &fragmentSource, NULL);
+#else
+  glShaderSource(fragmentShader, 1, (const GLchar**) &fragmentSource, NULL);
+#endif
   glCompileShader(fragmentShader);
 
   glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);

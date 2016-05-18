@@ -1,6 +1,11 @@
 
 #pragma once
 
+#ifdef _WIN32
+#define CAPSULE_STDCALL __stdcall
+#else
+#define CAPSULE_STDCALL
+#endif
 
 #if defined(_WIN32)
 #define LIBSDL2_FILENAME "SDL2.dll"
@@ -27,13 +32,13 @@
 #endif
 
 #ifdef CAPSULE_WINDOWS
-#ifdef BUILD_LIBFAKE_DLL
-#define LIBFAKE_DLL __declspec(dllexport)
+#ifdef BUILD_CAPSULE_DLL
+#define CAPSULE_DLL __declspec(dllexport)
 #else
-#define LIBFAKE_DLL __declspec(dllimport)
+#define CAPSULE_DLL __declspec(dllimport)
 #endif
 #else
-#define LIBFAKE_DLL
+#define CAPSULE_DLL
 #endif
 
 #ifdef __cplusplus
@@ -41,10 +46,10 @@ extern "C" {
 #endif
 
 #ifdef CAPSULE_WINDOWS
-LIBFAKE_DLL void libfake_hello ();
+CAPSULE_DLL void libfake_hello ();
 #endif
 
-void __stdcall libfake_captureFrame ();
+void CAPSULE_STDCALL libfake_captureFrame ();
 
 #ifdef __cplusplus
 }

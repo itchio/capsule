@@ -1,8 +1,11 @@
 
 #define _GNU_SOURCE
 
-#include "libfake.h"
+#include "capsule.h"
+
+#ifdef _WIN32
 #include <NktHookLib.h>
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -16,6 +19,7 @@
 #define RTLD_LOCAL 0
 #define LIBHANDLE HMODULE
 #else
+
 #include <dlfcn.h>
 #define LIBHANDLE void*
 #endif
@@ -24,7 +28,7 @@
   fprintf(stderr, "[libfake] "); \
   fprintf(stderr, __VA_ARGS__); }
 
-static void __stdcall assert (const char *msg, int cond) {
+static void CAPSULE_STDCALL assert (const char *msg, int cond) {
   if (cond) {
     return;
   }
@@ -34,40 +38,24 @@ static void __stdcall assert (const char *msg, int cond) {
   exit(1);
 }
 
-#ifdef CAPSULE_WINDOWS
-#define WIN32_LEAN_AND_MEAN 
-#include <windows.h>
-
-typedef void (__stdcall *glSwapBuffersType)(void*);
-glSwapBuffersType _glSwapBuffers;
-
-glSwapBuffersType fnSwapBuffers;
-
-void __stdcall _fakeSwapBuffers (void *hdc) {
-  libfake_log("In fakeSwapBuffers\n");
-  libfake_captureFrame();
-  fnSwapBuffers(hdc);
-}
-
 LIBHANDLE gl_handle;
 
-typedef void(__stdcall *glReadPixelsType)(int, int, int, int, int, int, void*);
+typedef void(CAPSULE_STDCALL *glReadPixelsType)(int, int, int, int, int, int, void*);
 glReadPixelsType _realglReadPixels;
 
-typedef void* (__stdcall *glGetIntegervType)(int, int*);
+typedef void* (CAPSULE_STDCALL *glGetIntegervType)(int, int*);
 glGetIntegervType _realglGetIntegerv;
 
-CNktHookLib cHookMgr;
 
-void __stdcall load_opengl (const char *);
+void CAPSULE_STDCALL load_opengl (const char *);
 
-void __stdcall ensure_opengl() {
+void CAPSULE_STDCALL ensure_opengl() {
 	if (!gl_handle) {
 		load_opengl(DEFAULT_OPENGL);
 	}
 }
 
-void __stdcall ensure_own_opengl() {
+void CAPSULE_STDCALL ensure_own_opengl() {
 	if (!_realglGetIntegerv) {
 		ensure_opengl();
 		_realglGetIntegerv = (glGetIntegervType)dlsym(gl_handle, "glGetIntegerv");
@@ -82,7 +70,24 @@ void __stdcall ensure_own_opengl() {
 	}
 }
 
-LIBFAKE_DLL void libfake_hello () {
+#ifdef CAPSULE_WINDOWS
+#define WIN32_LEAN_AND_MEAN 
+#include <windows.h>
+
+typedef void (CAPSULE_STDCALL *glSwapBuffersType)(void*);
+glSwapBuffersType _glSwapBuffers;
+
+glSwapBuffersType fnSwapBuffers;
+
+void CAPSULE_STDCALL _fakeSwapBuffers (void *hdc) {
+  libfake_log("In fakeSwapBuffers\n");
+  libfake_captureFrame();
+  fnSwapBuffers(hdc);
+}
+
+CNktHookLib cHookMgr;
+
+CAPSULE_DLL void libfake_hello () {
   libfake_log("Hello from libfake!\n");
   HMODULE mh = GetModuleHandle("opengl32.dll");
   libfake_log("OpenGL handle: %p\n", mh);
@@ -129,7 +134,7 @@ LIBFAKE_DLL void libfake_hello () {
   libfake_log("Direct3D9 handle: %p\n", m9);
 }
 
-void __stdcall DllMain(void *hinstDLL, int reason, void *reserved) {
+void CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
   libfake_log("DllMain called! reason = %d\n", reason);
 }
 #endif
@@ -155,16 +160,16 @@ int frameNumber = 0;
 typedef void* (*dlopen_type)(const char*, int);
 dlopen_type real_dlopen;
 
-void __stdcall ensure_real_dlopen() {
+void CAPSULE_STDCALL ensure_real_dlopen() {
 #ifdef CAPSULE_LINUX
   if (!real_dlopen) {
     libfake_log("Getting real dlopen\n");
-    real_dlopen = dlsym(RTLD_NEXT, "dlopen");
+    real_dlopen = (dlopen_type)dlsym(RTLD_NEXT, "dlopen");
   }
 #endif
 }
 
-void __stdcall load_opengl (const char *openglPath) {
+void CAPSULE_STDCALL load_opengl (const char *openglPath) {
   libfake_log("Loading real opengl from %s\n", openglPath);
 #ifdef CAPSULE_LINUX
   ensure_real_dlopen();
@@ -177,17 +182,17 @@ void __stdcall load_opengl (const char *openglPath) {
 
 #ifdef CAPSULE_LINUX
   libfake_log("Getting glXQueryExtension adress\n");
-  _realglXQueryExtension = dlsym(gl_handle, "glXQueryExtension");
+  _realglXQueryExtension = (glXQueryExtensionType)dlsym(gl_handle, "glXQueryExtension");
   assert("Got glXQueryExtension", !!_realglXQueryExtension);
   libfake_log("Got glXQueryExtension adress: %p\n", _realglXQueryExtension);
 
   libfake_log("Getting glXSwapBuffers adress\n");
-  _realglXSwapBuffers = dlsym(gl_handle, "glXSwapBuffers");
+  _realglXSwapBuffers = (glXSwapBuffersType)dlsym(gl_handle, "glXSwapBuffers");
   assert("Got glXSwapBuffers", !!_realglXSwapBuffers);
   libfake_log("Got glXSwapBuffers adress: %p\n", _realglXSwapBuffers);
 
   libfake_log("Getting glXGetProcAddressARB address\n");
-  _realglXGetProcAddressARB = dlsym(gl_handle, "glXGetProcAddressARB");
+  _realglXGetProcAddressARB = (glXGetProcAddressARBType)dlsym(gl_handle, "glXGetProcAddressARB");
   assert("Got glXGetProcAddressARB", !!_realglXGetProcAddressARB);
   libfake_log("Got glXGetProcAddressARB adress: %p\n", _realglXGetProcAddressARB);
 #endif
@@ -198,7 +203,7 @@ void* glXGetProcAddressARB (const char *name) {
   if (strcmp(name, "glXSwapBuffers") == 0) {
     libfake_log("In glXGetProcAddressARB: %s\n", name);
     libfake_log("Returning fake glXSwapBuffers\n");
-    return &glXSwapBuffers;
+    return (void*) &glXSwapBuffers;
   }
 
   /* libfake_log("In glXGetProcAddressARB: %s\n", name); */
@@ -238,7 +243,7 @@ void* dlopen (const char * filename, int flag) {
 
 FILE *outFile;
 
-void __stdcall libfake_captureFrame () {
+void CAPSULE_STDCALL libfake_captureFrame () {
   int width = FRAME_WIDTH;
   int height = FRAME_HEIGHT;
   int components = 3;
