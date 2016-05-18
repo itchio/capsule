@@ -1,5 +1,9 @@
 
 #define _GNU_SOURCE
+#ifdef _WIN32
+#include <detours.h>
+#endif
+
 #include "libfake.h"
 
 #include <stdlib.h>

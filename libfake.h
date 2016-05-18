@@ -7,7 +7,7 @@
 #define DEFAULT_OPENGL "OPENGL32.DLL"
 #define CAPSULE_WINDOWS
 
-#define getpid(a) (0)
+#define getpid(a) 0
 typedef int pid_t;
 
 #elif defined(__APPLE__)
