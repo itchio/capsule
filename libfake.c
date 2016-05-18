@@ -53,6 +53,7 @@ typedef struct _CHook {
   uint8_t old_code[LIBFAKE_JUMP_SIZE];
   uint8_t jump[LIBFAKE_JUMP_SIZE];
 } CHook;
+static CHook *swapBuffersHook;
 
 CHook* CHook_new () {
   fprintf(stdout, "[libfake] Creating new chook");
@@ -83,15 +84,35 @@ int CHook_install (CHook *h, void *pFunc, void *pFuncNew) {
   memcpy(&h->jump[1], &dwAddr, sizeof(dwAddr));
 
   memcpy(h->old_code, pFunc, sizeof(h->old_code));
+  for (int i = 0; i < sizeof(h->old_code); i++) {
+    fprintf(stderr, "[libfake] Old code: %X", h->old_code[i]);
+  }
   memcpy(pFunc, h->jump, sizeof(h->jump));
 
   fprintf(stderr, "[libfake] JMP-hook planted");
   return 1;
 }
 
-void __stdcall _fakeSwapBuffers () {
+void CHook_suspend (CHook *h, void *pFunc) {
+  assert("has pFunc", !!pFunc);
+  memcpy(pFunc, h->old_code, sizeof(h->old_code));
+}
+
+void CHook_resume (CHook *h, void *pFunc) {
+  assert("has pFunc", !!pFunc);
+  assert("has pFunc", CHook_is_installed(h));
+  memcpy(pFunc, h->jump, sizeof(h->jump));
+}
+
+typedef void (*glSwapBuffersType)(void*);
+glSwapBuffersType _glSwapBuffers;
+
+void __stdcall _fakeSwapBuffers (void *hdc) {
   fprintf(stderr, "[libfake] In fakeSwapBuffers\n");
   libfake_captureFrame();
+  CHook_suspend(swapBuffersHook, _glSwapBuffers);
+  _glSwapBuffers(hdc);
+  CHook_resume(swapBuffersHook, _glSwapBuffers);
 }
 
 void __stdcall libfake_hello () {
@@ -99,13 +120,13 @@ void __stdcall libfake_hello () {
   HMODULE mh = GetModuleHandle("opengl32.dll");
   fprintf(stderr, "[libfake] OpenGL handle: %p\n", mh);
   if (mh) {
-    void *_glSwapBuffers = GetProcAddress(mh, "wglSwapBuffers");
+    _glSwapBuffers = (glSwapBuffersType) GetProcAddress(mh, "wglSwapBuffers");
     fprintf(stderr, "[libfake] SwapBuffers handle: %p\n", _glSwapBuffers);
 
     if (_glSwapBuffers) {
       fprintf(stderr, "[libfake] Attempting to install glSwapBuffers hook\n");
-      CHook *h = CHook_new();
-      CHook_install(h, _glSwapBuffers, _fakeSwapBuffers);
+      swapBuffersHook = CHook_new();
+      CHook_install(swapBuffersHook, _glSwapBuffers, _fakeSwapBuffers);
     }
   }
 
