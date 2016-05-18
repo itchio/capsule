@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <SDL.h>
+#include <string.h>
 
 #define GLEW_STATIC
 #include <GL/glew.h>
