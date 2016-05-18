@@ -2,7 +2,12 @@
 #include <stdio.h>
 #include <SDL2/SDL.h>
 
+#define GLEW_STATIC
 #include <GL/glew.h>
+
+#ifdef _WIN32
+#include "libfake.h"
+#endif
 
 #define SHADER_LEN 4096
 
@@ -26,10 +31,6 @@ void readFile (char *target, const char *path) {
   fclose(f);
   return;
 }
-
-#ifdef _WIN32
-void __stdcall libfake_hello();
-#endif
 
 int main(int argc, char **argv) {
   fprintf(stderr, "[main] Calling SDL_Init\n");
@@ -71,18 +72,18 @@ int main(int argc, char **argv) {
   fprintf(stderr, "[main] Uploading vertex data to GPU...\n");
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  char* vertexSource = malloc(SHADER_LEN);
+  char* vertexSource = (char*) malloc(SHADER_LEN);
   memset(vertexSource, 0, SHADER_LEN);
   readFile(vertexSource, "shader.vert");
   /* fprintf(stderr, "vertex source: %s\n", vertexSource); */
 
-  char* fragmentSource = malloc(SHADER_LEN);
+  char* fragmentSource = (char*) malloc(SHADER_LEN);
   memset(fragmentSource, 0, SHADER_LEN);
   readFile(fragmentSource, "shader.frag");
   /* fprintf(stderr, "fragment source: %s\n", fragmentSource); */
 
   GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
-  glShaderSource(vertexShader, 1, (void*) &vertexSource, NULL);
+  glShaderSource(vertexShader, 1, (const GLchar* const*) &vertexSource, NULL);
   glCompileShader(vertexShader);
 
   GLint status;
@@ -97,7 +98,7 @@ int main(int argc, char **argv) {
   }
 
   GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-  glShaderSource(fragmentShader, 1, (void*) &fragmentSource, NULL);
+  glShaderSource(fragmentShader, 1, (const GLchar* const*) &fragmentSource, NULL);
   glCompileShader(fragmentShader);
 
   glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
