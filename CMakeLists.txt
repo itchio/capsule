@@ -6,12 +6,13 @@ set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps64)
 
 # includes cmake/FindSDL2.cmake
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+set(CMAKE_FIND_FRAMEWORK LAST)
 
 find_package(OpenGL REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(GLEW REQUIRED)
 
-set(CAPSULE_INCLUDE_DIRS ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${PROJECT_SOURCE_DIR})
+set(CAPSULE_INCLUDE_DIRS ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${PROJECT_SOURCE_DIR} SYSTEM)
 
 if(WIN32)
   list(APPEND CAPSULE_INCLUDE_DIRS /../Deviare-InProc/Include)
@@ -28,13 +29,18 @@ set(CAPSULE_SRC
     capsule.h)
 
 if(APPLE)
-  list(APPEND MAIN_SRC capsule_cocoa.m)
+  list(APPEND CAPSULE_SRC capsule_cocoa.m)
 endif()
 
 add_library(capsule SHARED ${CAPSULE_SRC})
 
 if(WIN32)
-target_link_libraries(capsule ../../Deviare-InProc/Libs/2015/NktHookLib64_Debug)
+  target_link_libraries(capsule ../../Deviare-InProc/Libs/2015/NktHookLib64_Debug)
+endif()
+
+if(APPLE)
+  find_library(COCOA_LIBRARY Cocoa)
+  target_link_libraries(capsule ${COCOA_LIBRARY})
 endif()
 
 add_executable(main ${MAIN_SRC})
@@ -45,3 +51,5 @@ target_link_libraries(main capsule)
 endif()
 
 add_dependencies(main capsule)
+
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -M")

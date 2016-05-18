@@ -66,8 +66,8 @@
 #  License text for the above reference.)
 
 SET(SDL2_SEARCH_PATHS
-	~/Library/Frameworks
-	/Library/Frameworks
+        /Frameworks
+        ~/Frameworks
 	/usr/local
 	/usr
 	/sw # Fink

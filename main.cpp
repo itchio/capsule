@@ -7,7 +7,7 @@
 #include <GL/glew.h>
 
 #ifdef _WIN32
-#include "libfake.h"
+#include "capsule.h"
 #endif
 
 #define SHADER_LEN 4096
@@ -49,7 +49,7 @@ int main(int argc, char **argv) {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
-  SDL_Window* window = SDL_CreateWindow("opengl-inject-poc", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
+  SDL_Window* window = SDL_CreateWindow("example opengl game", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
   assert("Window created correctly", !!window);
 
   SDL_GLContext context = SDL_GL_CreateContext(window);
@@ -147,7 +147,7 @@ int main(int argc, char **argv) {
   float dx = 0.02f;
 
 #ifdef _WIN32
-  libfake_hello();
+  capsule_hello();
 #endif
 
   for (;;) {

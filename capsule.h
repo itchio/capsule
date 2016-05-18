@@ -12,9 +12,6 @@
 #define DEFAULT_OPENGL "OPENGL32.DLL"
 #define CAPSULE_WINDOWS
 
-#define getpid(a) 0
-#define pid_t int
-
 #elif defined(__APPLE__)
 #define LIBSDL2_FILENAME "libSDL2.dylib"
 #define DEFAULT_OPENGL "/System/Library/Frameworks/OpenGL.framework/Libraries/libGL.dylib"
@@ -24,12 +21,19 @@
 #define LIBSDL2_FILENAME "libSDL2.so"
 #define DEFAULT_OPENGL "libGL.so.1"
 #define CAPSULE_LINUX
-#include <sys/types.h>
-#include <unistd.h>
 
 #else
 #error Unsupported platform
 #endif
+
+#if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
+#include <sys/types.h>
+#include <unistd.h>
+#else
+#define getpid(a) 0
+#define pid_t int
+#endif
+
 
 #ifdef CAPSULE_WINDOWS
 #ifdef BUILD_CAPSULE_DLL
@@ -46,10 +50,10 @@ extern "C" {
 #endif
 
 #ifdef CAPSULE_WINDOWS
-CAPSULE_DLL void libfake_hello ();
+CAPSULE_DLL void capsule_hello ();
 #endif
 
-void CAPSULE_STDCALL libfake_captureFrame ();
+void CAPSULE_STDCALL capsule_captureFrame ();
 
 void* glXGetProcAddressARB (const char*);
 void glXSwapBuffers (void *a, void *b);
