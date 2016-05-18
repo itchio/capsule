@@ -1,6 +1,4 @@
 
-#define _GNU_SOURCE
-
 #include "capsule.h"
 
 #ifdef _WIN32
@@ -245,6 +243,11 @@ void* dlopen (const char * filename, int flag) {
 FILE *outFile;
 
 void CAPSULE_STDCALL capsule_captureFrame () {
+  frameNumber++;
+  if (frameNumber < 120) {
+    return;
+  }
+
   int width = FRAME_WIDTH;
   int height = FRAME_HEIGHT;
   int components = 3;
@@ -277,8 +280,6 @@ void CAPSULE_STDCALL capsule_captureFrame () {
 
   fwrite(frameData, 1, frameDataSize, outFile);
   fflush(outFile);
-
-  frameNumber++;
 }
 
 #ifdef CAPSULE_LINUX
