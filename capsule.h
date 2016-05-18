@@ -51,6 +51,10 @@ CAPSULE_DLL void libfake_hello ();
 
 void CAPSULE_STDCALL libfake_captureFrame ();
 
+void* glXGetProcAddressARB (const char*);
+void glXSwapBuffers (void *a, void *b);
+int glXQueryExtension (void *a, void *b, void *c);
+
 #ifdef __cplusplus
 }
 #endif

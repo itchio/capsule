@@ -24,17 +24,17 @@
 #define LIBHANDLE void*
 #endif
 
-#define libfake_log(...) {\
-  fprintf(stderr, "[libfake] "); \
+#define capsule_log(...) {\
+  fprintf(stderr, "[capsule] "); \
   fprintf(stderr, __VA_ARGS__); }
 
 static void CAPSULE_STDCALL assert (const char *msg, int cond) {
   if (cond) {
     return;
   }
-  libfake_log("Assertion failed: %s\n", msg);
+  capsule_log("Assertion failed: %s\n", msg);
   /* const char *err = SDL_GetError(); */
-  /* libfake_log("[main] Last SDL GetError: %s\n", err); */
+  /* capsule_log("[main] Last SDL GetError: %s\n", err); */
   exit(1);
 }
 
@@ -59,7 +59,6 @@ void CAPSULE_STDCALL ensure_own_opengl() {
 	if (!_realglGetIntegerv) {
 		ensure_opengl();
 		_realglGetIntegerv = (glGetIntegervType)dlsym(gl_handle, "glGetIntegerv");
-		return;
 		assert("Got glGetIntegerv address", !!_realglGetIntegerv);
 	}
 
@@ -80,25 +79,25 @@ glSwapBuffersType _glSwapBuffers;
 glSwapBuffersType fnSwapBuffers;
 
 void CAPSULE_STDCALL _fakeSwapBuffers (void *hdc) {
-  libfake_log("In fakeSwapBuffers\n");
-  libfake_captureFrame();
+  capsule_log("In fakeSwapBuffers\n");
+  capsule_captureFrame();
   fnSwapBuffers(hdc);
 }
 
 CNktHookLib cHookMgr;
 
-CAPSULE_DLL void libfake_hello () {
-  libfake_log("Hello from libfake!\n");
+CAPSULE_DLL void capsule_hello () {
+  capsule_log("Hello from capsule!\n");
   HMODULE mh = GetModuleHandle("opengl32.dll");
-  libfake_log("OpenGL handle: %p\n", mh);
+  capsule_log("OpenGL handle: %p\n", mh);
   if (mh) {
 	ensure_own_opengl();
 
     _glSwapBuffers = (glSwapBuffersType) GetProcAddress(mh, "wglSwapBuffers");
-    libfake_log("SwapBuffers handle: %p\n", _glSwapBuffers);
+    capsule_log("SwapBuffers handle: %p\n", _glSwapBuffers);
 
     if (_glSwapBuffers) {
-      libfake_log("Attempting to install glSwapBuffers hook\n");
+      capsule_log("Attempting to install glSwapBuffers hook\n");
 	  
 	  cHookMgr.SetEnableDebugOutput(TRUE);
 
@@ -112,30 +111,30 @@ CAPSULE_DLL void libfake_hello () {
 		  ::MessageBoxW(0, L"Error: Cannot get address of wglSwapBuffers", L"HookTest", MB_OK | MB_ICONERROR);
 		  exit(1);
 	  }
-	  libfake_log("Ours = %p, theirs = %p\n", _glSwapBuffers, fnOrigSwapBuffers);
+	  capsule_log("Ours = %p, theirs = %p\n", _glSwapBuffers, fnOrigSwapBuffers);
 
 	  size_t hookId;
 	  int dwOsErr = cHookMgr.Hook(&hookId, (PVOID*) &fnSwapBuffers, fnOrigSwapBuffers, _fakeSwapBuffers, 0);
 
-	  libfake_log("Well I think we're doing fine! err = %d\n", dwOsErr);
+	  capsule_log("Well I think we're doing fine! err = %d\n", dwOsErr);
 
       // assert("Installed hook", Mhook_SetHook(_glSwapBuffers, _fakeSwapBuffers));
       // try {
       //   detour_glSwapBuffers = new MologieDetours::Detour<glSwapBuffersType>(_glSwapBuffers, &_fakeSwapBuffers);
       // } catch (MologieDetours::DetourException &e) {
-      //   libfake_log("While installing detour: %s\n", e.what());
+      //   capsule_log("While installing detour: %s\n", e.what());
       // }
     }
   }
 
   HMODULE m8 = GetModuleHandle("d3d8.dll");
-  libfake_log("Direct3D8 handle: %p\n", m8);
+  capsule_log("Direct3D8 handle: %p\n", m8);
   HMODULE m9 = GetModuleHandle("d3d9.dll");
-  libfake_log("Direct3D9 handle: %p\n", m9);
+  capsule_log("Direct3D9 handle: %p\n", m9);
 }
 
 void CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
-  libfake_log("DllMain called! reason = %d\n", reason);
+  capsule_log("DllMain called! reason = %d\n", reason);
 }
 #endif
 
@@ -163,14 +162,14 @@ dlopen_type real_dlopen;
 void CAPSULE_STDCALL ensure_real_dlopen() {
 #ifdef CAPSULE_LINUX
   if (!real_dlopen) {
-    libfake_log("Getting real dlopen\n");
+    capsule_log("Getting real dlopen\n");
     real_dlopen = (dlopen_type)dlsym(RTLD_NEXT, "dlopen");
   }
 #endif
 }
 
 void CAPSULE_STDCALL load_opengl (const char *openglPath) {
-  libfake_log("Loading real opengl from %s\n", openglPath);
+  capsule_log("Loading real opengl from %s\n", openglPath);
 #ifdef CAPSULE_LINUX
   ensure_real_dlopen();
   gl_handle = real_dlopen(openglPath, (RTLD_NOW|RTLD_LOCAL));
@@ -178,38 +177,40 @@ void CAPSULE_STDCALL load_opengl (const char *openglPath) {
   gl_handle = dlopen(openglPath, (RTLD_NOW|RTLD_LOCAL));
 #endif
   assert("Loaded real OpenGL lib", !!gl_handle);
-  libfake_log("Loaded opengl!\n");
+  capsule_log("Loaded opengl!\n");
 
 #ifdef CAPSULE_LINUX
-  libfake_log("Getting glXQueryExtension adress\n");
+  capsule_log("Getting glXQueryExtension adress\n");
   _realglXQueryExtension = (glXQueryExtensionType)dlsym(gl_handle, "glXQueryExtension");
   assert("Got glXQueryExtension", !!_realglXQueryExtension);
-  libfake_log("Got glXQueryExtension adress: %p\n", _realglXQueryExtension);
+  capsule_log("Got glXQueryExtension adress: %p\n", _realglXQueryExtension);
 
-  libfake_log("Getting glXSwapBuffers adress\n");
+  capsule_log("Getting glXSwapBuffers adress\n");
   _realglXSwapBuffers = (glXSwapBuffersType)dlsym(gl_handle, "glXSwapBuffers");
   assert("Got glXSwapBuffers", !!_realglXSwapBuffers);
-  libfake_log("Got glXSwapBuffers adress: %p\n", _realglXSwapBuffers);
+  capsule_log("Got glXSwapBuffers adress: %p\n", _realglXSwapBuffers);
 
-  libfake_log("Getting glXGetProcAddressARB address\n");
+  capsule_log("Getting glXGetProcAddressARB address\n");
   _realglXGetProcAddressARB = (glXGetProcAddressARBType)dlsym(gl_handle, "glXGetProcAddressARB");
   assert("Got glXGetProcAddressARB", !!_realglXGetProcAddressARB);
-  libfake_log("Got glXGetProcAddressARB adress: %p\n", _realglXGetProcAddressARB);
+  capsule_log("Got glXGetProcAddressARB adress: %p\n", _realglXGetProcAddressARB);
 #endif
 }
 
 #ifdef CAPSULE_LINUX
+extern "C" {
 void* glXGetProcAddressARB (const char *name) {
   if (strcmp(name, "glXSwapBuffers") == 0) {
-    libfake_log("In glXGetProcAddressARB: %s\n", name);
-    libfake_log("Returning fake glXSwapBuffers\n");
+    capsule_log("In glXGetProcAddressARB: %s\n", name);
+    capsule_log("Returning fake glXSwapBuffers\n");
     return (void*) &glXSwapBuffers;
   }
 
-  /* libfake_log("In glXGetProcAddressARB: %s\n", name); */
+  capsule_log("In glXGetProcAddressARB: %s\n", name);
 
   ensure_opengl();
   return _realglXGetProcAddressARB(name);
+}
 }
 #endif
 
@@ -221,17 +222,17 @@ void* dlopen (const char * filename, int flag) {
     load_opengl(filename);
 
     if (!strcmp(filename, "libGL.so.1")) {
-      libfake_log("Faking libGL for %s\n", filename);
+      capsule_log("Faking libGL for %s\n", filename);
       return real_dlopen(NULL, RTLD_NOW|RTLD_LOCAL);
     } else {
-      libfake_log("Looks like a real libGL? %s\n", filename);
+      capsule_log("Looks like a real libGL? %s\n", filename);
       return real_dlopen(filename, flag);
     }
   } else {
     pid_t pid = getpid();
-    libfake_log("pid %d, dlopen(%s, %d)\n", pid, filename, flag);
+    capsule_log("pid %d, dlopen(%s, %d)\n", pid, filename, flag);
     void *res = real_dlopen(filename, flag);
-    libfake_log("pid %d, dlopen(%s, %d): %p\n", pid, filename, flag, res);
+    capsule_log("pid %d, dlopen(%s, %d): %p\n", pid, filename, flag, res);
     return res;
   }
 }
@@ -243,7 +244,7 @@ void* dlopen (const char * filename, int flag) {
 
 FILE *outFile;
 
-void CAPSULE_STDCALL libfake_captureFrame () {
+void CAPSULE_STDCALL capsule_captureFrame () {
   int width = FRAME_WIDTH;
   int height = FRAME_HEIGHT;
   int components = 3;
@@ -260,7 +261,7 @@ void CAPSULE_STDCALL libfake_captureFrame () {
   }
 
   if (frameNumber % 60 == 0) {
-    libfake_log("Saved %d frames. Current resolution = %dx%d\n", frameNumber, width, height);
+    capsule_log("Saved %d frames. Current resolution = %dx%d\n", frameNumber, width, height);
   }
 
   size_t frameDataSize = width * height * components;
@@ -281,30 +282,32 @@ void CAPSULE_STDCALL libfake_captureFrame () {
 }
 
 #ifdef CAPSULE_LINUX
+extern "C" {
 void glXSwapBuffers (void *a, void *b) {
-  libfake_log("About to capture frame..\n");
-  libfake_captureFrame();
-  libfake_log("About to call real swap buffers..\n");
+  capsule_log("About to capture frame..\n");
+  capsule_captureFrame();
+  capsule_log("About to call real swap buffers..\n");
   return _realglXSwapBuffers(a, b);
 }
 
 int glXQueryExtension (void *a, void *b, void *c) {
   return _realglXQueryExtension(a, b, c);
 }
+}
 #endif
 
 #ifndef CAPSULE_WINDOWS
-void __attribute__((constructor)) libfake_load() {
+void __attribute__((constructor)) capsule_load() {
   pid_t pid = getpid();
-  libfake_log("Initializing (pid %d)...\n", pid);
+  capsule_log("Initializing (pid %d)...\n", pid);
 
 #ifdef CAPSULE_LINUX
-  libfake_log("LD_LIBRARY_PATH: %s\n", getenv("LD_LIBRARY_PATH"));
+  capsule_log("LD_LIBRARY_PATH: %s\n", getenv("LD_LIBRARY_PATH"));
 #endif
 }
 
-void __attribute__((destructor)) libfake_unload() {
-  libfake_log("Winding down...\n");
+void __attribute__((destructor)) capsule_unload() {
+  capsule_log("Winding down...\n");
 }
 #endif
 
