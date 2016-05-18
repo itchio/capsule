@@ -43,8 +43,22 @@ static void assert (const char *msg, int cond) {
 }
 
 #ifdef CAPSULE_WINDOWS
+#define WIN32_LEAN_AND_MEAN 
+#include <windows.h>
+
 void __stdcall libfake_hello () {
   fprintf(stderr, "[libfake] Hello from libfake!\n");
+  HMODULE mh = GetModuleHandle("opengl32.dll");
+  fprintf(stderr, "[libfake] OpenGL handle: %p\n", mh);
+  if (mh) {
+    void *_glSwapBuffers = GetProcAddress(mh, "wglSwapBuffers");
+    fprintf(stderr, "[libfake] SwapBuffers handle: %p\n", _glSwapBuffers);
+  }
+
+  HMODULE m8 = GetModuleHandle("d3d8.dll");
+  fprintf(stderr, "[libfake] Direct3D8 handle: %p\n", m8);
+  HMODULE m9 = GetModuleHandle("d3d9.dll");
+  fprintf(stderr, "[libfake] Direct3D9 handle: %p\n", m9);
 }
 
 void __stdcall DllMain(void *hinstDLL, int reason, void *reserved) {
