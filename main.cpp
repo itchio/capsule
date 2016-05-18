@@ -1,6 +1,6 @@
 
 #include <stdio.h>
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #define GLEW_STATIC
 #include <GL/glew.h>
@@ -16,8 +16,8 @@ static void assert (const char *msg, int cond) {
     return;
   }
   fprintf(stderr, "[main] Assertion failed: %s\n", msg);
-  const char *err = SDL_GetError();
-  fprintf(stderr, "[main] Last SDL GetError: %s\n", err);
+  // const char *err = SDL_GetError();
+  // fprintf(stderr, "[main] Last SDL GetError: %s\n", err);
   exit(1);
 }
 

@@ -28,9 +28,9 @@
 
 #ifdef CAPSULE_WINDOWS
 #ifdef BUILD_LIBFAKE_DLL
-#define LIBFAKE_DLL __stdcall __declspec(dllexport)
+#define LIBFAKE_DLL __declspec(dllexport)
 #else
-#define LIBFAKE_DLL __stdcall __declspec(dllimport)
+#define LIBFAKE_DLL __declspec(dllimport)
 #endif
 #else
 #define LIBFAKE_DLL
@@ -41,7 +41,7 @@ extern "C" {
 #endif
 
 #ifdef CAPSULE_WINDOWS
-void LIBFAKE_DLL libfake_hello ();
+LIBFAKE_DLL void libfake_hello ();
 #endif
 
 void libfake_captureFrame ();

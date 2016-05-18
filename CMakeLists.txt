@@ -9,8 +9,14 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(OpenGL REQUIRED)
 find_package(SDL2 REQUIRED)
 
+add_subdirectory(MologieDetours)
+
+include_directories(SYSTEM ${SDL2_INCLUDE_DIR} MologieDetours)
+
 set(MAIN_SRC
     main.cpp)
+
+add_definitions(-DBUILD_LIBFAKE_DLL)
 
 set(LIBFAKE_SRC
     libfake.cpp
@@ -21,5 +27,7 @@ if(APPLE)
 endif()
 
 add_library(libfake ${LIBFAKE_SRC})
+target_link_libraries(libfake MologieDetours)
+
 add_executable(main ${MAIN_SRC})
 target_link_libraries(main libfake)

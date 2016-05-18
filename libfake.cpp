@@ -8,9 +8,19 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-#include <dlfcn.h>
 #include <stdint.h>
 #include <string.h>
+
+#if defined(CAPSULE_WINDOWS)
+#define dlopen(a, b) LoadLibrary((a))
+#define dlsym GetProcAddress
+#define RTLD_NOW 0
+#define RTLD_LOCAL 0
+#define LIBHANDLE HMODULE
+#else
+#include <dlfcn.h>
+#define LIBHANDLE void*
+#endif
 
 #define libfake_log(...) {\
   fprintf(stderr, "[libfake] "); \
@@ -43,7 +53,7 @@ void _fakeSwapBuffers (void *hdc) {
   // assert("Installed hook", Mhook_SetHook(_glSwapBuffers, _fakeSwapBuffers));
 }
 
-void LIBFAKE_DLL libfake_hello () {
+LIBFAKE_DLL void libfake_hello () {
   libfake_log("Hello from libfake!\n");
   HMODULE mh = GetModuleHandle("opengl32.dll");
   libfake_log("OpenGL handle: %p\n", mh);
@@ -93,7 +103,7 @@ int frameNumber = 0;
 
 typedef void* (*dlopen_type)(const char*, int);
 dlopen_type real_dlopen;
-void *gl_handle;
+LIBHANDLE gl_handle;
 
 void ensure_real_dlopen() {
 #ifdef CAPSULE_LINUX
@@ -250,6 +260,7 @@ int glXQueryExtension (void *a, void *b, void *c) {
 }
 #endif
 
+#ifndef CAPSULE_WINDOWS
 void __attribute__((constructor)) libfake_load() {
   pid_t pid = getpid();
   libfake_log("Initializing (pid %d)...\n", pid);
@@ -262,4 +273,5 @@ void __attribute__((constructor)) libfake_load() {
 void __attribute__((destructor)) libfake_unload() {
   libfake_log("Winding down...\n");
 }
+#endif
 
