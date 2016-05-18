@@ -29,7 +29,7 @@ endif
 ifeq (${OS},Windows_NT)
 	MAIN_LDFLAGS := ${MAIN_LDFLAGS} -lopengl32 -L . -lfake -g
 	LIB_CFLAGS := -DBUILD_LIBFAKE_DLL -I${PWD}/../MologieDetours/
-        LIB_LDFLAGS := -shared -ldl -g -L${PWD}/../MologieDetours/build/ -lMologieDetours
+        LIB_LDFLAGS := -shared -ldl -g -L${PWD}/../MologieDetours/build64/ -lMologieDetours
 	LIB_EXT := .dll
 endif
 

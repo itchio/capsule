@@ -8,7 +8,7 @@
 #define CAPSULE_WINDOWS
 
 #define getpid(a) 0
-typedef int pid_t;
+#define pid_t int
 
 #elif defined(__APPLE__)
 #define LIBSDL2_FILENAME "libSDL2.dylib"
