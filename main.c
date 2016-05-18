@@ -33,10 +33,6 @@ void __stdcall libfake_hello();
 #endif
 
 int main(int argc, char **argv) {
-#ifdef _WIN32
-  libfake_hello();
-#endif
-
   fprintf(stderr, "[main] Calling SDL_Init\n");
   SDL_Init(SDL_INIT_VIDEO);
   fprintf(stderr, "[main] Returned from SDL_Init\n");
@@ -135,6 +131,10 @@ int main(int argc, char **argv) {
   SDL_Event windowEvent;
   float x = 1.0;
   float dx = 0.02f;
+
+#ifdef _WIN32
+  libfake_hello();
+#endif
 
   for (;;) {
     x += dx;

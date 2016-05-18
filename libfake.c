@@ -101,7 +101,7 @@ void __stdcall libfake_hello () {
     void *_glSwapBuffers = GetProcAddress(mh, "wglSwapBuffers");
     fprintf(stderr, "[libfake] SwapBuffers handle: %p\n", _glSwapBuffers);
 
-    if (_glSwapBuffers) {
+    if (0 && _glSwapBuffers) {
       fprintf(stderr, "[libfake] Attempting to install glSwapBuffers hook\n");
       CHook *h = CHook_new();
       CHook_install(h, _glSwapBuffers, _fakeSwapBuffers);
