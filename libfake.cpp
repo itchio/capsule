@@ -1,10 +1,8 @@
 
 #define _GNU_SOURCE
-#ifdef _WIN32
-#include <detours.h>
-#endif
 
 #include "libfake.h"
+#include <NktHookLib.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -42,15 +40,13 @@ static void __stdcall assert (const char *msg, int cond) {
 
 typedef void (__stdcall *glSwapBuffersType)(void*);
 glSwapBuffersType _glSwapBuffers;
-MologieDetours::Detour<glSwapBuffersType>* detour_glSwapBuffers = NULL;
+
+glSwapBuffersType fnSwapBuffers;
 
 void __stdcall _fakeSwapBuffers (void *hdc) {
   libfake_log("In fakeSwapBuffers\n");
   libfake_captureFrame();
-  // assert("Installed hook", Mhook_Unhook(_glSwapBuffers));
-  // _glSwapBuffers(hdc);
-  detour_glSwapBuffers->GetOriginalFunction()(hdc);
-  // assert("Installed hook", Mhook_SetHook(_glSwapBuffers, _fakeSwapBuffers));
+  fnSwapBuffers(hdc);
 }
 
 LIBHANDLE gl_handle;
@@ -60,6 +56,8 @@ glReadPixelsType _realglReadPixels;
 
 typedef void* (__stdcall *glGetIntegervType)(int, int*);
 glGetIntegervType _realglGetIntegerv;
+
+CNktHookLib cHookMgr;
 
 void __stdcall load_opengl (const char *);
 
@@ -96,12 +94,32 @@ LIBFAKE_DLL void libfake_hello () {
 
     if (_glSwapBuffers) {
       libfake_log("Attempting to install glSwapBuffers hook\n");
+	  
+	  cHookMgr.SetEnableDebugOutput(TRUE);
+
+	  HINSTANCE hOpengl32Dll = NktHookLibHelpers::GetModuleBaseAddress(L"opengl32.dll");
+	  if (hOpengl32Dll == NULL) {
+		  ::MessageBoxW(0, L"Error: Cannot get handle of opengl.dll", L"HookTest", MB_OK | MB_ICONERROR);
+		  exit(1);
+	  }
+	  LPVOID fnOrigSwapBuffers = NktHookLibHelpers::GetProcedureAddress(hOpengl32Dll, "wglSwapBuffers");
+	  if (fnOrigSwapBuffers == NULL) {
+		  ::MessageBoxW(0, L"Error: Cannot get address of wglSwapBuffers", L"HookTest", MB_OK | MB_ICONERROR);
+		  exit(1);
+	  }
+	  libfake_log("Ours = %p, theirs = %p\n", _glSwapBuffers, fnOrigSwapBuffers);
+
+	  size_t hookId;
+	  int dwOsErr = cHookMgr.Hook(&hookId, (PVOID*) &fnSwapBuffers, fnOrigSwapBuffers, _fakeSwapBuffers, 0);
+
+	  libfake_log("Well I think we're doing fine! err = %d\n", dwOsErr);
+
       // assert("Installed hook", Mhook_SetHook(_glSwapBuffers, _fakeSwapBuffers));
-      try {
-        detour_glSwapBuffers = new MologieDetours::Detour<glSwapBuffersType>(_glSwapBuffers, &_fakeSwapBuffers);
-      } catch (MologieDetours::DetourException &e) {
-        libfake_log("While installing detour: %s\n", e.what());
-      }
+      // try {
+      //   detour_glSwapBuffers = new MologieDetours::Detour<glSwapBuffersType>(_glSwapBuffers, &_fakeSwapBuffers);
+      // } catch (MologieDetours::DetourException &e) {
+      //   libfake_log("While installing detour: %s\n", e.what());
+      // }
     }
   }
 
