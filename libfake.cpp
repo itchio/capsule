@@ -32,12 +32,14 @@ static void assert (const char *msg, int cond) {
 
 typedef void (*glSwapBuffersType)(void*);
 glSwapBuffersType _glSwapBuffers;
+MologieDetours::Detour<glSwapBuffersType>* detour_glSwapBuffers = NULL;
 
-void __stdcall _fakeSwapBuffers (void *hdc) {
+void _fakeSwapBuffers (void *hdc) {
   libfake_log("In fakeSwapBuffers\n");
   libfake_captureFrame();
   // assert("Installed hook", Mhook_Unhook(_glSwapBuffers));
-  _glSwapBuffers(hdc);
+  // _glSwapBuffers(hdc);
+  detour_glSwapBuffers->GetOriginalFunction()(hdc);
   // assert("Installed hook", Mhook_SetHook(_glSwapBuffers, _fakeSwapBuffers));
 }
 
@@ -52,6 +54,11 @@ void LIBFAKE_DLL libfake_hello () {
     if (_glSwapBuffers) {
       libfake_log("Attempting to install glSwapBuffers hook\n");
       // assert("Installed hook", Mhook_SetHook(_glSwapBuffers, _fakeSwapBuffers));
+      try {
+        detour_glSwapBuffers = new MologieDetours::Detour<glSwapBuffersType>(_glSwapBuffers, _fakeSwapBuffers);
+      } catch (MologieDetours::DetourException &e) {
+        libfake_log("While installing detour: %s\n", e.what());
+      }
     }
   }
 
