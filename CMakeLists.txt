@@ -13,7 +13,7 @@ find_package(OpenGL REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(GLEW REQUIRED)
 
-include_directories(SYSTEM ${SDL2_INCLUDE_DIR} glew/include MologieDetours)
+include_directories(SYSTEM ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} MologieDetours)
 
 set(MAIN_SRC
     main.cpp)
@@ -32,6 +32,7 @@ add_library(libfake ${LIBFAKE_SRC})
 target_link_libraries(libfake MologieDetours)
 
 add_executable(main ${MAIN_SRC})
-target_link_libraries(main libfake ${SDL2_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARY})
+target_link_libraries(main libfake ${SDL2_LIBRARY} ${SDL2MAIN_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARY})
 
 add_dependencies(libfake MologieDetours)
+add_dependencies(main libfake)
