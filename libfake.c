@@ -7,6 +7,9 @@
 #define DEFAULT_OPENGL "OPENGL32.DLL"
 #define CAPSULE_WINDOWS
 
+#define getpid(a) (0)
+typedef int pid_t;
+
 #elif defined(__APPLE__)
 #define LIBSDL2_FILENAME "libSDL2.dylib"
 #define DEFAULT_OPENGL "/System/Library/Frameworks/OpenGL.framework/Libraries/libGL.dylib"
@@ -33,11 +36,21 @@ static void assert (const char *msg, int cond) {
   if (cond) {
     return;
   }
-  fprintf(stderr, "[main] Assertion failed: %s\n", msg);
+  fprintf(stderr, "[libfake] Assertion failed: %s\n", msg);
   /* const char *err = SDL_GetError(); */
   /* fprintf(stderr, "[main] Last SDL GetError: %s\n", err); */
   exit(1);
 }
+
+#ifdef CAPSULE_WINDOWS
+void __stdcall libfake_hello () {
+  fprintf(stderr, "[libfake] Hello from libfake!\n");
+}
+
+void __stdcall DllMain(void *hinstDLL, int reason, void *reserved) {
+  fprintf(stderr, "[libfake] DllMain called! reason = %d\n", reason);
+}
+#endif
 
 #ifdef CAPSULE_LINUX
 void glXSwapBuffers (void *a, void *b);

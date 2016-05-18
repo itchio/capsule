@@ -22,22 +22,26 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 ifeq (${OS},Windows_NT)
-	MAIN_LDFLAGS := ${MAIN_LDFLAGS} -lopengl32
+	MAIN_LDFLAGS := ${MAIN_LDFLAGS} -lopengl32 -L${PWD} -lfake
+        LIB_LDFLAGS := -shared -ldl
+	LIB_EXT := .dll
 endif
 
 CC ?= clang
 AR := ar
 
 test: all
-	mkdir -p frames
 ifeq ($(UNAME_S),Linux)
 	LD_PRELOAD="${PWD}/libfake.so" MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=150 ${RUN_CMD}
 endif
 ifeq ($(UNAME_S),Darwin)
 	DYLD_FORCE_FLAT_NAMESPACE=1 DYLD_INSERT_LIBRARIES="${PWD}/libfake.dylib" ${RUN_CMD}
 endif
+ifeq (${OS},Windows_NT)
+	${RUN_CMD}
+endif
 
-all: main libfake
+all: libfake main
 
 main:
 	${CC} ${MAIN_CFLAGS} main.c -o main ${MAIN_LDFLAGS}
@@ -49,3 +53,4 @@ ifeq ($(UNAME_S),Darwin)
 endif
 	${AR} rcs libfake.a libfake*.o
 	${CC} ${LIB_CFLAGS} libfake*.o -o libfake${LIB_EXT} ${LIB_LDFLAGS}
+	rm -f libfake.a

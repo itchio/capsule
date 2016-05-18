@@ -28,12 +28,20 @@ void readFile (char *target, const char *path) {
   return;
 }
 
-int main(int argc, char **argv) {
-  printf("[main] Calling SDL_Init\n");
-  SDL_Init(SDL_INIT_VIDEO);
-  printf("[main] Returned from SDL_Init\n");
+#ifdef _WIN32
+void __stdcall libfake_hello();
+#endif
 
-  printf("[main] Asking for OpenGL 2.0 context\n");
+int main(int argc, char **argv) {
+#ifdef _WIN32
+  libfake_hello();
+#endif
+
+  fprintf(stderr, "[main] Calling SDL_Init\n");
+  SDL_Init(SDL_INIT_VIDEO);
+  fprintf(stderr, "[main] Returned from SDL_Init\n");
+
+  fprintf(stderr, "[main] Asking for OpenGL 2.0 context\n");
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
@@ -45,7 +53,7 @@ int main(int argc, char **argv) {
   SDL_GLContext context = SDL_GL_CreateContext(window);
   assert("OpenGL context created correctly", !!context);
 
-  printf("[main] Initializing glew...\n");
+  fprintf(stderr, "[main] Initializing glew...\n");
   glewExperimental = GL_TRUE;
   glewInit();
 
@@ -55,28 +63,28 @@ int main(int argc, char **argv) {
     -0.5f, -0.5f  // Vertex 3 (X, Y)
   };
 
-  printf("[main] Making a vertex array object...\n");
+  fprintf(stderr, "[main] Making a vertex array object...\n");
   GLuint vao;
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
 
-  printf("[main] Making a vertex buffer...\n");
+  fprintf(stderr, "[main] Making a vertex buffer...\n");
   GLuint vbo;
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
 
-  printf("[main] Uploading vertex data to GPU...\n");
+  fprintf(stderr, "[main] Uploading vertex data to GPU...\n");
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
   char* vertexSource = malloc(SHADER_LEN);
   memset(vertexSource, 0, SHADER_LEN);
   readFile(vertexSource, "shader.vert");
-  /* printf("vertex source: %s\n", vertexSource); */
+  /* fprintf(stderr, "vertex source: %s\n", vertexSource); */
 
   char* fragmentSource = malloc(SHADER_LEN);
   memset(fragmentSource, 0, SHADER_LEN);
   readFile(fragmentSource, "shader.frag");
-  /* printf("fragment source: %s\n", fragmentSource); */
+  /* fprintf(stderr, "fragment source: %s\n", fragmentSource); */
 
   GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
   glShaderSource(vertexShader, 1, (void*) &vertexSource, NULL);
@@ -140,7 +148,7 @@ int main(int argc, char **argv) {
 
     if (SDL_PollEvent(&windowEvent)) {
       if (windowEvent.type == SDL_QUIT) {
-        printf("[main] Window closed, quitting...\n");
+        fprintf(stderr, "[main] Window closed, quitting...\n");
         break;
       }
     }
@@ -161,10 +169,10 @@ int main(int argc, char **argv) {
     SDL_Delay(16);
   }
 
-  printf("[main] Deleting OpenGL context\n");
+  fprintf(stderr, "[main] Deleting OpenGL context\n");
   SDL_GL_DeleteContext(context);
 
-  printf("[main] Quitting\n");
+  fprintf(stderr, "[main] Quitting\n");
   SDL_Quit();
 
   return 0;
