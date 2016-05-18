@@ -52,4 +52,8 @@ endif()
 
 add_dependencies(main capsule)
 
+set_target_properties(main capsule
+  PROPERTIES COMPILE_FLAGS "-m32"
+  LINK_FLAGS "-m32")
+
 # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -M")
