@@ -28,15 +28,15 @@ void readFile (char *target, const char *path) {
   return;
 }
 
-int main() {
+int main(int argc, char **argv) {
   printf("[main] Calling SDL_Init\n");
   SDL_Init(SDL_INIT_VIDEO);
   printf("[main] Returned from SDL_Init\n");
 
-  printf("[main] Asking for OpenGL 3.2 context\n");
+  printf("[main] Asking for OpenGL 2.0 context\n");
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
   SDL_Window* window = SDL_CreateWindow("opengl-inject-poc", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 800, 600, SDL_WINDOW_OPENGL);
@@ -69,12 +69,12 @@ int main() {
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
   char* vertexSource = malloc(SHADER_LEN);
-  bzero(vertexSource, SHADER_LEN);
+  memset(vertexSource, 0, SHADER_LEN);
   readFile(vertexSource, "shader.vert");
   /* printf("vertex source: %s\n", vertexSource); */
 
   char* fragmentSource = malloc(SHADER_LEN);
-  bzero(fragmentSource, SHADER_LEN);
+  memset(fragmentSource, 0, SHADER_LEN);
   readFile(fragmentSource, "shader.frag");
   /* printf("fragment source: %s\n", fragmentSource); */
 
