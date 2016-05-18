@@ -6,6 +6,9 @@ RUN_CMD := ${GDB} ./main
 MAIN_CFLAGS := $(shell pkg-config --cflags glew sdl2)
 MAIN_LDFLAGS := $(shell pkg-config --libs glew sdl2)
 
+CC := gcc
+AR := ar
+
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
 	MAIN_LDFLAGS := ${MAIN_LDFLAGS} -lGL
@@ -15,6 +18,7 @@ ifeq ($(UNAME_S),Linux)
 endif
 
 ifeq ($(UNAME_S),Darwin)
+	CC := clang
 	MAIN_LDFLAGS := ${MAIN_LDFLAGS} -framework OpenGL
 	LIB_CFLAGS := -fPIC
 	LIB_LDFLAGS := -dynamiclib -ldl -framework Cocoa
@@ -22,13 +26,10 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 ifeq (${OS},Windows_NT)
-	MAIN_LDFLAGS := ${MAIN_LDFLAGS} -lopengl32 -L${PWD} -lfake
-        LIB_LDFLAGS := -shared -ldl
+	MAIN_LDFLAGS := ${MAIN_LDFLAGS} -lopengl32 -L${PWD} -lfake -g
+        LIB_LDFLAGS := -shared -ldl -g
 	LIB_EXT := .dll
 endif
-
-CC ?= clang
-AR := ar
 
 test: all
 ifeq ($(UNAME_S),Linux)

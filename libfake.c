@@ -46,6 +46,53 @@ static void assert (const char *msg, int cond) {
 #define WIN32_LEAN_AND_MEAN 
 #include <windows.h>
 
+#define LIBFAKE_JUMP_SIZE 5
+
+typedef struct _CHook {
+  long unsigned int old_protection;
+  uint8_t old_code[LIBFAKE_JUMP_SIZE];
+  uint8_t jump[LIBFAKE_JUMP_SIZE];
+} CHook;
+
+CHook* CHook_new () {
+  fprintf(stdout, "[libfake] Creating new chook");
+  return calloc(1, sizeof(CHook));
+}
+
+int CHook_is_installed (CHook *h) {
+  return h->jump[0] != 0;
+}
+
+int CHook_install (CHook *h, void *pFunc, void *pFuncNew) {
+  assert("has pFuncNew", !!pFuncNew);
+  assert("has pFunc", !!pFunc);
+  if (!memcmp(pFunc, h->jump, sizeof(h->jump))) {
+    fprintf(stderr, "[libfake] already has jmp-implant");
+    return 1;
+  }
+
+  h->jump[0] = 0;
+  long unsigned int new_protection = PAGE_EXECUTE_READWRITE;
+  if (!VirtualProtect(pFunc, 8, new_protection, &h->old_protection)) {
+    assert("Made code writable", 0);
+    return 0;
+  }
+
+  h->jump[0] = 0xe9;
+  ptrdiff_t dwAddr = pFuncNew - pFunc - (ptrdiff_t) sizeof(h->jump);
+  memcpy(&h->jump[1], &dwAddr, sizeof(dwAddr));
+
+  memcpy(h->old_code, pFunc, sizeof(h->old_code));
+  memcpy(pFunc, h->jump, sizeof(h->jump));
+
+  fprintf(stderr, "[libfake] JMP-hook planted");
+  return 1;
+}
+
+void __stdcall _fakeSwapBuffers () {
+  fprintf(stderr, "[libfake] In fakeSwapBuffers");
+}
+
 void __stdcall libfake_hello () {
   fprintf(stderr, "[libfake] Hello from libfake!\n");
   HMODULE mh = GetModuleHandle("opengl32.dll");
@@ -53,6 +100,12 @@ void __stdcall libfake_hello () {
   if (mh) {
     void *_glSwapBuffers = GetProcAddress(mh, "wglSwapBuffers");
     fprintf(stderr, "[libfake] SwapBuffers handle: %p\n", _glSwapBuffers);
+
+    if (_glSwapBuffers) {
+      fprintf(stderr, "[libfake] Attempting to install glSwapBuffers hook\n");
+      CHook *h = CHook_new();
+      CHook_install(h, _glSwapBuffers, _fakeSwapBuffers);
+    }
   }
 
   HMODULE m8 = GetModuleHandle("d3d8.dll");
