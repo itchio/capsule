@@ -38,6 +38,10 @@ target_link_libraries(capsule ../../Deviare-InProc/Libs/2015/NktHookLib64_Debug)
 endif()
 
 add_executable(main ${MAIN_SRC})
-target_link_libraries(main capsule ${SDL2_LIBRARY} ${SDL2MAIN_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARY})
+target_link_libraries(main ${SDL2_LIBRARY} ${SDL2MAIN_LIBRARY} ${GLEW_LIBRARY} ${OPENGL_LIBRARY})
+
+if(WIN32)
+target_link_libraries(main capsule)
+endif()
 
 add_dependencies(main capsule)
