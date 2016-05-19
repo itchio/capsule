@@ -58,9 +58,9 @@ int __CRTDECL wmain(__in int argc, __in wchar_t *argv[], __in wchar_t *envp[])
   LPWSTR szStopW;
 
   //check arguments
-  if (argc != 3)
+  if (argc != 2)
   {
-    wprintf_s(L"Use: InjectDLL path-to-exe|process-id path-to-dll\n");
+    wprintf_s(L"Use: InjectDLL path-to-exe|process-id\n");
     return 1;
   }
   //if first argument is numeric, assume a process ID
@@ -83,18 +83,36 @@ int __CRTDECL wmain(__in int argc, __in wchar_t *argv[], __in wchar_t *envp[])
     //assume a process path to execute
     dwPid = 0;
   }
-  //take dll name
-  if (argv[2][0] == 0)
-  {
-    wprintf_s(L"Error: Invalid dll name specified.\n");
+
+  const SIZE_T exeNameSize = 512;
+  LPTSTR dirPath = (LPTSTR)calloc(1, exeNameSize);
+  LPTSTR drive = (LPTSTR)calloc(1, exeNameSize);
+  LPTSTR exeName = (LPTSTR)calloc(1, exeNameSize);
+  LPTSTR dllPath = (LPTSTR)calloc(1, exeNameSize);
+  GetModuleFileName(NULL, exeName, exeNameSize);
+
+  errno_t sErr = _splitpath_s(exeName, drive, exeNameSize, dirPath, exeNameSize, NULL, 0, NULL, 0);
+  if (sErr != 0) {
+    printf("splitpath error: %d\n", sErr);
     return 1;
   }
+
+  sErr = _makepath_s(dllPath, exeNameSize, drive, dirPath, "capsule", "dll");
+  if (sErr != 0) {
+    printf("makepath error: %d\n", sErr);
+    return 1;
+  }
+
+  size_t wn = mbstowcs(NULL, dllPath, 0);
+  wchar_t *wDllPath = (wchar_t*)calloc(wn, sizeof(wchar_t));
+  mbstowcs(wDllPath, dllPath, wn);
+
   //execute action
   if (dwPid != 0)
   {
 
     //if a process ID was specified, inject dll into that process
-    dwOsErr = NktHookLibHelpers::InjectDllByPidW(dwPid, argv[2]);
+    dwOsErr = NktHookLibHelpers::InjectDllByPidW(dwPid, wDllPath);
     if (dwOsErr != ERROR_SUCCESS)
     {
       wprintf_s(L"Error: Cannot inject Dll in target process [0x%08X]\n", dwOsErr);
@@ -109,7 +127,7 @@ int __CRTDECL wmain(__in int argc, __in wchar_t *argv[], __in wchar_t *envp[])
     memset(&sSiW, 0, sizeof(sSiW));
     sSiW.cb = (DWORD)sizeof(sSiW);
     memset(&sPi, 0, sizeof(sPi));
-    dwOsErr = NktHookLibHelpers::CreateProcessWithDllW(argv[1], NULL, NULL, NULL, FALSE, 0, NULL, NULL, &sSiW, &sPi, argv[2]);
+    dwOsErr = NktHookLibHelpers::CreateProcessWithDllW(argv[1], NULL, NULL, NULL, FALSE, 0, NULL, NULL, &sSiW, &sPi, wDllPath);
     if (dwOsErr != ERROR_SUCCESS)
     {
       wprintf_s(L"Error: Cannot launch process and inject dll [0x%08X]\n", dwOsErr);

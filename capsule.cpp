@@ -22,7 +22,14 @@
 #define LIBHANDLE void*
 #endif
 
+FILE *logfile;
+
 #define capsule_log(...) {\
+  if (!logfile) { \
+    logfile = fopen("capsule.log.txt", "w"); \
+  } \
+  fprintf(logfile, __VA_ARGS__); \
+  fflush(logfile); \
   fprintf(stderr, "[capsule] "); \
   fprintf(stderr, __VA_ARGS__); }
 
@@ -133,6 +140,9 @@ CAPSULE_DLL void capsule_hello () {
 
 BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
   capsule_log("DllMain called! reason = %d\n", reason);
+  if (reason == 1) {
+	  capsule_hello();
+  }
   return TRUE;
 }
 #endif
