@@ -111,7 +111,7 @@ CAPSULE_DLL void capsule_hello () {
 	  }
 	  capsule_log("Ours = %p, theirs = %p\n", _glSwapBuffers, fnOrigSwapBuffers);
 
-	  size_t hookId;
+	  SIZE_T hookId;
 	  int dwOsErr = cHookMgr.Hook(&hookId, (PVOID*) &fnSwapBuffers, fnOrigSwapBuffers, _fakeSwapBuffers, 0);
 
 	  capsule_log("Well I think we're doing fine! err = %d\n", dwOsErr);
@@ -131,8 +131,9 @@ CAPSULE_DLL void capsule_hello () {
   capsule_log("Direct3D9 handle: %p\n", m9);
 }
 
-void CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
+BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
   capsule_log("DllMain called! reason = %d\n", reason);
+  return TRUE;
 }
 #endif
 

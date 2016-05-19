@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project(capsule)
 
-set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps64)
+set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps32)
 
 # includes cmake/FindSDL2.cmake
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -15,7 +15,7 @@ find_package(GLEW REQUIRED)
 set(CAPSULE_INCLUDE_DIRS ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${PROJECT_SOURCE_DIR} SYSTEM)
 
 if(WIN32)
-  list(APPEND CAPSULE_INCLUDE_DIRS /../Deviare-InProc/Include)
+  list(APPEND CAPSULE_INCLUDE_DIRS ../Deviare-InProc/Include)
 endif()
 include_directories(${CAPSULE_INCLUDE_DIRS})
 
@@ -35,7 +35,7 @@ endif()
 add_library(capsule SHARED ${CAPSULE_SRC})
 
 if(WIN32)
-  target_link_libraries(capsule ../../Deviare-InProc/Libs/2015/NktHookLib64_Debug)
+  target_link_libraries(capsule ../../Deviare-InProc/Libs/2015/NktHookLib_Debug)
 endif()
 
 if(APPLE)
