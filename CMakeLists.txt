@@ -34,10 +34,6 @@ endif()
 
 add_library(capsule SHARED ${CAPSULE_SRC})
 
-if(WIN32)
-  target_link_libraries(capsule ../../Deviare-InProc/Libs/2015/NktHookLib_Debug)
-endif()
-
 if(APPLE)
   find_library(COCOA_LIBRARY Cocoa)
   target_link_libraries(capsule ${COCOA_LIBRARY})
@@ -51,3 +47,15 @@ target_link_libraries(main capsule)
 endif()
 
 add_dependencies(main capsule)
+
+if(WIN32)
+set(CAPSULERUN_SRC
+    capsule-run.cpp)
+add_executable(capsule-run ${CAPSULERUN_SRC})
+endif()
+
+if(WIN32)
+  set(NKT_HOOK_LIBRARY ../../Deviare-InProc/Libs/2015/NktHookLib_Debug)
+  target_link_libraries(capsule ${NKT_HOOK_LIBRARY})
+  target_link_libraries(capsule-run ${NKT_HOOK_LIBRARY})
+endif()
