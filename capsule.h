@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <stdio.h>
+
 #ifdef _WIN32
 #define CAPSULE_STDCALL __stdcall
 #else
@@ -45,12 +47,25 @@
 #define CAPSULE_DLL
 #endif
 
+extern FILE *logfile;
+
+#define capsule_log(...) {\
+  if (!logfile) { \
+    logfile = fopen("capsule.log.txt", "w"); \
+  } \
+  fprintf(logfile, __VA_ARGS__); \
+  fflush(logfile); \
+  fprintf(stderr, "[capsule] "); \
+  fprintf(stderr, __VA_ARGS__); }
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #ifdef CAPSULE_WINDOWS
 CAPSULE_DLL void capsule_hello ();
+void capsule_dx8_sniff();
 #endif
 
 void CAPSULE_STDCALL capsule_captureFrame ();

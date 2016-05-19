@@ -24,15 +24,6 @@
 
 FILE *logfile;
 
-#define capsule_log(...) {\
-  if (!logfile) { \
-    logfile = fopen("capsule.log.txt", "w"); \
-  } \
-  fprintf(logfile, __VA_ARGS__); \
-  fflush(logfile); \
-  fprintf(stderr, "[capsule] "); \
-  fprintf(stderr, __VA_ARGS__); }
-
 static void CAPSULE_STDCALL assert (const char *msg, int cond) {
   if (cond) {
     return;
@@ -134,6 +125,10 @@ CAPSULE_DLL void capsule_hello () {
 
   HMODULE m8 = GetModuleHandle("d3d8.dll");
   capsule_log("Direct3D8 handle: %p\n", m8);
+
+  if (m8) {
+    capsule_dx8_sniff();
+  }
 
   HMODULE m9 = GetModuleHandle("d3d9.dll");
   capsule_log("Direct3D9 handle: %p\n", m9);

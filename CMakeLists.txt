@@ -32,6 +32,10 @@ if(APPLE)
   list(APPEND CAPSULE_SRC capsule_cocoa.m)
 endif()
 
+if(WIN32)
+  list(APPEND CAPSULE_SRC capsule_dx8.cpp)
+endif()
+
 add_library(capsule SHARED ${CAPSULE_SRC})
 
 if(APPLE)
