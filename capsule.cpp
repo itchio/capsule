@@ -134,8 +134,15 @@ CAPSULE_DLL void capsule_hello () {
 
   HMODULE m8 = GetModuleHandle("d3d8.dll");
   capsule_log("Direct3D8 handle: %p\n", m8);
+
   HMODULE m9 = GetModuleHandle("d3d9.dll");
   capsule_log("Direct3D9 handle: %p\n", m9);
+
+  HMODULE m10 = GetModuleHandle("d3d10.dll");
+  capsule_log("Direct3D10 handle: %p\n", m10);
+
+  HMODULE m11 = GetModuleHandle("d3d11.dll");
+  capsule_log("Direct3D11 handle: %p\n", m11);
 }
 
 BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
