@@ -104,8 +104,9 @@ int __CRTDECL wmain(__in int argc, __in wchar_t *argv[], __in wchar_t *envp[])
   }
 
   size_t wn = mbstowcs(NULL, dllPath, 0);
-  wchar_t *wDllPath = (wchar_t*)calloc(wn, sizeof(wchar_t));
+  wchar_t *wDllPath = (wchar_t*)calloc(wn+1, sizeof(wchar_t));
   mbstowcs(wDllPath, dllPath, wn);
+  wprintf_s(L"DLL path = %s\n", wDllPath);
 
   //execute action
   if (dwPid != 0)
@@ -127,12 +128,14 @@ int __CRTDECL wmain(__in int argc, __in wchar_t *argv[], __in wchar_t *envp[])
     memset(&sSiW, 0, sizeof(sSiW));
     sSiW.cb = (DWORD)sizeof(sSiW);
     memset(&sPi, 0, sizeof(sPi));
-    dwOsErr = NktHookLibHelpers::CreateProcessWithDllW(argv[1], NULL, NULL, NULL, FALSE, 0, NULL, NULL, &sSiW, &sPi, wDllPath);
+    dwOsErr = NktHookLibHelpers::CreateProcessWithDllW(argv[1], NULL, NULL, NULL, TRUE, 0, NULL, NULL, &sSiW, &sPi, wDllPath);
     if (dwOsErr != ERROR_SUCCESS)
     {
       wprintf_s(L"Error: Cannot launch process and inject dll [0x%08X]\n", dwOsErr);
       return 2;
     }
+    WaitForSingleObject(sPi.hProcess, INFINITE);
+
     ::CloseHandle(sPi.hThread);
     ::CloseHandle(sPi.hProcess);
   }

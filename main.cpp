@@ -6,10 +6,6 @@
 #define GLEW_STATIC
 #include <GL/glew.h>
 
-#ifdef _WIN32
-#include "capsule.h"
-#endif
-
 #define SHADER_LEN 4096
 
 static void assert (const char *msg, int cond) {
@@ -140,10 +136,6 @@ int main(int argc, char **argv) {
   SDL_Event windowEvent;
   float x = 1.0;
   float dx = 0.02f;
-
-#ifdef _WIN32
-  capsule_hello();
-#endif
 
   for (;;) {
     x += dx;
