@@ -51,7 +51,7 @@ extern FILE *logfile;
 
 #define capsule_log(...) {\
   if (!logfile) { \
-    logfile = fopen("capsule.log.txt", "w"); \
+    logfile = fopen("C:\\capsule.log.txt", "w"); \
   } \
   fprintf(logfile, __VA_ARGS__); \
   fflush(logfile); \
@@ -65,7 +65,8 @@ extern "C" {
 
 #ifdef CAPSULE_WINDOWS
 CAPSULE_DLL void capsule_hello ();
-void capsule_dx8_sniff();
+void capsule_d3d8_sniff();
+void capsule_d3d11_sniff();
 #endif
 
 void CAPSULE_STDCALL capsule_captureFrame ();

@@ -81,13 +81,18 @@ void CAPSULE_STDCALL _fakeSwapBuffers (void *hdc) {
 }
 
 CNktHookLib cHookMgr;
+static int capsule_inited = 0;
 
 CAPSULE_DLL void capsule_hello () {
+  if (capsule_inited) return;
+  capsule_inited = 1;
+
   capsule_log("Hello from capsule!\n");
+
   HMODULE mh = GetModuleHandle("opengl32.dll");
   capsule_log("OpenGL handle: %p\n", mh);
   if (mh) {
-	ensure_own_opengl();
+	  ensure_own_opengl();
 
     _glSwapBuffers = (glSwapBuffersType) GetProcAddress(mh, "wglSwapBuffers");
     capsule_log("SwapBuffers handle: %p\n", _glSwapBuffers);
@@ -95,31 +100,24 @@ CAPSULE_DLL void capsule_hello () {
     if (_glSwapBuffers) {
       capsule_log("Attempting to install glSwapBuffers hook\n");
 	  
-	  cHookMgr.SetEnableDebugOutput(TRUE);
+	    cHookMgr.SetEnableDebugOutput(TRUE);
 
-	  HINSTANCE hOpengl32Dll = NktHookLibHelpers::GetModuleBaseAddress(L"opengl32.dll");
-	  if (hOpengl32Dll == NULL) {
-		  ::MessageBoxW(0, L"Error: Cannot get handle of opengl.dll", L"HookTest", MB_OK | MB_ICONERROR);
-		  exit(1);
-	  }
-	  LPVOID fnOrigSwapBuffers = NktHookLibHelpers::GetProcedureAddress(hOpengl32Dll, "wglSwapBuffers");
-	  if (fnOrigSwapBuffers == NULL) {
-		  ::MessageBoxW(0, L"Error: Cannot get address of wglSwapBuffers", L"HookTest", MB_OK | MB_ICONERROR);
-		  exit(1);
-	  }
-	  capsule_log("Ours = %p, theirs = %p\n", _glSwapBuffers, fnOrigSwapBuffers);
+	    HINSTANCE hOpengl32Dll = NktHookLibHelpers::GetModuleBaseAddress(L"opengl32.dll");
+	    if (hOpengl32Dll == NULL) {
+		    ::MessageBoxW(0, L"Error: Cannot get handle of opengl.dll", L"HookTest", MB_OK | MB_ICONERROR);
+		    exit(1);
+	    }
+	    LPVOID fnOrigSwapBuffers = NktHookLibHelpers::GetProcedureAddress(hOpengl32Dll, "wglSwapBuffers");
+	    if (fnOrigSwapBuffers == NULL) {
+		    ::MessageBoxW(0, L"Error: Cannot get address of wglSwapBuffers", L"HookTest", MB_OK | MB_ICONERROR);
+		    exit(1);
+	    }
+	    capsule_log("Ours = %p, theirs = %p\n", _glSwapBuffers, fnOrigSwapBuffers);
 
-	  SIZE_T hookId;
-	  int dwOsErr = cHookMgr.Hook(&hookId, (PVOID*) &fnSwapBuffers, fnOrigSwapBuffers, _fakeSwapBuffers, 0);
+	    SIZE_T hookId;
+	    int dwOsErr = cHookMgr.Hook(&hookId, (PVOID*) &fnSwapBuffers, fnOrigSwapBuffers, _fakeSwapBuffers, 0);
 
-	  capsule_log("Well I think we're doing fine! err = %d\n", dwOsErr);
-
-      // assert("Installed hook", Mhook_SetHook(_glSwapBuffers, _fakeSwapBuffers));
-      // try {
-      //   detour_glSwapBuffers = new MologieDetours::Detour<glSwapBuffersType>(_glSwapBuffers, &_fakeSwapBuffers);
-      // } catch (MologieDetours::DetourException &e) {
-      //   capsule_log("While installing detour: %s\n", e.what());
-      // }
+	    capsule_log("Well I think we're doing fine! err = %d\n", dwOsErr);
     }
   }
 
@@ -127,7 +125,7 @@ CAPSULE_DLL void capsule_hello () {
   capsule_log("Direct3D8 handle: %p\n", m8);
 
   if (m8) {
-    capsule_dx8_sniff();
+    capsule_d3d8_sniff();
   }
 
   HMODULE m9 = GetModuleHandle("d3d9.dll");
@@ -138,6 +136,10 @@ CAPSULE_DLL void capsule_hello () {
 
   HMODULE m11 = GetModuleHandle("d3d11.dll");
   capsule_log("Direct3D11 handle: %p\n", m11);
+
+  if (m11) {
+	  capsule_d3d11_sniff();
+  }
 }
 
 BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {

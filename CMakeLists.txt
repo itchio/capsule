@@ -12,6 +12,10 @@ find_package(OpenGL REQUIRED)
 find_package(SDL2 REQUIRED)
 find_package(GLEW REQUIRED)
 
+if(WIN32)
+    find_package(DirectX REQUIRED)
+endif()
+
 set(CAPSULE_INCLUDE_DIRS ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${PROJECT_SOURCE_DIR} SYSTEM)
 
 if(WIN32)
@@ -33,7 +37,7 @@ if(APPLE)
 endif()
 
 if(WIN32)
-  list(APPEND CAPSULE_SRC capsule_dx8.cpp)
+  list(APPEND CAPSULE_SRC capsule_d3d8.cpp capsule_d3d11.cpp)
 endif()
 
 add_library(capsule SHARED ${CAPSULE_SRC})
@@ -59,7 +63,7 @@ add_executable(capsule-run ${CAPSULERUN_SRC})
 endif()
 
 if(WIN32)
-  set(NKT_HOOK_LIBRARY ../../Deviare-InProc/Libs/2015/NktHookLib_Debug)
+  set(NKT_HOOK_LIBRARY ../../Deviare-InProc/Libs/2013/NktHookLib_Debug)
   target_link_libraries(capsule ${NKT_HOOK_LIBRARY})
   target_link_libraries(capsule-run ${NKT_HOOK_LIBRARY})
 endif()
