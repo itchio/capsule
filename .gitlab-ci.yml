@@ -1,0 +1,14 @@
+
+stages:
+  - build
+
+compile:windows:
+  stage: build
+  tags:
+    - msbuild
+  script:
+    - scripts/ci-compile.rb
+  artifacts:
+    paths:
+      - compile-artifacts
+      
