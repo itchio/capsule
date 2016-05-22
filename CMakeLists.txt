@@ -2,7 +2,18 @@ cmake_minimum_required(VERSION 2.8)
 
 project(capsule)
 
-set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps32)
+# Based on Visual C++ 2015, adapting to 2013 should be trivial
+if(${CMAKE_GENERATOR} STREQUAL "Visual Studio 14 2015")
+message(STATUS "Using 32-bit dependencies")
+set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/32)
+set(NKT_HOOK_LIBRARY ${CMAKE_PREFIX_PATH}/lib/NktHookLib_Debug.lib)
+elseif(${CMAKE_GENERATOR} STREQUAL "Visual Studio 14 2015 Win64")
+message(STATUS "Using 64-bit dependencies")
+set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/64)
+set(NKT_HOOK_LIBRARY ${CMAKE_PREFIX_PATH}/lib/NktHookLib64_Debug.lib)
+elseif()
+message(warning "Not using 32-bit or 64-bit dependencies (ok on non-Windows)")
+endif()
 
 # includes cmake/FindSDL2.cmake
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -57,7 +68,6 @@ add_executable(capsule-run ${CAPSULERUN_SRC})
 endif()
 
 if(WIN32)
-  set(NKT_HOOK_LIBRARY ../../Deviare-InProc/Libs/2013/NktHookLib_Debug)
   target_link_libraries(capsule ${NKT_HOOK_LIBRARY})
   target_link_libraries(capsule-run ${NKT_HOOK_LIBRARY})
 endif()
