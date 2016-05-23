@@ -18,6 +18,15 @@ if(MSVC)
   endif()
 endif()
 
+# Universal binary only makes sense on OSX
+if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  option (OSX_UNIVERSAL "Build an OSX universal binary" OFF)
+  if(OSX_UNIVERSAL)
+    message(STATUS "Building universal OSX binaries")
+    set(COMPILE_FLAGS "${COMPILE_FLAGS} -arch i386 -arch x86_64")
+  endif()
+endif()
+
 # includes cmake/FindSDL2.cmake
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set(CMAKE_FIND_FRAMEWORK LAST)
@@ -74,3 +83,6 @@ if(WIN32)
   target_link_libraries(capsule ${NKT_HOOK_LIBRARY})
   target_link_libraries(capsule-run ${NKT_HOOK_LIBRARY})
 endif()
+
+SET(CMAKE_CXX_FLAGS "${COMPILE_FLAGS} ${CMAKE_CXX_FLAGS}")
+
