@@ -3,12 +3,6 @@
 
 #include <stdio.h>
 
-#ifdef _WIN32
-#define CAPSULE_STDCALL __stdcall
-#else
-#define CAPSULE_STDCALL
-#endif
-
 #if defined(_WIN32)
 #define LIBSDL2_FILENAME "SDL2.dll"
 #define DEFAULT_OPENGL "OPENGL32.DLL"
@@ -26,6 +20,14 @@
 
 #else
 #error Unsupported platform
+#endif
+
+#if defined(CAPSULE_WINDOWS)
+#define CAPSULE_STDCALL __stdcall
+#define CAPSULE_LOG_PATH "C:\\capsule.log.txt"
+#else
+#define CAPSULE_STDCALL
+#define CAPSULE_LOG_PATH "/tmp/capsule.log.txt"
 #endif
 
 #if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
@@ -51,7 +53,7 @@ extern FILE *logfile;
 
 #define capsule_log(...) {\
   if (!logfile) { \
-    logfile = fopen("C:\\capsule.log.txt", "w"); \
+    logfile = fopen(CAPSULE_LOG_PATH, "w"); \
   } \
   fprintf(logfile, __VA_ARGS__); \
   fflush(logfile); \
