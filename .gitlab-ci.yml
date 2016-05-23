@@ -7,8 +7,19 @@ compile:windows:
   tags:
     - msbuild
   script:
-    - scripts/ci-compile.rb
+    - scripts/ci-compile.rb windows
   artifacts:
     paths:
       - compile-artifacts
+
+compile:darwin:
+  stage: build
+  tags:
+    - darwin
+  script:
+    - scripts/ci-compile.rb darwin
+  artifacts:
+    paths:
+      - compile-artifacts
+
       
