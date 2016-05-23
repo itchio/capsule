@@ -1,0 +1,12 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    colored (1.2)
+    filesize (0.1.1)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  colored
+  filesize
