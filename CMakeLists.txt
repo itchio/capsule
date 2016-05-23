@@ -20,7 +20,7 @@ endif()
 
 # Universal binary only makes sense on OSX
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  option (OSX_UNIVERSAL "Build an OSX universal binary" OFF)
+  option (OSX_UNIVERSAL "Build an OSX universal binary" ON)
   if(OSX_UNIVERSAL)
     message(STATUS "Building universal OSX binaries")
     set(COMPILE_FLAGS "${COMPILE_FLAGS} -arch i386 -arch x86_64")
@@ -84,5 +84,6 @@ if(WIN32)
   target_link_libraries(capsule-run ${NKT_HOOK_LIBRARY})
 endif()
 
+SET(CMAKE_C_FLAGS "${COMPILE_FLAGS} ${CMAKE_C_FLAGS}")
 SET(CMAKE_CXX_FLAGS "${COMPILE_FLAGS} ${CMAKE_CXX_FLAGS}")
 
