@@ -4,7 +4,10 @@
 require_relative 'common'
 
 module Capsule
-  def Capsule.ci_compile (os)
+  def Capsule.ci_compile (args)
+    raise "ci-compile expects one argument" unless args.length == 1
+    os = args[0]
+
     say "Compiling #{app_name}"
 
     case os
@@ -43,5 +46,5 @@ module Capsule
   end
 end
 
-Capsule.ci_compile
+Capsule.ci_compile ARGV
 
