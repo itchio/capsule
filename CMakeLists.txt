@@ -5,6 +5,9 @@ cmake_policy(SET CMP0042 NEW)
 
 project(capsule)
 
+set (CAPSULE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set (CAPSULE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
 # Based on Visual C++ 2015, adapting to 2013 should be trivial
 if(MSVC)
   if(${CMAKE_GENERATOR} MATCHES "Win64$")
@@ -44,23 +47,27 @@ set(CAPSULE_INCLUDE_DIRS ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${PROJECT_SOURC
 if(WIN32)
   list(APPEND CAPSULE_INCLUDE_DIRS ../Deviare-InProc/Include)
 endif()
-include_directories(${CAPSULE_INCLUDE_DIRS})
+include_directories(${CAPSULE_INCLUDE_DIRS} ${CAPSULE_INCLUDE_DIR})
 
 set(MAIN_SRC
-    main.cpp)
+  ${CAPSULE_SOURCE_DIR}/main.cpp)
 
 add_definitions(-DBUILD_CAPSULE_DLL)
 
 set(CAPSULE_SRC
-    capsule.cpp
-    capsule.h)
+    ${CAPSULE_SOURCE_DIR}/capsule.cpp)
 
 if(APPLE)
-  list(APPEND CAPSULE_SRC capsule_cocoa.m)
+  list(APPEND CAPSULE_SRC
+    ${CAPSULE_SOURCE_DIR}/capsule_cocoa.m
+  )
 endif()
 
 if(WIN32)
-  list(APPEND CAPSULE_SRC capsule_d3d8.cpp capsule_d3d11.cpp)
+  list(APPEND CAPSULE_SRC
+    ${CAPSULE_SOURCE_DIR}/capsule_d3d8.cpp
+    ${CAPSULE_SOURCE_DIR}/capsule_d3d11.cpp
+  )
 endif()
 
 add_library(capsule SHARED ${CAPSULE_SRC})
