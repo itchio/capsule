@@ -8,11 +8,11 @@
 @implementation NSOpenGLContext (Tracking)
 
   + (void)load {
-    NSLog(@"Loading NSOpenGLContext");
+    capsule_log("Loading NSOpenGLContext");
 
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        NSLog(@"Doing the old reddit switcheroo");
+        capsule_log("Swizzling flushBuffer implementations");
 
         Class class = [self class];
 
@@ -28,12 +28,12 @@
             method_getTypeEncoding(swizzledMethod));
 
         if (didAddMethod) {
-          NSLog(@"Did add method!");
+          capsule_log("Added method");
           class_replaceMethod(class, swizzledSelector,
             method_getImplementation(originalMethod),
             method_getTypeEncoding(originalMethod));
         } else {
-          NSLog(@"Did not add method, exchanging implementations");
+          capsule_log("Didn't add method, exchanging");
           method_exchangeImplementations(originalMethod, swizzledMethod);
         }
     });
@@ -42,7 +42,7 @@
 - (void)capsule_flushBuffer {
   capsule_captureFrame();
   [self capsule_flushBuffer];
-  NSLog(@"flushBuffer: %@", self);
+  capsule_log("In capsule_flushBuffer");
 }
 
 @end

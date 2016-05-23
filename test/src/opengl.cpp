@@ -1,5 +1,7 @@
 
 #include <stdio.h>
+
+// N.B: including SDL2/SDL.h is non-portable
 #include <SDL.h>
 #include <string.h>
 
@@ -7,6 +9,26 @@
 #include <GL/glew.h>
 
 #define SHADER_LEN 4096
+
+const char *vertexShaderSource = "#version 150\n"
+"in vec2 position;\n"
+"\n"
+"void main() \n"
+"{ \n"
+"  gl_Position = vec4(position, 0.0, 1.0); \n"
+"} \n"
+"\n";
+
+const char *fragmentShaderSource = "#version 150 \n"
+" \n"
+"uniform vec3 triangleColor; \n"
+" \n"
+"out vec4 outColor; \n"
+" \n"
+"void main() \n"
+"{ \n"
+"  outColor = vec4(triangleColor, 1.0); \n"
+"} \n";
 
 static void assert (const char *msg, int cond) {
   if (cond) {
@@ -16,17 +38,6 @@ static void assert (const char *msg, int cond) {
   // const char *err = SDL_GetError();
   // fprintf(stderr, "[main] Last SDL GetError: %s\n", err);
   exit(1);
-}
-
-void readFile (char *target, const char *path) {
-  FILE *f = fopen(path, "r");
-  assert("Opened shader file successfully", !!f);
-
-  size_t read = fread(target, 1, SHADER_LEN, f);
-  assert("Read shader successfully", read > 0);
-
-  fclose(f);
-  return;
 }
 
 int main(int argc, char **argv) {
@@ -69,21 +80,11 @@ int main(int argc, char **argv) {
   fprintf(stderr, "[main] Uploading vertex data to GPU...\n");
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-  char* vertexSource = (char*) malloc(SHADER_LEN);
-  memset(vertexSource, 0, SHADER_LEN);
-  readFile(vertexSource, "shader.vert");
-  /* fprintf(stderr, "vertex source: %s\n", vertexSource); */
-
-  char* fragmentSource = (char*) malloc(SHADER_LEN);
-  memset(fragmentSource, 0, SHADER_LEN);
-  readFile(fragmentSource, "shader.frag");
-  /* fprintf(stderr, "fragment source: %s\n", fragmentSource); */
-
   GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 #ifdef _WIN32
-  glShaderSource(vertexShader, 1, (const GLchar* const*) &vertexSource, NULL);
+  glShaderSource(vertexShader, 1, (const GLchar* const*) &vertexShaderSource, NULL);
 #else
-  glShaderSource(vertexShader, 1, (const GLchar**) &vertexSource, NULL);
+  glShaderSource(vertexShader, 1, (const GLchar**) &vertexShaderSource, NULL);
 #endif
   glCompileShader(vertexShader);
 
@@ -100,9 +101,9 @@ int main(int argc, char **argv) {
 
   GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
 #ifdef _WIN32
-  glShaderSource(fragmentShader, 1, (const GLchar* const*) &fragmentSource, NULL);
+  glShaderSource(fragmentShader, 1, (const GLchar* const*) &fragmentShaderSource, NULL);
 #else
-  glShaderSource(fragmentShader, 1, (const GLchar**) &fragmentSource, NULL);
+  glShaderSource(fragmentShader, 1, (const GLchar**) &fragmentShaderSource, NULL);
 #endif
   glCompileShader(fragmentShader);
 

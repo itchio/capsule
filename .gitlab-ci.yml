@@ -7,7 +7,7 @@ compile:windows:
   tags:
     - msbuild
   script:
-    - scripts/ci-compile.rb windows
+    - ruby scripts\ci-compile.rb windows
   artifacts:
     paths:
       - compile-artifacts

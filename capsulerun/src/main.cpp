@@ -27,6 +27,8 @@
  *
  **/
 
+#if defined(_WIN32)
+
 #define WIN32_LEAN_AND_MEAN
 
 #include <windows.h>
@@ -142,3 +144,15 @@ int __CRTDECL wmain(__in int argc, __in wchar_t *argv[], __in wchar_t *envp[])
   wprintf_s(L"Dll successfully injected!\n");
   return 0;
 }
+
+#else // defined(_WIN32)
+
+#include <stdio.h>
+#include <capsule.h>
+
+int main (int argc, char **argv) {
+  capsule_log("capsulerun on non-Windows platforms: stub!");
+  return 1;
+}
+
+#endif

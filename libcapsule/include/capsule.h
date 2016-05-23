@@ -56,10 +56,11 @@ extern FILE *logfile;
     logfile = fopen(CAPSULE_LOG_PATH, "w"); \
   } \
   fprintf(logfile, __VA_ARGS__); \
+  fprintf(logfile, "\n"); \
   fflush(logfile); \
   fprintf(stderr, "[capsule] "); \
-  fprintf(stderr, __VA_ARGS__); }
-
+  fprintf(stderr, __VA_ARGS__); \
+  fprintf(stderr, "\n"); }
 
 #ifdef __cplusplus
 extern "C" {
