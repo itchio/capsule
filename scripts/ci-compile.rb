@@ -12,6 +12,8 @@ module Capsule
       ci_compile_windows
     when "darwin"
       ci_compile_darwin
+    else
+      raise "Unsupported os #{os}"
     end
   end
 
