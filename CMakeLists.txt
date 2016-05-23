@@ -6,7 +6,7 @@ cmake_policy(SET CMP0042 NEW)
 project(capsule)
 
 # Based on Visual C++ 2015, adapting to 2013 should be trivial
-if(${CMAKE_GENERATOR} MATCHES "^Visual Studio")
+if(MSVC)
   if(${CMAKE_GENERATOR} MATCHES "Win64$")
     message(STATUS "Using 64-bit dependencies")
     set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/64)
