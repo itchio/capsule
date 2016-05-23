@@ -1,18 +1,21 @@
 cmake_minimum_required(VERSION 2.8)
 
+# MACOSX_RPATH is now enabled by default
+cmake_policy(SET CMP0042 NEW)
+
 project(capsule)
 
 # Based on Visual C++ 2015, adapting to 2013 should be trivial
-if(${CMAKE_GENERATOR} STREQUAL "Visual Studio 14 2015")
-message(STATUS "Using 32-bit dependencies")
-set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/32)
-set(NKT_HOOK_LIBRARY ${CMAKE_PREFIX_PATH}/lib/NktHookLib_Debug.lib)
-elseif(${CMAKE_GENERATOR} STREQUAL "Visual Studio 14 2015 Win64")
-message(STATUS "Using 64-bit dependencies")
-set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/64)
-set(NKT_HOOK_LIBRARY ${CMAKE_PREFIX_PATH}/lib/NktHookLib64_Debug.lib)
-elseif()
-message(warning "Not using 32-bit or 64-bit dependencies (ok on non-Windows)")
+if(${CMAKE_GENERATOR} MATCHES "^Visual Studio")
+  if(${CMAKE_GENERATOR} MATCHES "Win64$")
+    message(STATUS "Using 64-bit dependencies")
+    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/64)
+    set(NKT_HOOK_LIBRARY ${CMAKE_PREFIX_PATH}/lib/NktHookLib64_Debug.lib)
+  else()
+    message(STATUS "Using 32-bit dependencies")
+    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/32)
+    set(NKT_HOOK_LIBRARY ${CMAKE_PREFIX_PATH}/lib/NktHookLib_Debug.lib)
+  endif()
 endif()
 
 # includes cmake/FindSDL2.cmake
