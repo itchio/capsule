@@ -36,8 +36,6 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set(CMAKE_FIND_FRAMEWORK LAST)
 
 find_package(OpenGL REQUIRED)
-find_package(SDL2 REQUIRED)
-find_package(GLEW REQUIRED)
 
 if(WIN32)
     find_package(DirectX REQUIRED)
