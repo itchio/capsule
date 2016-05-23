@@ -40,7 +40,7 @@ module Capsule
     FileUtils.rm_rf 'build'
     FileUtils.mkdir_p 'build'
     cd 'build' do
-      ✓ sh 'cmake -DOSX_UNIVERSAL=1 ..'
+      ✓ sh 'cmake ..'
       ✓ sh 'make'
     end
   end

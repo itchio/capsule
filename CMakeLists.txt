@@ -10,19 +10,6 @@ option(OSX_UNIVERSAL "Build an OSX universal binary" ON)
 
 set (CAPSULE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libcapsule/include)
 
-# Based on Visual C++ 2015, adapting to 2013 should be trivial
-if(MSVC)
-  if(${CMAKE_GENERATOR} MATCHES "Win64$")
-    message(STATUS "Using 64-bit dependencies")
-    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/64)
-    set(NKT_HOOK_LIBRARY ${CMAKE_PREFIX_PATH}/lib/NktHookLib64_Debug.lib)
-  else()
-    message(STATUS "Using 32-bit dependencies")
-    set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/32)
-    set(NKT_HOOK_LIBRARY ${CMAKE_PREFIX_PATH}/lib/NktHookLib_Debug.lib)
-  endif()
-endif()
-
 # Universal binary only makes sense on OSX
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   if(OSX_UNIVERSAL)
