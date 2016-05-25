@@ -34,7 +34,6 @@
 #include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <NktHookLib.h>
 
 #define DISALLOW_REENTRANCY
 
@@ -115,7 +114,8 @@ int __CRTDECL wmain(__in int argc, __in wchar_t *argv[], __in wchar_t *envp[])
   {
 
     //if a process ID was specified, inject dll into that process
-    dwOsErr = NktHookLibHelpers::InjectDllByPidW(dwPid, wDllPath);
+    // dwOsErr = NktHookLibHelpers::InjectDllByPidW(dwPid, wDllPath);
+    wprintf_s(L"Injecting capsule dll into a process: stub!\n");
     if (dwOsErr != ERROR_SUCCESS)
     {
       wprintf_s(L"Error: Cannot inject Dll in target process [0x%08X]\n", dwOsErr);
@@ -130,7 +130,9 @@ int __CRTDECL wmain(__in int argc, __in wchar_t *argv[], __in wchar_t *envp[])
     memset(&sSiW, 0, sizeof(sSiW));
     sSiW.cb = (DWORD)sizeof(sSiW);
     memset(&sPi, 0, sizeof(sPi));
-    dwOsErr = NktHookLibHelpers::CreateProcessWithDllW(argv[1], NULL, NULL, NULL, TRUE, 0, NULL, NULL, &sSiW, &sPi, wDllPath);
+    // dwOsErr = NktHookLibHelpers::CreateProcessWithDllW(argv[1], NULL, NULL, NULL, TRUE, 0, NULL, NULL, &sSiW, &sPi, wDllPath);
+    wprintf_s(L"Injecting capsule dll into an executable: stub!\n");
+
     if (dwOsErr != ERROR_SUCCESS)
     {
       wprintf_s(L"Error: Cannot launch process and inject dll [0x%08X]\n", dwOsErr);

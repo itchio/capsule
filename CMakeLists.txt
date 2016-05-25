@@ -8,7 +8,7 @@ project(capsule)
 option(BUILD_TESTS "Build tests" OFF)
 option(OSX_UNIVERSAL "Build an OSX universal binary" ON)
 
-set (CAPSULE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libcapsule/include)
+set(CAPSULE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libcapsule/include)
 
 # Universal binary only makes sense on OSX
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
@@ -25,13 +25,14 @@ set(CMAKE_FIND_FRAMEWORK LAST)
 find_package(OpenGL REQUIRED)
 
 if(WIN32)
+    add_subdirectory(PolyHook)
     find_package(DirectX REQUIRED)
 endif()
 
 set(CAPSULE_INCLUDE_DIRS ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${PROJECT_SOURCE_DIR} SYSTEM)
 
 if(WIN32)
-  list(APPEND CAPSULE_INCLUDE_DIRS ../Deviare-InProc/Include)
+    list(APPEND CAPSULE_INCLUDE_DIRS PolyHook/source/PolyHook)
 endif()
 include_directories(${CAPSULE_INCLUDE_DIRS} ${CAPSULE_INCLUDE_DIR})
 
@@ -43,4 +44,6 @@ add_subdirectory(capsulerun)
 if(BUILD_TESTS)
   add_subdirectory(test)
 endif()
+
+add_dependencies(capsulerun capsule)
 

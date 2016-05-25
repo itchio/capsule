@@ -2,7 +2,7 @@
 #include <capsule.h>
 
 #ifdef _WIN32
-#include <NktHookLib.h>
+#include <PolyHook.h>
 #endif
 
 #include <stdlib.h>
@@ -78,7 +78,7 @@ void CAPSULE_STDCALL _fakeSwapBuffers (void *hdc) {
   fnSwapBuffers(hdc);
 }
 
-CNktHookLib cHookMgr;
+std::shared_ptr<PLH::Detour> swapBuffersDetour(new PLH::Detour);
 static int capsule_inited = 0;
 
 CAPSULE_DLL void capsule_hello () {
@@ -98,24 +98,9 @@ CAPSULE_DLL void capsule_hello () {
     if (_glSwapBuffers) {
       capsule_log("Attempting to install glSwapBuffers hook");
 	  
-	    cHookMgr.SetEnableDebugOutput(TRUE);
-
-	    HINSTANCE hOpengl32Dll = NktHookLibHelpers::GetModuleBaseAddress(L"opengl32.dll");
-	    if (hOpengl32Dll == NULL) {
-		    ::MessageBoxW(0, L"Error: Cannot get handle of opengl.dll", L"HookTest", MB_OK | MB_ICONERROR);
-		    exit(1);
-	    }
-	    LPVOID fnOrigSwapBuffers = NktHookLibHelpers::GetProcedureAddress(hOpengl32Dll, "wglSwapBuffers");
-	    if (fnOrigSwapBuffers == NULL) {
-		    ::MessageBoxW(0, L"Error: Cannot get address of wglSwapBuffers", L"HookTest", MB_OK | MB_ICONERROR);
-		    exit(1);
-	    }
-	    capsule_log("Ours = %p, theirs = %p", _glSwapBuffers, fnOrigSwapBuffers);
-
-	    SIZE_T hookId;
-	    int dwOsErr = cHookMgr.Hook(&hookId, (PVOID*) &fnSwapBuffers, fnOrigSwapBuffers, _fakeSwapBuffers, 0);
-
-	    capsule_log("Well I think we're doing fine! err = %d", dwOsErr);
+      swapBuffersDetour->SetupHook((BYTE*) _glSwapBuffers, (BYTE*) _fakeSwapBuffers);
+      swapBuffersDetour->Hook();
+	    capsule_log("Well I think we're doing fine!");
     }
   }
 

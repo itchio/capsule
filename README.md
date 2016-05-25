@@ -1,5 +1,11 @@
 # capsule
 
+## License
+
+capsule is released under the MIT license, see the `LICENSE` file.
+
+  * On Windows, capsule uses [Deviare-InProc]()
+
 ## Linux
 
 ```bash
