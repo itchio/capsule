@@ -18,3 +18,4 @@ set(polyhook_SOURCES
     ${polyhook_SOURCE_DIR}/PolyHook.cpp)
 
 add_library(polyhook ${polyhook_SOURCES})
+

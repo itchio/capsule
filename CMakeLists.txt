@@ -25,7 +25,6 @@ set(CMAKE_FIND_FRAMEWORK LAST)
 find_package(OpenGL REQUIRED)
 
 if(WIN32)
-    add_subdirectory(PolyHook)
     find_package(DirectX REQUIRED)
 endif()
 
@@ -46,4 +45,3 @@ if(BUILD_TESTS)
 endif()
 
 add_dependencies(capsulerun capsule)
-

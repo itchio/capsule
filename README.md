@@ -4,8 +4,6 @@
 
 capsule is released under the MIT license, see the `LICENSE` file.
 
-  * On Windows, capsule uses [Deviare-InProc]()
-
 ## Linux
 
 ```bash
@@ -34,14 +32,11 @@ Same as linux but without the MESA mess
 TODO: allow building win32 or win64 with same CMakeLists, for now, using `deps32/` and `deps64/` dirs, with:
 
   * Hand-built glew (from <https://github.com/Perlmint/glew-cmake>)
-  * Hand-built Deviare-InProc (from <https://github.com/nektra/Deviare-InProc>)
   * MSVC SDL2 (from <https://www.libsdl.org/download-2.0.php>)
 
 TODO: upload builds of those somewhere accessible.
 
 When preparing `deps32/` make sure to remove `x64` directory
-
-To build: edit CMakeLists.txt to let deps64 or deps32 be in prefix, then:
 
 ```
 mkdir build64
@@ -60,5 +55,5 @@ Re detours:
 
   * taksi approach worked on win32, broke on win64
   * MologieDetours worked on win32, broke on win64
-  * Deviare-InProc seems to work for both, thank heavens
+  * Deviare-InProc worked on both but was GPL
 
