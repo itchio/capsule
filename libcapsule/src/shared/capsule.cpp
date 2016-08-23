@@ -40,6 +40,9 @@ glReadPixelsType _realglReadPixels;
 typedef void* (CAPSULE_STDCALL *glGetIntegervType)(int, int*);
 glGetIntegervType _realglGetIntegerv;
 
+typedef void* (CAPSULE_STDCALL *glGetRenderbufferParameterivType)(int, int, int*);
+glGetRenderbufferParameterivType _realglGetRenderbufferParameteriv;
+
 
 void CAPSULE_STDCALL load_opengl (const char *);
 
@@ -61,6 +64,11 @@ void CAPSULE_STDCALL ensure_own_opengl() {
 		_realglReadPixels = (glReadPixelsType)dlsym(gl_handle, "glReadPixels");
 		assert("Got glReadPixels address", !!_realglReadPixels);
 	}
+	if (!_realglGetRenderbufferParameteriv) {
+		ensure_opengl();
+		_realglGetRenderbufferParameteriv = (glGetRenderbufferParameterivType)dlsym(gl_handle, "glGetRenderbufferParameteriv");
+		assert("Got glGetRenderbufferParameteriv address", !!_realglGetRenderbufferParameteriv);
+	}
 }
 
 #ifdef CAPSULE_WINDOWS
@@ -74,7 +82,7 @@ glSwapBuffersType fnSwapBuffers;
 
 void CAPSULE_STDCALL _fakeSwapBuffers (void *hdc) {
   capsule_log("In fakeSwapBuffers");
-  capsule_captureFrame();
+  capsule_captureFrame(0, 0);
   fnSwapBuffers(hdc);
 }
 
@@ -237,6 +245,9 @@ void* dlopen (const char * filename, int flag) {
 #define GL_RGB 6407
 #define GL_UNSIGNED_BYTE 5121
 #define GL_VIEWPORT 2978
+#define GL_RENDERBUFFER 36161
+#define GL_RENDERBUFFER_WIDTH 36162
+#define GL_RENDERBUFFER_HEIGHT 36163
 
 FILE *outFile;
 
@@ -250,30 +261,45 @@ void CAPSULE_STDCALL capsule_writeFrame (char *frameData, size_t frameDataSize) 
   fflush(outFile);
 }
 
-void CAPSULE_STDCALL capsule_captureFrame () {
+void CAPSULE_STDCALL capsule_captureFrame (int width, int height) {
   frameNumber++;
   if (frameNumber < 120) {
     return;
   }
 
-  int width = FRAME_WIDTH;
-  int height = FRAME_HEIGHT;
   int components = 3;
   int format = GL_RGB;
 
   ensure_own_opengl();
 
-  int viewport[4];
-  _realglGetIntegerv(GL_VIEWPORT, viewport);
+  if (width == 0 || height == 0) {
+    int viewport[4];
+    _realglGetIntegerv(GL_VIEWPORT, viewport);
 
-  if (viewport[2] > 0 && viewport[3] > 0) {
-    width = viewport[2];
-    height = viewport[3];
+    capsule_log("Viewport values: %d, %d, %d, %d", viewport[0], viewport[1], viewport[2], viewport[3]);
+    if (viewport[2] > 0 && viewport[3] > 0) {
+      capsule_log("Setting size from viewport");
+      width = viewport[2];
+      height = viewport[3];
+    } else {
+      capsule_log("Missing viewport values :(");
+    }
   }
 
-  if (frameNumber % 60 == 0) {
+  // make sure width and height are multiples of 2
+  if (height % 2 > 0) {
+    height++;
+    width += 2;
+  }
+
+  if (width % 2 > 0) {
+    width++;
+    height += 2;
+  }
+
+  // if (frameNumber % 60 == 0) {
     capsule_log("Saved %d frames. Current resolution = %dx%d", frameNumber, width, height);
-  }
+  // }
 
   size_t frameDataSize = width * height * components;
   if (!frameData) {
@@ -288,7 +314,7 @@ void CAPSULE_STDCALL capsule_captureFrame () {
 extern "C" {
 void glXSwapBuffers (void *a, void *b) {
   capsule_log("About to capture frame..");
-  capsule_captureFrame();
+  capsule_captureFrame(0, 0);
   capsule_log("About to call real swap buffers..");
   return _realglXSwapBuffers(a, b);
 }

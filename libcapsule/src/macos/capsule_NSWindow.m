@@ -8,54 +8,55 @@
 #import <Cocoa/Cocoa.h>
 #import <CoreGraphics/CoreGraphics.h>
 
-@implementation NSWindow (Tracking)
+static bool windows_found = false;
+static CGWindowID windowId = kCGNullWindowID;
 
-+ (void)load {
-  return;
-  capsule_log("Loading NSWindow");
+@implementation CapsuleFixedRecorder
 
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    capsule_log("Swizzling displayIfNeeded implementations");
-    capsule_swizzle([self class], @selector(displayIfNeeded), @selector(capsule_displayIfNeeded));
-  });
+- (id)init {
+  self = [super init];
+  float interval = 1.0f / 20.0f;
+  [NSTimer scheduledTimerWithTimeInterval:interval target: self selector:@selector(handleTimer:) userInfo:nil repeats:YES];
+  return self;
 }
 
-static bool windowsDone = false;
-static CGWindowID windowId = kCGNullWindowID;
-static int bestWidth = -1;
-static int bestHeight = -1;
+- (void)handleTimer:(NSTimer *)timer {
+  if (capsule_capturing != 2) {
+    [timer invalidate];
+    return;
+  }
 
-- (void)capsule_displayIfNeeded {
-  [self capsule_displayIfNeeded];
 
-  if (!windowsDone) {
-    windowsDone = true;
+  if (!windows_found) {
+    windows_found = true;
     capsule_log("First CGWindow frame capture");
     pid_t ourPID = getpid();
 
     NSArray *windows = (NSArray*) CGWindowListCopyWindowInfo(kCGWindowListExcludeDesktopElements, kCGNullWindowID);
     capsule_log("Got %lu windows", (unsigned long) [windows count])
 
-      for (NSDictionary *window in windows) {
-        pid_t ownerPID = [[window objectForKey:(NSString *)kCGWindowOwnerPID] intValue];
-        if (ownerPID == ourPID) {
-          NSString *windowName = [window objectForKey:(NSString *)kCGWindowName];
-          capsule_log("PID %d, name %s", ownerPID, [windowName UTF8String]);
+    int bestWidth = -1;
+    int bestHeight = -1;
 
-          NSDictionary *bounds = [window objectForKey:(NSString *)kCGWindowBounds];
-          int width = [[bounds objectForKey:@"Width"] intValue];
-          int height = [[bounds objectForKey:@"Height"] intValue];
-          capsule_log("bounds: %dx%d", width, height);
+    for (NSDictionary *window in windows) {
+      pid_t ownerPID = [[window objectForKey:(NSString *)kCGWindowOwnerPID] intValue];
+      if (ownerPID == ourPID) {
+        NSString *windowName = [window objectForKey:(NSString *)kCGWindowName];
+        capsule_log("PID %d, name %s", ownerPID, [windowName UTF8String]);
 
-          if (width >= bestWidth || height >= bestHeight) {
-            capsule_log("new best size: %dx%d", width, height);
-            bestWidth = width;
-            bestHeight = height;
-            windowId = [[window objectForKey:(NSString *)kCGWindowNumber] unsignedIntValue];
-          }
+        NSDictionary *bounds = [window objectForKey:(NSString *)kCGWindowBounds];
+        int width = [[bounds objectForKey:@"Width"] intValue];
+        int height = [[bounds objectForKey:@"Height"] intValue];
+        capsule_log("bounds: %dx%d", width, height);
+
+        if (width >= bestWidth || height >= bestHeight) {
+          capsule_log("new best size: %dx%d", width, height);
+          bestWidth = width;
+          bestHeight = height;
+          windowId = [[window objectForKey:(NSString *)kCGWindowNumber] unsignedIntValue];
         }
       }
+    }
     capsule_log("Our window id = %d", (int) windowId);
   }
 
@@ -63,11 +64,13 @@ static int bestHeight = -1;
       CGRectNull, // indicate the minimum rectangle that encloses the specified windows
       kCGWindowListOptionIncludingWindow,
       windowId,
-      kCGWindowImageBoundsIgnoreFraming|kCGWindowImageBestResolution
+      // kCGWindowImageBoundsIgnoreFraming|kCGWindowImageBestResolution
+      kCGWindowImageBoundsIgnoreFraming
       );
 
   int width = CGImageGetWidth(image);
   int height = CGImageGetHeight(image);
+  capsule_log("Captured %dx%d CFImage", width, height);
 
   CFDataRef dataRef = CGDataProviderCopyData(CGImageGetDataProvider(image));
   char *frameData = (char*) CFDataGetBytePtr(dataRef);
@@ -79,3 +82,4 @@ static int bestHeight = -1;
 }
 
 @end
+
