@@ -82,23 +82,3 @@ static CGWindowID windowId = kCGNullWindowID;
 }
 
 @end
-
-@implementation NSWindow (Tracking)
-
-+ (void)load {
-  return;
-  capsule_log("Loading NSWindow");
-
-  static dispatch_once_t onceToken;
-  dispatch_once(&onceToken, ^{
-    capsule_log("Swizzling sendEvent implementations");
-    capsule_swizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
-  });
-}
-- (void)capsule_sendEvent:(NSEvent*)event {
-  NSLog(@"Window event: %@", event);
-  [self capsule_sendEvent:event];
-}
-
-@end
-
