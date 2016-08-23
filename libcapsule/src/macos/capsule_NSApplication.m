@@ -9,21 +9,15 @@
 
 @implementation NSApplication (Tracking)
 
-OSStatus capsule_hotKeyHandler(EventHandlerCallRef nextHandler, EventRef theEvent, void *userData) {
-  @autoreleasepool {
-    EventHotKeyID hotKeyID;
-    GetEventParameter(theEvent, kEventParamDirectObject, typeEventHotKeyID, NULL, sizeof(hotKeyID), NULL, &hotKeyID);
-
-    UInt32 keyID = hotKeyID.id;
-    NSLog(@"keyID: %d", (unsigned int) keyID);
-  }
-
-  return noErr;
-}
-
 CGEventRef eventCallback (CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon) {
   NSLog(@"Tapped event: %@", event);
   return event;
+}
+
+OSStatus KeyboardEventHandler(EventHandlerCallRef myHandlerChain, 
+        EventRef event, void* userData) {
+  NSLog(@"CG keyboard event");
+  return noErr;
 }
 
 + (void)load {
@@ -31,8 +25,8 @@ CGEventRef eventCallback (CGEventTapProxy proxy, CGEventType type, CGEventRef ev
 
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
-    // capsule_log("Swizzling sendEvent implementations");
-    // capsule_swizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
+    capsule_log("Swizzling sendEvent implementations");
+    capsule_swizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
     capsule_log("Swizzling run implementations");
     capsule_swizzle([self class], @selector(run), @selector(capsule_run));
   });
@@ -41,32 +35,46 @@ CGEventRef eventCallback (CGEventTapProxy proxy, CGEventType type, CGEventRef ev
 static CapsuleFixedRecorder *recorder;
 
 - (void)capsule_run {
-  OSStatus err;
+  [NSEvent addLocalMonitorForEventsMatchingMask:NSKeyDownMask 
+					handler:^(NSEvent *event) {
+					  NSLog( @"keyDown event! %@", event);
+					  return event;
+					}];
 
-  // [self capsule_run];
-  capsule_log("Installing hotKey handler");
-  EventTypeSpec eventSpec;
-  eventSpec.eventClass = kEventClassKeyboard;
-  eventSpec.eventKind = kEventHotKeyReleased;
-  err = InstallApplicationEventHandler(&capsule_hotKeyHandler, 1, &eventSpec, NULL, NULL);
-  if (err != 0) {
-    capsule_log("While installing hotkey handler: %d", err);
+  EventTypeSpec keyboardHandlerEvents = 
+  { kEventClassKeyboard, kEventRawKeyDown }; 
+
+  InstallApplicationEventHandler(NewEventHandlerUPP(KeyboardEventHandler), 
+      1, &keyboardHandlerEvents, self, NULL); 
+
+  CFMachPortRef      eventTap;
+  CGEventMask        eventMask;
+  CFRunLoopSourceRef runLoopSource;
+
+  // Create an event tap. We are interested in key presses.
+  capsule_log("Creating event tap...");
+  eventMask = ((1 << kCGEventKeyDown) | (1 << kCGEventKeyUp));
+  eventTap = CGEventTapCreate(kCGSessionEventTap, kCGHeadInsertEventTap, 0,
+			      eventMask, eventCallback, NULL);
+  if (!eventTap) {
+    fprintf(stderr, "failed to create event tap\n");
+  } else {
+    // Create a run loop source.
+    capsule_log("Creating run loop source");
+    runLoopSource = CFMachPortCreateRunLoopSource(
+			kCFAllocatorDefault, eventTap, 0);
+
+    // Add to the current run loop.
+    capsule_log("Adding to current run loop");
+    CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource,
+			kCFRunLoopCommonModes);
+
+    // Enable the event tap.
+    capsule_log("Enabling event tap");
+    CGEventTapEnable(eventTap, true);
+
+    capsule_log("Done adding event tap!");
   }
-  
-  capsule_log("Adding hotkey");
-  EventHotKeyID keyID;
-  keyID.signature = 'cap1';
-  keyID.id = 1;
-
-  EventHotKeyRef carbonHotKey;
-  UInt32 flags = 0;
-  err = RegisterEventHotKey(kVK_F9, flags, keyID, GetEventDispatcherTarget(), 0, &carbonHotKey);
-
-  if (err != 0) {
-    capsule_log("While adding hotkey: err %d", err);
-    return;
-  }
-  capsule_log("Installed hotkey.");
 
   [self capsule_run];
 }
