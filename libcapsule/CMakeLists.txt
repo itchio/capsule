@@ -25,9 +25,11 @@ set(libcapsule_SRC
 
 if(APPLE)
   list(APPEND libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/macos/capsule_nsopengl.m
-    ${libcapsule_SOURCE_DIR}/macos/capsule_nsview.m
-    ${libcapsule_SOURCE_DIR}/macos/capsule_cgl.m
+    ${libcapsule_SOURCE_DIR}/macos/capsule_macos_utils.m
+    ${libcapsule_SOURCE_DIR}/macos/capsule_NSOpenGLContext.m
+    ${libcapsule_SOURCE_DIR}/macos/capsule_NSWindow.m
+    ${libcapsule_SOURCE_DIR}/macos/capsule_NSApplication.m
+    ${libcapsule_SOURCE_DIR}/macos/capsule_CGL.m
   )
 endif()
 
