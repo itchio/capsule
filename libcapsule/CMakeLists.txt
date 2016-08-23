@@ -61,9 +61,10 @@ add_library(capsule SHARED ${libcapsule_SRC})
 if(APPLE)
   find_library(COCOA_LIBRARY Cocoa)
   target_link_libraries(capsule ${COCOA_LIBRARY})
+  find_library(OPENGL_LIBRARY OpenGL)
+  target_link_libraries(capsule ${OPENGL_LIBRARY})
 endif()
 
 if(WIN32)
   target_link_libraries(capsule polyhook)
 endif()
-
