@@ -54,7 +54,9 @@ static CapsuleFixedRecorder *recorder;
   // Create an event tap. We are interested in key presses.
   capsule_log("Creating event tap...");
   eventMask = ((1 << kCGEventKeyDown) | (1 << kCGEventKeyUp));
-  eventTap = CGEventTapCreate(kCGSessionEventTap, kCGHeadInsertEventTap, 0,
+  ProcessSerialNumber *psn;
+  GetCurrentProcess(&psn);
+  eventTap = CGEventTapCreateForPSN(&psn, kCGHeadInsertEventTap, 0,
 			      eventMask, eventCallback, NULL);
   if (!eventTap) {
     fprintf(stderr, "failed to create event tap\n");
