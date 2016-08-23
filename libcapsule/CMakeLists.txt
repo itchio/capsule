@@ -21,18 +21,20 @@ include_directories(${libcapsule_INCLUDE_DIRS} ${libcapsule_INCLUDE_DIR})
 add_definitions(-DBUILD_CAPSULE_DLL)
 
 set(libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/capsule.cpp)
+    ${libcapsule_SOURCE_DIR}/shared/capsule.cpp)
 
 if(APPLE)
   list(APPEND libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/capsule_cocoa.m
+    ${libcapsule_SOURCE_DIR}/macos/capsule_nsopengl.m
+    ${libcapsule_SOURCE_DIR}/macos/capsule_nsview.m
+    ${libcapsule_SOURCE_DIR}/macos/capsule_cgl.m
   )
 endif()
 
 if(WIN32)
   list(APPEND libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/capsule_d3d8.cpp
-    ${libcapsule_SOURCE_DIR}/capsule_d3d11.cpp
+    ${libcapsule_SOURCE_DIR}/windows/capsule_d3d8.cpp
+    ${libcapsule_SOURCE_DIR}/windows/capsule_d3d11.cpp
   )
 endif()
 
@@ -61,6 +63,8 @@ add_library(capsule SHARED ${libcapsule_SRC})
 if(APPLE)
   find_library(COCOA_LIBRARY Cocoa)
   target_link_libraries(capsule ${COCOA_LIBRARY})
+  find_library(COREGRAPHICS_LIBRARY CoreGraphics)
+  target_link_libraries(capsule ${COREGRAPHICS_LIBRARY})
   find_library(OPENGL_LIBRARY OpenGL)
   target_link_libraries(capsule ${OPENGL_LIBRARY})
 endif()

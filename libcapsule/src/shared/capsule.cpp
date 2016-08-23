@@ -64,7 +64,7 @@ void CAPSULE_STDCALL ensure_own_opengl() {
 }
 
 #ifdef CAPSULE_WINDOWS
-#define WIN32_LEAN_AND_MEAN 
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 typedef void (CAPSULE_STDCALL *glSwapBuffersType)(void*);
@@ -97,7 +97,7 @@ CAPSULE_DLL void capsule_hello () {
 
     if (_glSwapBuffers) {
       capsule_log("Attempting to install glSwapBuffers hook");
-	  
+
       swapBuffersDetour->SetupHook((BYTE*) _glSwapBuffers, (BYTE*) _fakeSwapBuffers);
       swapBuffersDetour->Hook();
 	    capsule_log("Well I think we're doing fine!");
@@ -240,6 +240,16 @@ void* dlopen (const char * filename, int flag) {
 
 FILE *outFile;
 
+void CAPSULE_STDCALL capsule_writeFrame (char *frameData, size_t frameDataSize) {
+  if (!outFile) {
+    outFile = fopen("capsule.rawvideo", "wb");
+    assert("Opened output file", !!outFile);
+  }
+
+  fwrite(frameData, 1, frameDataSize, outFile);
+  fflush(outFile);
+}
+
 void CAPSULE_STDCALL capsule_captureFrame () {
   frameNumber++;
   if (frameNumber < 120) {
@@ -271,13 +281,7 @@ void CAPSULE_STDCALL capsule_captureFrame () {
   }
   _realglReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
 
-  if (!outFile) {
-    outFile = fopen("capsule.rawvideo", "wb");
-    assert("Opened output file", !!outFile);
-  }
-
-  fwrite(frameData, 1, frameDataSize, outFile);
-  fflush(outFile);
+  capsule_writeFrame(frameData, frameDataSize);
 }
 
 #ifdef CAPSULE_LINUX
@@ -309,4 +313,3 @@ void __attribute__((destructor)) capsule_unload() {
   capsule_log("Winding down...");
 }
 #endif
-

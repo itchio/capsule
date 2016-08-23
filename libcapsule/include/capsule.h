@@ -72,6 +72,7 @@ void capsule_d3d8_sniff();
 void capsule_d3d11_sniff();
 #endif
 
+void CAPSULE_STDCALL capsule_writeFrame (char *frameData, size_t frameDataSize);
 void CAPSULE_STDCALL capsule_captureFrame ();
 
 void* glXGetProcAddressARB (const char*);
