@@ -9,13 +9,30 @@
 
 @implementation NSApplication (Tracking)
 
+CGEventRef eventCallback (CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon) {
+  NSLog(@"Tapped event: %@", event);
+  return event;
+}
+
 + (void)load {
   capsule_log("Loading NSApplication");
 
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
     capsule_log("Swizzling sendEvent implementations");
-    capsule_swizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
+    // capsule_swizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
+    
+    OSErr err;
+    ProcessSerialNumber psn;
+    err = GetCurrentProcess(&psn);
+    if (err != 0) {
+      capsule_log("While getting current process, got error %d", err);
+    }
+
+    capsule_log("Adding event tap");
+    CFMachPortRef tap;
+    tap = CGEventTapCreateForPSN(&psn, kCGHeadInsertEventTap, kCGEventTapOptionListenOnly, kCGEventMaskForAllEvents, eventCallback, nil);
+    capsule_log("Event tap: %p", tap);
   });
 }
 
