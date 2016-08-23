@@ -9,6 +9,18 @@
 
 @implementation NSApplication (Tracking)
 
+OSStatus capsule_hotKeyHandler(EventHandlerCallRef nextHandler, EventRef theEvent, void *userData) {
+  @autoreleasepool {
+    EventHotKeyID hotKeyID;
+    GetEventParameter(theEvent, kEventParamDirectObject, typeEventHotKeyID, NULL, sizeof(hotKeyID), NULL, &hotKeyID);
+
+    UInt32 keyID = hotKeyID.id;
+    NSLog(@"keyID: %d", (unsigned int) keyID);
+  }
+
+  return noErr;
+}
+
 CGEventRef eventCallback (CGEventTapProxy proxy, CGEventType type, CGEventRef event, void *refcon) {
   NSLog(@"Tapped event: %@", event);
   return event;
@@ -19,24 +31,45 @@ CGEventRef eventCallback (CGEventTapProxy proxy, CGEventType type, CGEventRef ev
 
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
-    capsule_log("Swizzling sendEvent implementations");
+    // capsule_log("Swizzling sendEvent implementations");
     // capsule_swizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
-    
-    OSErr err;
-    ProcessSerialNumber psn;
-    err = GetCurrentProcess(&psn);
-    if (err != 0) {
-      capsule_log("While getting current process, got error %d", err);
-    }
-
-    capsule_log("Adding event tap");
-    CFMachPortRef tap;
-    tap = CGEventTapCreateForPSN(&psn, kCGHeadInsertEventTap, kCGEventTapOptionListenOnly, kCGEventMaskForAllEvents, eventCallback, nil);
-    capsule_log("Event tap: %p", tap);
+    capsule_log("Swizzling run implementations");
+    capsule_swizzle([self class], @selector(run), @selector(capsule_run));
   });
 }
 
 static CapsuleFixedRecorder *recorder;
+
+- (void)capsule_run {
+  OSStatus err;
+
+  // [self capsule_run];
+  capsule_log("Installing hotKey handler");
+  EventTypeSpec eventSpec;
+  eventSpec.eventClass = kEventClassKeyboard;
+  eventSpec.eventKind = kEventHotKeyReleased;
+  err = InstallApplicationEventHandler(&capsule_hotKeyHandler, 1, &eventSpec, NULL, NULL);
+  if (err != 0) {
+    capsule_log("While installing hotkey handler: %d", err);
+  }
+  
+  capsule_log("Adding hotkey");
+  EventHotKeyID keyID;
+  keyID.signature = 'cap1';
+  keyID.id = 1;
+
+  EventHotKeyRef carbonHotKey;
+  UInt32 flags = 0;
+  err = RegisterEventHotKey(kVK_F9, flags, keyID, GetEventDispatcherTarget(), 0, &carbonHotKey);
+
+  if (err != 0) {
+    capsule_log("While adding hotkey: err %d", err);
+    return;
+  }
+  capsule_log("Installed hotkey.");
+
+  [self capsule_run];
+}
 
 - (void)capsule_sendEvent:(NSEvent*)event {
   if (([event type] == NSKeyDown && [event keyCode] == kVK_F9) || ([event type] == NSRightMouseDown)) {
@@ -57,7 +90,7 @@ static CapsuleFixedRecorder *recorder;
       }
     }
   } else {
-    // NSLog(@"Another event: %@", event);
+    NSLog(@"Another event: %@", event);
   }
   [self capsule_sendEvent:event];
 }
