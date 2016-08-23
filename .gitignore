@@ -9,7 +9,7 @@
 *.rawvideo
 *.mp4
 *.swp
-*.log.txt
+*log.txt
 /build
 /build32
 /build64
