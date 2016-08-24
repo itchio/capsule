@@ -3,10 +3,6 @@
 #include "capsule_macos_utils.h"
 #include <OpenGL/OpenGL.h>
 
-#define DYLD_INTERPOSE(_replacement,_replacee) \
-  __attribute__((used)) static struct{ const void* replacement; const void* replacee; } _interpose_##_replacee \
-__attribute__ ((section ("__DATA,__interpose"))) = { (const void*)(unsigned long)&_replacement, (const void*)(unsigned long)&_replacee };
-
 int capsule_capturing = 0;
 int capsule_had_opengl = 0;
 
