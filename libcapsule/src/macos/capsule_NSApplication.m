@@ -15,7 +15,6 @@
   dispatch_once(&onceToken, ^{
     capsule_log("Swizzling sendEvent implementations");
     capsule_swizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
-    capsule_setAudioOutput("Soundflower (2ch)");
   });
 }
 
