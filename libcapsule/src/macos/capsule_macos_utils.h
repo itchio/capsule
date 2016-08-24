@@ -10,6 +10,7 @@ __attribute__ ((section ("__DATA,__interpose"))) = { (const void*)(unsigned long
 extern int capsule_capturing;
 extern int capsule_had_opengl;
 void capsule_swizzle (Class class, SEL originalSelector, SEL swizzledSelector);
+bool capsule_setAudioOutput (char *targetDevice);
 
 @interface CapsuleFixedRecorder : NSObject
 

@@ -15,6 +15,7 @@
   dispatch_once(&onceToken, ^{
     capsule_log("Swizzling sendEvent implementations");
     capsule_swizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
+    capsule_setAudioOutput("Soundflower (2ch)");
   });
 }
 
@@ -39,10 +40,9 @@ static CapsuleFixedRecorder *recorder;
       }
     }
   } else {
-    NSLog(@"Another event: %@", event);
+    // NSLog(@"Another event: %@", event);
   }
   [self capsule_sendEvent:event];
 }
 
 @end
-
