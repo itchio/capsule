@@ -25,8 +25,26 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
        )
       ) {
 
-    AudioDeviceID* devs = (AudioDeviceID*) outData;
-    UInt32 numDevs = *ioDataSize / sizeof(AudioDeviceID);
+    AudioDeviceID soundflowerId = -1;
+    AudioDeviceID builtinId = -1;
+    UInt32 size;
+    OSStatus nStatus = AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &devlist_address, 0, NULL, &size);
+    if (nStatus != kAudioHardwareNoError) {
+      capsule_log("Could not get size of device list");
+    }
+
+    AudioDeviceID* devs = alloca(size);
+    if (!devs) {
+      capsule_log("Could not allocate device list");
+      return status;
+    }
+
+    nStatus = AudioObjectGetPropertyData(kAudioObjectSystemObject, &devlist_address, 0, NULL, &size, devs);
+    if (nStatus != kAudioHardwareNoError) {
+      capsule_log("Could not list devices");
+    }
+
+    UInt32 numDevs = size / sizeof(AudioDeviceID);
 
     capsule_log("Querying %s, got %d results",
         (inAddress->mSelector == kAudioHardwarePropertyDevices ? "all devices" :
@@ -64,7 +82,6 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
     /* } */
 
     for (UInt32 i = 0; i < numDevs; i++) {
-      UInt32 size;
       CFStringRef cfstr = NULL;
       char *ptr = NULL;
       const AudioObjectPropertyAddress nameaddr = {
@@ -94,18 +111,34 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
 
       if (strcmp("Soundflower (2ch)", ptr) == 0) {
         capsule_log("Found the soundflower!")
+        soundflowerId = dev;
       }
       if (strcmp("Built-in Output", ptr) == 0) {
         capsule_log("Found the built-in output!")
+        builtinId = dev;
       }
 
       free(ptr);
     }
+
+    if (builtinId != -1 && soundflowerId != -1) {
+      capsule_log("Pretending default output is soundflower, %d devices to go through");
+
+      numDevs = *ioDataSize / sizeof(AudioDeviceID);
+      devs = (AudioDeviceID*) outData;
+      for (UInt32 i = 0; i < numDevs; i++) {
+        AudioDeviceID dev = devs[i];
+        if (dev == builtinId) {
+          capsule_log("Swapping device %d!\n", i);
+          devs[i] = soundflowerId;
+        }
+      }
+    }
   } else {
-    capsule_log("Called AudioObjectGetPropertyData with unknown parameters");
-    capsule_log("mElement is %u instead of %u", inAddress->mElement, devlist_address.mElement);
-    capsule_log("mScope is %u instead of %u", inAddress->mScope, devlist_address.mScope);
-    capsule_log("mSelector is %u instead of %u", inAddress->mSelector, devlist_address.mSelector);
+    /* capsule_log("Called AudioObjectGetPropertyData with unknown parameters"); */
+    /* capsule_log("mElement is %u instead of %u", inAddress->mElement, devlist_address.mElement); */
+    /* capsule_log("mScope is %u instead of %u", inAddress->mScope, devlist_address.mScope); */
+    /* capsule_log("mSelector is %u instead of %u", inAddress->mSelector, devlist_address.mSelector); */
   }
 
   return status;
