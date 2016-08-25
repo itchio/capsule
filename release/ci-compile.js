@@ -69,10 +69,10 @@ function ci_compile_capsulerun (os, arch) {
   if (os === 'windows') {
     if (arch === '386') {
       TRIPLET = 'i686-w64-mingw32-'
-      process.env.PKG_CONFIG_PATH = '/mingw32/lib/pkgconfig'
+      process.env.PKG_CONFIG_PATH = 'C:\\msys64\\mingw32\\lib\\pkgconfig'
     } else {
       TRIPLET = 'x86_64-w64-mingw32-'
-      process.env.PKG_CONFIG_PATH = '/mingw64/lib/pkgconfig'
+      process.env.PKG_CONFIG_PATH = 'C:\\msys64\\mingw64\\lib\\pkgconfig'
     }
   }
 
