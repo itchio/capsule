@@ -77,7 +77,7 @@ function ci_compile_capsulerun (os, arch) {
   process.env.CC = `${TRIPLET}gcc`
   process.env.CXX = `${TRIPLET}g++`
 
-  let TARGET = 'capsulerun'
+  let TARGET = 'capsulerun/capsulerun'
 
   if (os === 'windows') {
     TARGET += '.exe'
@@ -102,7 +102,7 @@ function ci_compile_capsulerun (os, arch) {
 
   // compile
   // todo: LDFLAGS?
-  $($.sh(`gox -osarch "${os}/${arch}" -cgo -output="capsulerun" ${pkg}/capsulerun`))
+  $($.sh(`gox -osarch "${os}/${arch}" -cgo -output="capsulerun/capsulerun" ${pkg}/capsulerun`))
 
   // sign (win)
   if (os === 'windows') {
@@ -114,7 +114,7 @@ function ci_compile_capsulerun (os, arch) {
 
   $.sh(`rm -rf compile-artifacts`)
   $.sh(`mkdir compile-artifacts`)
-  $.sh(`cp capsulerun.exe compile-artifacts`)
+  $.sh(`cp ${TARGET} compile-artifacts`)
 }
 
 function ci_compile_darwin () {
