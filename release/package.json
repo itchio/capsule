@@ -8,6 +8,6 @@
   "author": "",
   "devDependencies": {
     "colors": "^1.1.2",
-    "munyx": "^1.1.0"
+    "munyx": "^1.2.0"
   }
 }

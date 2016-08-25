@@ -42,13 +42,17 @@ $.ARCHES = {
   }
 }
 
+$.add_to_path (element) {
+  process.env.path += ospath.delimiter + element
+}
+
 // local golang executables
 $.GOPATH = ospath.join($.HOME, 'go')
 process.env.GOPATH = $.GOPATH
-process.env.PATH += `:${ospath.join($.GOPATH, 'bin')}`
+$.add_to_path(ospath.join($.GOPATH, 'bin'))
 
 // local npm executables
-process.env.PATH += `:${ospath.resolve(__dirname, '..', 'node_modules')}/.bin`
+$.add_to_path(ospath.resolve(__dirname, '..', 'node_modules', '.bin'))
 
 $.VERSION_SPECS = {
   ['7za']: '7za | head -2',
