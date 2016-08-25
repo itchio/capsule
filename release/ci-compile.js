@@ -18,11 +18,12 @@ function ci_compile (args) {
       break
     }
     case 'windows-mingw': {
-      ci_compile_capsulerun()
+      ci_compile_capsulerun('windows', '386')
+      ci_compile_capsulerun('windows', 'amd64')
       break
     }
     case 'darwin': {
-      ci_compile_darwin
+      ci_compile_darwin()
       break
     }
     default: {
@@ -35,14 +36,18 @@ function ci_compile_windows_msbuild () {
   const specs = [
     {
       dir: 'build32',
+      dll: 'capsule_x86.dll',
       generator: 'Visual Studio 14 2015'
     },
     {
       dir: 'build64',
+      dll: 'capsule_x64.dll',
       generator: 'Visual Studio 14 2015 Win64'
     }
   ]
 
+  $.cmd(['rmdir', '/s', '/q', 'compile-artifacts'])
+  $.cmd(['mkdir', 'compile-artifacts'])
   for (const spec of specs) {
     $.cmd(['rmdir', '/s', '/q', spec.dir])
     $.cmd(['mkdir', spec.dir])
@@ -50,13 +55,66 @@ function ci_compile_windows_msbuild () {
       $($.cmd(['cmake', '-G', spec.generator, '..']))
       $($.cmd(['msbuild', 'ALL_BUILD.vcxproj']))
     })
+    $.cmd(['copy', '/y', spec.dir + '\\libcapsule\\Debug\\capsule.dll', 'compile-artifacts\\' + spec.dll])
   }
 }
 
-function ci_compile_capsulerun () {
-  $.cd('capsulerun', function () {
-    $($.go('build capsulerun.go'))
-  })
+function ci_compile_capsulerun (os, arch) {
+  process.env.CGO_ENABLED = '1'
+
+  // set up go cross-compile
+  $($.go('get github.com/mitchellh/gox'))
+
+  let TRIPLET = ''
+  if (os === 'windows') {
+    if (arch === '386') {
+      TRIPLET = 'i686-w64-mingw32-'
+    } else {
+      TRIPLET = 'x86_64-w64-mingw32-'
+    }
+  }
+
+  process.env.CC = `${TRIPLET}gcc`
+  process.env.CXX = `${TRIPLET}g++`
+
+  let TARGET = 'capsulerun'
+
+  if (os === 'windows') {
+    TARGET += '.exe'
+  } else {
+    // XXX: is that still needed with munyx?
+    process.env.PATH += ':/usr/local/go/bin'
+  }
+
+  const pkg = 'github.com/itchio/capsule'
+  $.sh(`mkdir -p ${pkg}`)
+
+  // rsync will complain about vanishing files sometimes, who knows where they come from
+  $($.sh(`rm -rf github.com`))
+  $($.sh(`rsync -az . ${pkg} || echo "rsync complained (code $?)"`))
+
+  // grab deps
+  process.env.GOOS = os
+  process.env.GOARCH = arch
+  $($.go(`get -v -d -t ${pkg}/capsulerun`))
+  process.env.GOOS = ''
+  process.env.GOARCH = ''
+
+  // compile
+  // todo: LDFLAGS?
+  $($.sh(`gox -osarch "${os}/${arch}" -cgo -output="capsulerun" ${pkg}/capsulerun`))
+
+  // sign (win)
+  if (os === 'windows') {
+    const WIN_SIGN_KEY = 'Open Source Developer, Amos Wenger'
+    const WIN_SIGN_URL = 'http://timestamp.verisign.com/scripts/timstamp.dll'
+
+    $($.sh(`signtool.exe sign //v //s MY //n "${WIN_SIGN_KEY}" //t "${WIN_SIGN_URL}" ${TARGET}`))
+  }
+
+  $.sh(`rm -rf compile-artifacts`)
+  $.sh(`mkdir compile-artifacts`)
+  $.sh(`cp capsulerun.exe compile-artifacts`)
 }
 
 function ci_compile_darwin () {
@@ -66,7 +124,7 @@ function ci_compile_darwin () {
     $($.sh('cmake ..'))
     $($.sh('make'))
   })
-  ci_compile_capsulerun()
+  ci_compile_capsulerun('darwin', 'amd64')
 }
 
 ci_compile(process.argv.slice(2))

@@ -6,7 +6,7 @@ cache:
   key: "$CI_BUILD_NAME"
   untracked: true
 
-compile:windows-msbuild
+compile:windows-msbuild:
   stage: build
   tags:
     - msbuild
@@ -16,7 +16,7 @@ compile:windows-msbuild
     paths:
       - compile-artifacts
 
-compile:windows-mingw
+compile:windows-mingw:
   stage: build
   tags:
     - windows

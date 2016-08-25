@@ -14,7 +14,9 @@
 /build
 /build32
 /build64
+/compile-artifacts
 /deps
+/github.com
 
 CMakeCache.txt
 CMakeFiles
