@@ -42,7 +42,7 @@ $.ARCHES = {
   }
 }
 
-$.add_to_path (element) {
+$.add_to_path = function (element) {
   process.env.path += ospath.delimiter + element
 }
 
