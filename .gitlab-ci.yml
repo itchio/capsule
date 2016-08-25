@@ -11,7 +11,7 @@ compile:windows-msbuild:
   tags:
     - msbuild
   script:
-    - node scripts\ci-compile.js windows-msbuild
+    - node release\ci-compile.js windows-msbuild
   artifacts:
     paths:
       - compile-artifacts
@@ -21,7 +21,7 @@ compile:windows-mingw:
   tags:
     - windows
   script:
-    - scripts/ci-compile.js windows-mingw
+    - release/ci-compile.js windows-mingw
   artifacts:
     paths:
       - compile-artifacts
@@ -31,7 +31,7 @@ compile:darwin:
   tags:
     - darwin
   script:
-    - scripts/ci-compile.js darwin
+    - release/ci-compile.js darwin
   artifacts:
     paths:
       - compile-artifacts
