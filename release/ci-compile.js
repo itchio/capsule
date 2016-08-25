@@ -118,8 +118,8 @@ function ci_compile_capsulerun (os, arch) {
 }
 
 function ci_compile_darwin () {
-  $.rm_rf('build')
-  $.mkdir_p('build')
+  $.sh('rm -rf build')
+  $.sh('mkdir -p build')
   $.cd('build', function () {
     $($.sh('cmake ..'))
     $($.sh('make'))
