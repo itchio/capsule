@@ -5,8 +5,8 @@ cmake_policy(SET CMP0042 NEW)
 
 project(libcapsule)
 
-set (libcapsule_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set (libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(libcapsule_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 find_package(OpenGL REQUIRED)
 
@@ -66,6 +66,7 @@ if(WIN32)
 endif()
 
 add_library(capsule SHARED ${libcapsule_SRC})
+add_dependencies(capsule ffmpeg)
 
 if(APPLE)
   find_library(COCOA_LIBRARY Cocoa)
@@ -90,5 +91,12 @@ if(WIN32)
   target_link_libraries(capsule polyhook)
 endif()
 
-target_link_libraries(capsule ${FFMPEG_avcodec_LIBRARY} ${FFMPEG_avutil_LIBRARY})
+message(STATUS "libcapsule/avcodec library: ${FFMPEG_avcodec_LIBRARY_i386}")
+message(STATUS "libcapsule/avutil library: ${FFMPEG_avcodec_LIBRARY_i386}")
+target_link_libraries(capsule
+  ${FFMPEG_avcodec_LIBRARY_i386}
+  ${FFMPEG_avutil_LIBRARY_i386}
+  ${FFMPEG_avcodec_LIBRARY_x86_64}
+  ${FFMPEG_avutil_LIBRARY_x86_64}
+)
 
