@@ -25,7 +25,7 @@ $.DESCRIPTION = 'The best way to play itch.io games'
 $.BUILD_TIME = new Date()
 
 $.RETRY_COUNT = 5
-$.HOME = process.env.HOME
+$.HOME = process.env.HOME || process.env.USERPROFILE
 
 $.OSES = {
   windows: {},
@@ -43,7 +43,7 @@ $.ARCHES = {
 }
 
 $.add_to_path = function (element) {
-  process.env.path += ospath.delimiter + element
+  process.env.PATH += ospath.delimiter + element
 }
 
 // local golang executables
