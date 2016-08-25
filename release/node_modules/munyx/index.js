@@ -43,9 +43,9 @@ $.ARCHES = {
 }
 
 // local golang executables
-$.GOPATH = `${$.HOME}/go`
+$.GOPATH = ospath.join($.HOME, 'go')
 process.env.GOPATH = $.GOPATH
-process.env.PATH += `:${$.GOPATH}/bin`
+process.env.PATH += `:${ospath.join($.GOPATH, 'bin')}`
 
 // local npm executables
 process.env.PATH += `:${ospath.resolve(__dirname, '..', 'node_modules')}/.bin`
