@@ -6,7 +6,7 @@ cmake_policy(SET CMP0042 NEW)
 project(capsule)
 
 option(BUILD_TESTS "Build tests" OFF)
-option(OSX_UNIVERSAL "Build an OSX universal binary" ON)
+option(OSX_UNIVERSAL "Build an OSX universal binary" OFF)
 
 set(CAPSULE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libcapsule/include)
 
@@ -18,17 +18,18 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   endif()
 endif()
 
-# includes cmake/FindSDL2.cmake
+# includes cmake/FindSDL2.cmake, etc.
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set(CMAKE_FIND_FRAMEWORK LAST)
 
 find_package(OpenGL REQUIRED)
+find_package(FFMPEG REQUIRED)
 
 if(WIN32)
     find_package(DirectX REQUIRED)
 endif()
 
-set(CAPSULE_INCLUDE_DIRS ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${PROJECT_SOURCE_DIR} SYSTEM)
+set(CAPSULE_INCLUDE_DIRS ${FFMPEG_INCLUDE_DIRS} ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIR} ${PROJECT_SOURCE_DIR} SYSTEM)
 
 if(WIN32)
     list(APPEND CAPSULE_INCLUDE_DIRS PolyHook/source/PolyHook)

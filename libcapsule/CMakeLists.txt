@@ -89,3 +89,6 @@ endif()
 if(WIN32)
   target_link_libraries(capsule polyhook)
 endif()
+
+target_link_libraries(capsule ${FFMPEG_avcodec_LIBRARY} ${FFMPEG_avutil_LIBRARY})
+
