@@ -1,16 +1,13 @@
 
 #include <capsule.h>
 
-#ifdef _WIN32
-#include <PolyHook.h>
-#endif
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
 
 #if defined(CAPSULE_WINDOWS)
+#include <windows.h>
 #define dlopen(a, b) LoadLibrary((a))
 #define dlsym GetProcAddress
 #define RTLD_NOW 0
@@ -86,7 +83,7 @@ void CAPSULE_STDCALL _fakeSwapBuffers (void *hdc) {
   fnSwapBuffers(hdc);
 }
 
-std::shared_ptr<PLH::Detour> swapBuffersDetour(new PLH::Detour);
+// std::shared_ptr<PLH::Detour> swapBuffersDetour(new PLH::Detour);
 static int capsule_inited = 0;
 
 CAPSULE_DLL void capsule_hello () {
@@ -97,21 +94,21 @@ CAPSULE_DLL void capsule_hello () {
 
   HMODULE mh = GetModuleHandle("opengl32.dll");
   capsule_log("OpenGL handle: %p", mh);
-  if (mh) {
-	  ensure_own_opengl();
-
-    _glSwapBuffers = (glSwapBuffersType) GetProcAddress(mh, "wglSwapBuffers");
-    capsule_log("SwapBuffers handle: %p", _glSwapBuffers);
-
-    if (_glSwapBuffers) {
-      capsule_log("Attempting to install glSwapBuffers hook");
-
-      swapBuffersDetour->SetupHook((BYTE*) _glSwapBuffers, (BYTE*) _fakeSwapBuffers);
-      swapBuffersDetour->Hook();
-	    capsule_log("Well I think we're doing fine!");
-    }
-  }
-
+  // if (mh) {
+	//   ensure_own_opengl();
+  //
+  //   _glSwapBuffers = (glSwapBuffersType) GetProcAddress(mh, "wglSwapBuffers");
+  //   capsule_log("SwapBuffers handle: %p", _glSwapBuffers);
+  //
+  //   if (_glSwapBuffers) {
+  //     capsule_log("Attempting to install glSwapBuffers hook");
+  //
+  //     swapBuffersDetour->SetupHook((BYTE*) _glSwapBuffers, (BYTE*) _fakeSwapBuffers);
+  //     swapBuffersDetour->Hook();
+	//     capsule_log("Well I think we're doing fine!");
+  //   }
+  // }
+  
   HMODULE m8 = GetModuleHandle("d3d8.dll");
   capsule_log("Direct3D8 handle: %p", m8);
 

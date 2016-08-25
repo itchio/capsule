@@ -46,19 +46,15 @@ if(WIN32)
 endif()
 
 if(WIN32)
-  add_subdirectory(PolyHook)
-  include_directories(${CMAKE_CURRENT_SOURCE_DIR}/PolyHook/source/PolyHook/)
   if(MSVC)
     if(${CMAKE_GENERATOR} MATCHES "Win64$")
       message(STATUS "Using 64-bit dependencies")
       set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/64)
       include_directories(${PROJECT_SOURCE_DIR}/deps/include)
-      link_directories(${CMAKE_CURRENT_SOURCE_DIR}/PolyHook/source/Capstone/msvc/x64/Release)
     else()
       message(STATUS "Using 32-bit dependencies")
       set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/32)
       include_directories(${PROJECT_SOURCE_DIR}/deps/include)
-      link_directories(${CMAKE_CURRENT_SOURCE_DIR}/PolyHook/source/Capstone/msvc/x86/Release)
     endif()
   elseif()
     message(FATAL_ERROR "Only MSVC is supported on Windows. Sorry!")
@@ -66,7 +62,6 @@ if(WIN32)
 endif()
 
 add_library(capsule SHARED ${libcapsule_SRC})
-add_dependencies(capsule ffmpeg)
 
 if(APPLE)
   find_library(COCOA_LIBRARY Cocoa)
@@ -86,17 +81,4 @@ if(APPLE)
   find_library(AUDIOTOOLBOX_LIBRARY AudioToolbox)
   target_link_libraries(capsule ${AUDIOTOOLBOX_LIBRARY})
 endif()
-
-if(WIN32)
-  target_link_libraries(capsule polyhook)
-endif()
-
-message(STATUS "libcapsule/avcodec library: ${FFMPEG_avcodec_LIBRARY_i386}")
-message(STATUS "libcapsule/avutil library: ${FFMPEG_avcodec_LIBRARY_i386}")
-target_link_libraries(capsule
-  ${FFMPEG_avcodec_LIBRARY_i386}
-  ${FFMPEG_avutil_LIBRARY_i386}
-  ${FFMPEG_avcodec_LIBRARY_x86_64}
-  ${FFMPEG_avutil_LIBRARY_x86_64}
-)
 

@@ -6,13 +6,15 @@ require_relative 'common'
 module Capsule
   def Capsule.ci_compile (args)
     raise "ci-compile expects one argument" unless args.length == 1
-    os = args[0]
+    const [os] = args
 
     say "Compiling #{app_name}"
 
     case os
-    when "windows"
-      ci_compile_windows
+    when "windows-msbuild"
+      ci_compile_windows_msbuild
+    when "windows-mingw"
+      ci_compile_capsulerun
     when "darwin"
       ci_compile_darwin
     else
@@ -20,7 +22,7 @@ module Capsule
     end
   end
 
-  def Capsule.ci_compile_windows
+  def Capsule.ci_compile_windows_msbuild
     FileUtils.rm_rf 'build32'
     FileUtils.mkdir_p 'build32'
     cd 'build32' do
@@ -36,6 +38,12 @@ module Capsule
     end
   end
 
+  def Capsule.ci_compile_capsulerun
+    cd 'capsulerun' do
+      ✓ go 'build capsulerun.go'
+    end
+  end
+
   def Capsule.ci_compile_darwin
     FileUtils.rm_rf 'build'
     FileUtils.mkdir_p 'build'
@@ -43,8 +51,8 @@ module Capsule
       ✓ sh 'cmake ..'
       ✓ sh 'make'
     end
+    ci_compile_capsulerun
   end
 end
 
 Capsule.ci_compile ARGV
-

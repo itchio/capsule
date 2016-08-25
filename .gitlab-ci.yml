@@ -6,14 +6,22 @@ cache:
   key: "$CI_BUILD_NAME"
   untracked: true
 
-compile:windows:
+compile:windows-msbuild
   stage: build
   tags:
     - msbuild
-  before_script:
-    - git submodule update --init
   script:
-    - ruby scripts\ci-compile.rb windows
+    - node scripts\ci-compile.js windows-msbuild
+  artifacts:
+    paths:
+      - compile-artifacts
+
+compile:windows-mingw
+  stage: build
+  tags:
+    - windows
+  script:
+    - scripts/ci-compile.js windows-mingw
   artifacts:
     paths:
       - compile-artifacts
@@ -23,9 +31,7 @@ compile:darwin:
   tags:
     - darwin
   script:
-    - scripts/ci-compile.rb darwin
+    - scripts/ci-compile.js darwin
   artifacts:
     paths:
       - compile-artifacts
-
-      
