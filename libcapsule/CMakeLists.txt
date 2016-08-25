@@ -82,3 +82,7 @@ if(APPLE)
   target_link_libraries(capsule ${AUDIOTOOLBOX_LIBRARY})
 endif()
 
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+  target_link_libraries(capsule -ldl)
+endif()
+

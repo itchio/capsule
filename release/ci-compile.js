@@ -26,6 +26,10 @@ function ci_compile (args) {
       ci_compile_darwin()
       break
     }
+    case 'linux': {
+      ci_compile_linux()
+      break
+    }
     default: {
       throw new Error(`Unsupported os ${os}`)
     }
@@ -125,6 +129,16 @@ function ci_compile_darwin () {
     $($.sh('make'))
   })
   ci_compile_capsulerun('darwin', 'amd64')
+}
+
+function ci_compile_linux () {
+  $.sh('rm -rf build')
+  $.sh('mkdir -p build')
+  $.cd('build', function () {
+    $($.sh('cmake ..'))
+    $($.sh('make'))
+  })
+  ci_compile_capsulerun('linux', 'amd64')
 }
 
 ci_compile(process.argv.slice(2))

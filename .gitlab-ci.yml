@@ -35,3 +35,13 @@ compile-darwin:
   artifacts:
     paths:
       - compile-artifacts
+
+compile-linux:
+  stage: build
+  tags:
+    - linux
+  script:
+    - release/ci-compile.js linux
+  artifacts:
+    paths:
+      - compile-artifacts
