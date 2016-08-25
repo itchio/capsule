@@ -1,6 +1,7 @@
 
 #include "capsule.h"
-#include "capsule_macos_utils.h"
+#include "capsule_macos.h"
+
 #include <OpenGL/OpenGL.h>
 
 int capsule_capturing = 0;

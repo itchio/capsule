@@ -29,7 +29,12 @@ if(APPLE)
     ${libcapsule_SOURCE_DIR}/macos/capsule_NSWindow.m
     ${libcapsule_SOURCE_DIR}/macos/capsule_NSApplication.m
     ${libcapsule_SOURCE_DIR}/macos/capsule_CGL.m
-    ${libcapsule_SOURCE_DIR}/macos/capsule_CoreAudio.m
+    ${libcapsule_SOURCE_DIR}/macos/capsule_CoreAudio.mm
+
+    ${libcapsule_SOURCE_DIR}/macos/playthrough/CAPlayThrough.cpp
+    ${libcapsule_SOURCE_DIR}/macos/playthrough/CARingBuffer.cpp
+    ${libcapsule_SOURCE_DIR}/macos/playthrough/CAStreamBasicDescription.cpp
+    ${libcapsule_SOURCE_DIR}/macos/playthrough/AudioDevice.cpp
   )
 endif()
 
@@ -65,14 +70,20 @@ add_library(capsule SHARED ${libcapsule_SRC})
 if(APPLE)
   find_library(COCOA_LIBRARY Cocoa)
   target_link_libraries(capsule ${COCOA_LIBRARY})
-  find_library(COREAUDIO_LIBRARY CoreAudio)
-  target_link_libraries(capsule ${COREAUDIO_LIBRARY})
-  find_library(CORESERVICES_LIBRARY CoreServices)
-  target_link_libraries(capsule ${CORESERVICES_LIBRARY})
   find_library(COREGRAPHICS_LIBRARY CoreGraphics)
   target_link_libraries(capsule ${COREGRAPHICS_LIBRARY})
+
   find_library(OPENGL_LIBRARY OpenGL)
   target_link_libraries(capsule ${OPENGL_LIBRARY})
+
+  find_library(CORESERVICES_LIBRARY CoreServices)
+  target_link_libraries(capsule ${CORESERVICES_LIBRARY})
+  find_library(COREAUDIO_LIBRARY CoreAudio)
+  target_link_libraries(capsule ${COREAUDIO_LIBRARY})
+  find_library(AUDIOUNIT_LIBRARY AudioUnit)
+  target_link_libraries(capsule ${AUDIOUNIT_LIBRARY})
+  find_library(AUDIOTOOLBOX_LIBRARY AudioToolbox)
+  target_link_libraries(capsule ${AUDIOTOOLBOX_LIBRARY})
 endif()
 
 if(WIN32)

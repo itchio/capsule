@@ -1,10 +1,14 @@
 
 #include "capsule.h"
-#include "capsule_macos_utils.h"
+#include "capsule_macos.h"
+#include "playthrough/CAPlayThrough.h"
 
 #include <CoreAudio/CoreAudio.h>
 #include <CoreServices/CoreServices.h>
 #include <AudioToolbox/AudioToolbox.h>
+
+static CAPlayThroughHost *playThroughHost;
+static bool settingUpPlayThrough = false;
 
 static const AudioObjectPropertyAddress devlist_address = {
     kAudioHardwarePropertyDevices,
@@ -33,7 +37,7 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
       capsule_log("Could not get size of device list");
     }
 
-    AudioDeviceID* devs = alloca(size);
+    AudioDeviceID* devs = (AudioDeviceID*) alloca(size);
     if (!devs) {
       capsule_log("Could not allocate device list");
       return status;
@@ -51,35 +55,6 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
          (inAddress->mSelector == kAudioHardwarePropertyDefaultOutputDevice ? "default output" :
           (inAddress->mSelector == kAudioHardwarePropertyDefaultSystemOutputDevice ? "default system output" : "???"))),
         (unsigned int) numDevs);
-    /* if (inAddress->mSelector != devlist_address.mSelector) { */
-    /*   capsule_log("Selector differed: %d instead of %d", inAddress->mSelector, devlist_address.mSelector); */
-    /*   capsule_log("kAudioHardwarePropertyDevices: %d", kAudioHardwarePropertyDevices); */
-    /*   capsule_log("kAudioObjectPropertyScopeGlobal: %d", kAudioObjectPropertyScopeGlobal); */
-    /*   capsule_log("kAudioObjectPropertyElementMaster: %d", kAudioObjectPropertyElementMaster); */
-
-    /*   capsule_log("kAudioHardwarePropertyDevices: %d", kAudioHardwarePropertyDevices); */
-    /*   capsule_log("kAudioHardwarePropertyDefaultInputDevice: %d", kAudioHardwarePropertyDefaultInputDevice); */
-    /*   capsule_log("kAudioHardwarePropertyDefaultOutputDevice: %d", kAudioHardwarePropertyDefaultOutputDevice); */
-    /*   capsule_log("kAudioHardwarePropertyDefaultSystemOutputDevice: %d", kAudioHardwarePropertyDefaultSystemOutputDevice); */
-    /*   capsule_log("kAudioHardwarePropertyTranslateUIDToDevice: %d", kAudioHardwarePropertyTranslateUIDToDevice); */
-    /*   capsule_log("kAudioHardwarePropertyMixStereoToMono);: %d", kAudioHardwarePropertyMixStereoToMono); */
-    /*   capsule_log("kAudioHardwarePropertyPlugInList: %d", kAudioHardwarePropertyPlugInList); */
-    /*   capsule_log("kAudioHardwarePropertyTranslateBundleIDToPlugIn: %d", kAudioHardwarePropertyTranslateBundleIDToPlugIn); */
-    /*   capsule_log("kAudioHardwarePropertyTransportManagerList: %d", kAudioHardwarePropertyTransportManagerList); */
-    /*   capsule_log("kAudioHardwarePropertyTranslateBundleIDToTransportManager: %d", kAudioHardwarePropertyTranslateBundleIDToTransportManager); */
-    /*   capsule_log("kAudioHardwarePropertyBoxList: %d", kAudioHardwarePropertyBoxList); */
-    /*   capsule_log("kAudioHardwarePropertyTranslateUIDToBox: %d", kAudioHardwarePropertyTranslateUIDToBox); */
-    /*   capsule_log("kAudioHardwarePropertyProcessIsMaster: %d", kAudioHardwarePropertyProcessIsMaster); */
-    /*   capsule_log("kAudioHardwarePropertyIsInitingOrExiting: %d", kAudioHardwarePropertyIsInitingOrExiting); */
-    /*   capsule_log("kAudioHardwarePropertyUserIDChanged: %d", kAudioHardwarePropertyUserIDChanged); */
-    /*   capsule_log("kAudioHardwarePropertyProcessIsAudible: %d", kAudioHardwarePropertyProcessIsAudible); */
-    /*   capsule_log("kAudioHardwarePropertySleepingIsAllowed: %d", kAudioHardwarePropertySleepingIsAllowed); */
-    /*   capsule_log("kAudioHardwarePropertyUnloadingIsAllowed: %d", kAudioHardwarePropertyUnloadingIsAllowed); */
-    /*   capsule_log("kAudioHardwarePropertyHogModeIsAllowed: %d", kAudioHardwarePropertyHogModeIsAllowed); */
-    /*   capsule_log("kAudioHardwarePropertyUserSessionIsActiveOrHeadless: %d", kAudioHardwarePropertyUserSessionIsActiveOrHeadless); */
-    /*   capsule_log("kAudioHardwarePropertyServiceRestarted: %d", kAudioHardwarePropertyServiceRestarted); */
-    /*   capsule_log("kAudioHardwarePropertyPowerHint: %d", kAudioHardwarePropertyPowerHint); */
-    /* } */
 
     for (UInt32 i = 0; i < numDevs; i++) {
       CFStringRef cfstr = NULL;
@@ -95,7 +70,7 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
       AudioObjectGetPropertyData(dev, &nameaddr, 0, NULL, &size, &cfstr);
 
       if (!cfstr) {
-        capsule_log("No output name for device %d", i);
+        capsule_log("No output name for device %d", (unsigned int) i);
         continue;
       }
 
@@ -107,7 +82,7 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
       }
       CFRelease(cfstr);
 
-      capsule_log("Device #%d: %s", i, ptr)
+      capsule_log("Device #%d: %s", (unsigned int) i, ptr)
 
       if (strcmp("Soundflower (2ch)", ptr) == 0) {
         capsule_log("Found the soundflower!")
@@ -122,16 +97,26 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
     }
 
     if (builtinId != -1 && soundflowerId != -1) {
-      capsule_log("Pretending default output is soundflower, %d devices to go through");
-
       numDevs = *ioDataSize / sizeof(AudioDeviceID);
       devs = (AudioDeviceID*) outData;
+      capsule_log("Pretending default output is soundflower, %d devices to go through", (unsigned int) numDevs);
       for (UInt32 i = 0; i < numDevs; i++) {
         AudioDeviceID dev = devs[i];
         if (dev == builtinId) {
-          capsule_log("Swapping device %d!\n", i);
+          capsule_log("Swapping device %d!\n", (unsigned int) i);
           devs[i] = soundflowerId;
         }
+      }
+
+      if (!playThroughHost && !settingUpPlayThrough) {
+        settingUpPlayThrough = true;
+        playThroughHost = new CAPlayThroughHost(soundflowerId, builtinId);
+        if (!playThroughHost) {
+          capsule_log("ERROR: playThroughHost init failed!");
+          return status;
+        }
+        playThroughHost->Start();
+        settingUpPlayThrough = false;
       }
     }
   } else {

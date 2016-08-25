@@ -1,8 +1,8 @@
 
 #include "capsule.h"
-#include "capsule_macos_utils.h"
-#include <OpenGL/OpenGL.h>
+#include "capsule_macos.h"
 
+#import <OpenGL/OpenGL.h>
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
 

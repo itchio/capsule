@@ -1,6 +1,6 @@
 
 #include "capsule.h"
-#include "capsule_macos_utils.h"
+#include "capsule_macos.h"
 
 // for getpid
 #include <unistd.h>
