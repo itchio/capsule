@@ -81,9 +81,6 @@ function ci_compile_capsulerun (os, arch) {
 
   if (os === 'windows') {
     TARGET += '.exe'
-  } else {
-    // XXX: is that still needed with munyx?
-    process.env.PATH += ':/usr/local/go/bin'
   }
 
   const pkg = 'github.com/itchio/capsule'
@@ -102,6 +99,7 @@ function ci_compile_capsulerun (os, arch) {
 
   // compile
   // todo: LDFLAGS?
+  $.say(`PATH before gox: ${process.env.PATH}`)
   $($.sh(`gox -osarch "${os}/${arch}" -cgo -output="capsulerun/capsulerun" ${pkg}/capsulerun`))
 
   // sign (win)
