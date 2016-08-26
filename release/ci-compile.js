@@ -83,9 +83,9 @@ function ci_compile_capsulerun (os, arch) {
   if (os === 'linux') {
     // TODO: move on to something cleaner
     if (arch === '386') {
-      process.env.PKG_CONFIG_PATH = '/ffmpeg/32/lib/pkgconfig'
+      process.env.PKG_CONFIG_PATH = '/ffmpeg/32/prefix/lib/pkgconfig'
     } else {
-      process.env.PKG_CONFIG_PATH = '/ffmpeg/64/lib/pkgconfig'
+      process.env.PKG_CONFIG_PATH = '/ffmpeg/64/prefix/lib/pkgconfig'
     }
   }
 
