@@ -109,8 +109,8 @@ function ci_compile_capsulerun (os, arch) {
   process.env.GOOS = os
   process.env.GOARCH = arch
   $($.go(`get -v -d -t ${pkg}/capsulerun`))
-  process.env.GOOS = ''
-  process.env.GOARCH = ''
+  delete process.env.GOOS
+  delete process.env.GOARCH
 
   // compile
   // todo: LDFLAGS?
