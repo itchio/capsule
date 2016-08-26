@@ -39,7 +39,7 @@ compile-darwin:
 compile-linux:
   stage: build
   tags:
-    - linux
+    - dropsy
   script:
     - release/ci-compile.js linux
   artifacts:

@@ -80,6 +80,15 @@ function ci_compile_capsulerun (os, arch) {
     }
   }
 
+  if (os === 'linux') {
+    // TODO: move on to something cleaner
+    if (arch === '386') {
+      process.env.PKG_CONFIG_PATH = '/ffmpeg/32/lib/pkgconfig'
+    } else {
+      process.env.PKG_CONFIG_PATH = '/ffmpeg/64/lib/pkgconfig'
+    }
+  }
+
   process.env.CC = `${TRIPLET}gcc`
   process.env.CXX = `${TRIPLET}g++`
 
@@ -138,6 +147,7 @@ function ci_compile_linux () {
     $($.sh('cmake ..'))
     $($.sh('make'))
   })
+  ci_compile_capsulerun('linux', '386')
   ci_compile_capsulerun('linux', 'amd64')
 }
 
