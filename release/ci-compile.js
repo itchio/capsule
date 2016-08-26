@@ -18,8 +18,7 @@ function ci_compile (args) {
       break
     }
     case 'windows-mingw': {
-      ci_compile_capsulerun('windows', '386')
-      ci_compile_capsulerun('windows', 'amd64')
+      ci_compile_windows_mingw()
       break
     }
     case 'darwin': {
@@ -40,12 +39,12 @@ function ci_compile_windows_msbuild () {
   const specs = [
     {
       dir: 'build32',
-      dll: 'capsule_x86.dll',
+      osarch: 'windows-386',
       generator: 'Visual Studio 14 2015'
     },
     {
       dir: 'build64',
-      dll: 'capsule_x64.dll',
+      osarch: 'windows-amd64',
       generator: 'Visual Studio 14 2015 Win64'
     }
   ]
@@ -59,38 +58,30 @@ function ci_compile_windows_msbuild () {
       $($.cmd(['cmake', '-G', spec.generator, '..']))
       $($.cmd(['msbuild', 'ALL_BUILD.vcxproj']))
     })
-    $.cmd(['copy', '/y', spec.dir + '\\libcapsule\\Debug\\capsule.dll', 'compile-artifacts\\' + spec.dll])
+    $.cmd(['mkdir', 'compile-artfiacts\\' + spec.osarch])
+    $.cmd(['copy', '/y', spec.dir + '\\libcapsule\\Debug\\capsule.dll', 'compile-artifacts\\' + spec.osarch + '\\capsule.dll'])
   }
 }
 
-function ci_compile_capsulerun (os, arch) {
+function ci_compile_capsulerun (os, arch, opts) {
+  if (!opts) {
+    opts = {}
+  }
   process.env.CGO_ENABLED = '1'
 
   // set up go cross-compile
   $($.go('get github.com/mitchellh/gox'))
 
-  let TRIPLET = ''
-  if (os === 'windows') {
-    if (arch === '386') {
-      TRIPLET = 'i686-w64-mingw32-'
-      process.env.PKG_CONFIG_PATH = 'C:\\msys64\\mingw32\\lib\\pkgconfig'
-    } else {
-      TRIPLET = 'x86_64-w64-mingw32-'
-      process.env.PKG_CONFIG_PATH = 'C:\\msys64\\mingw64\\lib\\pkgconfig'
-    }
+  if (opts.prefix) {
+    process.env.PKG_CONFIG_PATH = path.join(opts.prefix, 'lib', 'pkgconfig')
   }
 
-  if (os === 'linux') {
-    // TODO: move on to something cleaner
-    if (arch === '386') {
-      process.env.PKG_CONFIG_PATH = '/ffmpeg/32/prefix/lib/pkgconfig'
-    } else {
-      process.env.PKG_CONFIG_PATH = '/ffmpeg/64/prefix/lib/pkgconfig'
-    }
+  if (opts.cc) {
+    process.env.CC = opts.cc
   }
-
-  process.env.CC = `${TRIPLET}gcc`
-  process.env.CXX = `${TRIPLET}g++`
+  if (opts.cxx) {
+    process.env.CXX = opts.cxx
+  }
 
   let TARGET = 'capsulerun/capsulerun'
 
@@ -131,32 +122,95 @@ function ci_compile_capsulerun (os, arch) {
 }
 
 function ci_compile_darwin () {
+  $.sh(`rm -rf compile-artifacts`)
+  const osarch = 'darwin-amd64'
+
   $.sh('rm -rf build')
   $.sh('mkdir -p build')
   $.cd('build', function () {
     $($.sh('cmake ..'))
     $($.sh('make'))
   })
+
   ci_compile_capsulerun('darwin', 'amd64')
+  $.sh(`mkdir -p compile-artifacts/libcapsule/${osarch}/`)
+  $.sh(`cp -rf build/libcapsule/libcapsule.dylib compile-artifacts/libcapsule/${osarch}/`)
 }
 
 function ci_compile_linux () {
-  $.sh('rm -rf build32')
-  $.sh('mkdir -p build32')
-  $.cd('build32', function () {
-    $($.sh('cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-Linux32.cmake'))
-    $($.sh('make'))
-  })
+  $.sh(`rm -rf compile-artifacts`)
 
-  $.sh('rm -rf build64')
-  $.sh('mkdir -p build64')
-  $.cd('build64', function () {
-    $($.sh('cmake ..'))
-    $($.sh('make'))
-  })
+  const specs = [
+    {
+      dir: 'build32',
+      cmake_extra: '-DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-Linux32.cmake',
+      os: 'linux',
+      arch: '386',
+      prefix: '/ffmpeg/32/prefix',
+    },
+    {
+      dir: 'build64',
+      cmake_extra: '',
+      os: 'linux',
+      arch: 'amd64',
+      prefix: '/ffmpeg/64/prefix',
+    }
+  ]
 
-  ci_compile_capsulerun('linux', '386')
-  ci_compile_capsulerun('linux', 'amd64')
+  for (const spec of specs) {
+    const osarch = spec.os + '-' + spec.arch
+    $.sh(`rm -rf ${spec.dir}`)
+    $.sh(`mkdir -p ${spec.dir}`)
+    $.cd(spec.dir, function () {
+      $($.sh(`cmake .. ${spec.cmake_extra}`))
+      $($.sh(`make`))
+    })
+    $.sh(`mkdir -p compile-artifacts/libcapsule/${osarch}`)
+    $.sh(`cp -rf ${spec.dir}/libcapsule/libcapsule.so compile-artifacts/libcapsule/${osarch}/`)
+
+    ci_compile_capsulerun(spec.os, spec.arch, {
+      prefix: spec.prefix
+    })
+    $.sh(`mkdir -p compile-artifacts/capsulerun/${osarch}`)
+    $.sh(`cp -rf capsulerun/capsulerun compile-artifacts/capsulerun/${osarch}/`)
+    const libs = $.get_output('ldd capsulerun/capsulerun | grep -E "lib(av|sw)" | cut -d " " -f 1 | sed -E "s/^[[:space:]]*//g"').trim().split('\n')
+    for (const lib of libs) {
+      $.sh(`cp -f ${spec.prefix}/lib/${lib} compile-artifacts/capsulerun/${osarch}/`)
+    }
+  }
+}
+
+function ci_compile_mingw () {
+  $.sh(`rm -rf compile-artifacts`)
+  
+  const specs = [
+    {
+      os: 'windows',
+      arch: '386',
+      prefix: 'C:\\msys64\\mingw32',
+      cc: 'i686-w64-mingw32-gcc',
+      cxx: 'i686-w64-mingw32-g++'
+    },
+    {
+      os: 'windows',
+      arch: 'amd64',
+      prefix: 'C:\\msys64\\mingw64',
+      cc: 'x86_64-w64-mingw32-gcc',
+      cxx: 'x86_64-w64-mingw32-g++'
+    },
+  ]
+
+  for (const spec of specs) {
+    const osarch = spec.os + '-' + spec.arch
+    ci_compile_capsulerun(spec.os, spec.arch, {
+      prefix: spec.prefix,
+      cc: spec.cc,
+      cxx: spec.cxx
+    })
+
+    $.sh(`mkdir -p compile-artifacts/capsulerun/${osarch}`)
+    $.sh(`cp -rf capsulerun/capsulerun.exe compile-artifacts/capsulerun/${osarch}/`)
+  }
 }
 
 ci_compile(process.argv.slice(2))
