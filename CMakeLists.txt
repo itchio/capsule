@@ -22,8 +22,6 @@ endif()
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set(CMAKE_FIND_FRAMEWORK LAST)
 
-find_package(OpenGL REQUIRED)
-
 if(WIN32)
     find_package(DirectX REQUIRED)
 endif()
@@ -39,9 +37,6 @@ SET(CMAKE_C_FLAGS "${COMPILE_FLAGS} ${CMAKE_C_FLAGS}")
 SET(CMAKE_CXX_FLAGS "${COMPILE_FLAGS} ${CMAKE_CXX_FLAGS}")
 
 add_subdirectory(libcapsule)
-add_subdirectory(capsulerun)
 if(BUILD_TESTS)
   add_subdirectory(test)
 endif()
-
-add_dependencies(capsulerun capsule)

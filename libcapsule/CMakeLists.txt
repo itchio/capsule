@@ -8,9 +8,8 @@ project(libcapsule)
 set(libcapsule_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-find_package(OpenGL REQUIRED)
-
 if(WIN32)
+    find_package(OpenGL REQUIRED)
     find_package(DirectX REQUIRED)
 endif()
 
