@@ -3,6 +3,7 @@
 // compile itch for production environemnts
 
 const $ = require('./common')
+const ospath = require('path')
 
 function ci_compile (args) {
   if (args.length !== 1) {
@@ -73,7 +74,7 @@ function ci_compile_capsulerun (os, arch, opts) {
   $($.go('get github.com/mitchellh/gox'))
 
   if (opts.prefix) {
-    process.env.PKG_CONFIG_PATH = path.join(opts.prefix, 'lib', 'pkgconfig')
+    process.env.PKG_CONFIG_PATH = ospath.join(opts.prefix, 'lib', 'pkgconfig')
   }
 
   if (opts.cc) {
@@ -180,7 +181,7 @@ function ci_compile_linux () {
   }
 }
 
-function ci_compile_mingw () {
+function ci_compile_windows_mingw () {
   $.sh(`rm -rf compile-artifacts`)
   
   const specs = [
