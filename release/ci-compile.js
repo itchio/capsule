@@ -141,12 +141,20 @@ function ci_compile_darwin () {
 }
 
 function ci_compile_linux () {
-  $.sh('rm -rf build')
-  $.sh('mkdir -p build')
-  $.cd('build', function () {
+  $.sh('rm -rf build32')
+  $.sh('mkdir -p build32')
+  $.cd('build32', function () {
+    $($.sh('cmake .. -DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-Linux32.cmake'))
+    $($.sh('make'))
+  })
+
+  $.sh('rm -rf build64')
+  $.sh('mkdir -p build64')
+  $.cd('build64', function () {
     $($.sh('cmake ..'))
     $($.sh('make'))
   })
+
   ci_compile_capsulerun('linux', '386')
   ci_compile_capsulerun('linux', 'amd64')
 }
