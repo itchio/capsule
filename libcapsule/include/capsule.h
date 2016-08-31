@@ -4,17 +4,14 @@
 #include <stdio.h>
 
 #if defined(_WIN32)
-#define LIBSDL2_FILENAME "SDL2.dll"
 #define DEFAULT_OPENGL "OPENGL32.DLL"
 #define CAPSULE_WINDOWS
 
 #elif defined(__APPLE__)
-#define LIBSDL2_FILENAME "libSDL2.dylib"
 #define DEFAULT_OPENGL "/System/Library/Frameworks/OpenGL.framework/Libraries/libGL.dylib"
 #define CAPSULE_OSX
 
 #elif defined(__linux__) || defined(__unix__)
-#define LIBSDL2_FILENAME "libSDL2.so"
 #define DEFAULT_OPENGL "libGL.so.1"
 #define CAPSULE_LINUX
 
@@ -53,7 +50,7 @@ extern FILE *logfile;
 
 #define capsule_log(...) {\
   if (!logfile) { \
-    logfile = fopen(CAPSULE_LOG_PATH, "w"); \
+    logfile = capsule_open_log(); \
   } \
   fprintf(logfile, __VA_ARGS__); \
   fprintf(logfile, "\n"); \
@@ -66,14 +63,16 @@ extern FILE *logfile;
 extern "C" {
 #endif
 
+FILE *capsule_open_log ();
+
 #ifdef CAPSULE_WINDOWS
-CAPSULE_DLL void capsule_hello ();
+CAPSULE_DLL void capsule_install_windows_hooks ();
 void capsule_d3d8_sniff();
 void capsule_d3d11_sniff();
 #endif
 
-void CAPSULE_STDCALL capsule_writeFrame (char *frameData, size_t frameDataSize);
-void CAPSULE_STDCALL capsule_captureFrame (int width, int height);
+void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize);
+void CAPSULE_STDCALL capsule_capture_frame (int width, int height);
 
 void* glXGetProcAddressARB (const char*);
 void glXSwapBuffers (void *a, void *b);

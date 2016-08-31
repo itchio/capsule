@@ -5,8 +5,6 @@ if(APPLE)
   cmake_policy(SET CMP0042 NEW)
 endif()
 
-project(libcapsule)
-
 set(libcapsule_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
@@ -46,23 +44,12 @@ if(WIN32)
   )
 endif()
 
-if(WIN32)
-  if(MSVC)
-    if(${CMAKE_GENERATOR} MATCHES "Win64$")
-      message(STATUS "Using 64-bit dependencies")
-      set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/64)
-      include_directories(${PROJECT_SOURCE_DIR}/deps/include)
-    else()
-      message(STATUS "Using 32-bit dependencies")
-      set(CMAKE_PREFIX_PATH ${PROJECT_SOURCE_DIR}/deps/32)
-      include_directories(${PROJECT_SOURCE_DIR}/deps/include)
-    endif()
-  elseif()
-    message(FATAL_ERROR "Only MSVC is supported on Windows. Sorry!")
-  endif()
-endif()
-
 add_library(capsule SHARED ${libcapsule_SRC})
+
+if(WIN32)
+  add_dependencies(capsule capsule_deps)
+  target_link_libraries(capsule ${DEVIARE_INPROC_LIBRARY})
+endif()
 
 if(APPLE)
   find_library(COCOA_LIBRARY Cocoa)
@@ -86,4 +73,3 @@ endif()
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   target_link_libraries(capsule -ldl)
 endif()
-

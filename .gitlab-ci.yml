@@ -6,22 +6,12 @@ cache:
   key: "$CI_BUILD_NAME"
   untracked: true
 
-compile-windows-msbuild:
+compile-windows:
   stage: build
   tags:
     - msbuild
   script:
-    - node release\ci-compile.js windows-msbuild
-  artifacts:
-    paths:
-      - compile-artifacts
-
-compile-windows-mingw:
-  stage: build
-  tags:
-    - windows
-  script:
-    - release/ci-compile.js windows-mingw
+    - node release\ci-compile.js windows
   artifacts:
     paths:
       - compile-artifacts

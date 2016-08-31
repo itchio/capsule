@@ -47,7 +47,7 @@ CGLError capsule_CGLFlushDrawable (CGLContextObj ctx) {
       capsule_log("no nsCtx");
     }
 
-    capsule_captureFrame(width, height);
+    capsule_capture_frame(width, height);
   }
 
   return ret;

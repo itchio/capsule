@@ -79,18 +79,18 @@ glSwapBuffersType fnSwapBuffers;
 
 void CAPSULE_STDCALL _fakeSwapBuffers (void *hdc) {
   capsule_log("In fakeSwapBuffers");
-  capsule_captureFrame(0, 0);
+  capsule_capture_frame(0, 0);
   fnSwapBuffers(hdc);
 }
 
 // std::shared_ptr<PLH::Detour> swapBuffersDetour(new PLH::Detour);
 static int capsule_inited = 0;
 
-CAPSULE_DLL void capsule_hello () {
+CAPSULE_DLL void capsule_install_windows_hooks () {
   if (capsule_inited) return;
   capsule_inited = 1;
 
-  capsule_log("Hello from capsule!");
+  capsule_log("Installing capsule windows hooks");
 
   HMODULE mh = GetModuleHandle("opengl32.dll");
   capsule_log("OpenGL handle: %p", mh);
@@ -108,7 +108,7 @@ CAPSULE_DLL void capsule_hello () {
 	//     capsule_log("Well I think we're doing fine!");
   //   }
   // }
-  
+
   HMODULE m8 = GetModuleHandle("d3d8.dll");
   capsule_log("Direct3D8 handle: %p", m8);
 
@@ -133,7 +133,8 @@ CAPSULE_DLL void capsule_hello () {
 BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
   capsule_log("DllMain called! reason = %d", reason);
   if (reason == 1) {
-	  capsule_hello();
+    // we've just been attached to a process
+	  capsule_install_windows_hooks();
   }
   return TRUE;
 }
@@ -248,7 +249,11 @@ void* dlopen (const char * filename, int flag) {
 
 FILE *outFile;
 
-void CAPSULE_STDCALL capsule_writeFrame (char *frameData, size_t frameDataSize) {
+FILE *capsule_open_log () {
+  return fopen(CAPSULE_LOG_PATH, "w");
+}
+
+void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize) {
   if (!outFile) {
     outFile = fopen("capsule.rawvideo", "wb");
     assert("Opened output file", !!outFile);
@@ -258,7 +263,7 @@ void CAPSULE_STDCALL capsule_writeFrame (char *frameData, size_t frameDataSize) 
   fflush(outFile);
 }
 
-void CAPSULE_STDCALL capsule_captureFrame (int width, int height) {
+void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   frameNumber++;
   if (frameNumber < 120) {
     return;
@@ -294,9 +299,9 @@ void CAPSULE_STDCALL capsule_captureFrame (int width, int height) {
     height += 2;
   }
 
-  // if (frameNumber % 60 == 0) {
+  if (frameNumber % 30 == 0) {
     capsule_log("Saved %d frames. Current resolution = %dx%d", frameNumber, width, height);
-  // }
+  }
 
   size_t frameDataSize = width * height * components;
   if (!frameData) {
@@ -304,21 +309,21 @@ void CAPSULE_STDCALL capsule_captureFrame (int width, int height) {
   }
   _realglReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
 
-  capsule_writeFrame(frameData, frameDataSize);
+  capsule_write_frame(frameData, frameDataSize);
 }
 
 #ifdef CAPSULE_LINUX
 extern "C" {
-void glXSwapBuffers (void *a, void *b) {
-  capsule_log("About to capture frame..");
-  capsule_captureFrame(0, 0);
-  capsule_log("About to call real swap buffers..");
-  return _realglXSwapBuffers(a, b);
-}
+  void glXSwapBuffers (void *a, void *b) {
+    capsule_log("About to capture frame..");
+    capsule_capture_frame(0, 0);
+    capsule_log("About to call real swap buffers..");
+    return _realglXSwapBuffers(a, b);
+  }
 
-int glXQueryExtension (void *a, void *b, void *c) {
-  return _realglXQueryExtension(a, b, c);
-}
+  int glXQueryExtension (void *a, void *b, void *c) {
+    return _realglXQueryExtension(a, b, c);
+  }
 }
 #endif
 

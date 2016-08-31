@@ -1,9 +1,8 @@
 #!/usr/bin/env node
 
-// compile itch for production environemnts
+// compile capsule for various platforms
 
 const $ = require('./common')
-const ospath = require('path')
 
 function ci_compile (args) {
   if (args.length !== 1) {
@@ -14,12 +13,8 @@ function ci_compile (args) {
   $.say(`Compiling ${$.app_name()}`)
 
   switch (os) {
-    case 'windows-msbuild': {
-      ci_compile_windows_msbuild()
-      break
-    }
-    case 'windows-mingw': {
-      ci_compile_windows_mingw()
+    case 'windows': {
+      ci_compile_windows()
       break
     }
     case 'darwin': {
@@ -36,7 +31,7 @@ function ci_compile (args) {
   }
 }
 
-function ci_compile_windows_msbuild () {
+function ci_compile_windows () {
   const specs = [
     {
       dir: 'build32',
@@ -57,69 +52,16 @@ function ci_compile_windows_msbuild () {
     $.cmd(['mkdir', spec.dir])
     $.cd(spec.dir, function () {
       $($.cmd(['cmake', '-G', spec.generator, '..']))
-      $($.cmd(['msbuild', 'ALL_BUILD.vcxproj']))
+      $($.cmd(['msbuild', 'capsule.sln', '/p:Configuration=Release']))
     })
-    $.cmd(['mkdir', 'compile-artfiacts\\' + spec.osarch])
-    $.cmd(['copy', '/y', spec.dir + '\\libcapsule\\Debug\\capsule.dll', 'compile-artifacts\\' + spec.osarch + '\\capsule.dll'])
+    $.cmd(['mkdir', 'compile-artifacts\\' + spec.osarch])
+
+    $.cmd(['mkdir', 'compile-artifacts\\' + spec.osarch + '\\libcapsule'])
+    $($.cmd(['copy', '/y', spec.dir + '\\libcapsule\\Release\\capsule.dll', 'compile-artifacts\\' + spec.osarch + '\\libcapsule\\capsule.dll']))
+
+    $.cmd(['mkdir', 'compile-artifacts\\' + spec.osarch + '\\capsulerun'])
+    $($.cmd(['copy', '/y', spec.dir + '\\capsulerun\\Release\\capsulerun.exe', 'compile-artifacts\\' + spec.osarch + '\\capsulerun\\capsulerun.exe']))
   }
-}
-
-function ci_compile_capsulerun (os, arch, opts) {
-  if (!opts) {
-    opts = {}
-  }
-  process.env.CGO_ENABLED = '1'
-
-  // set up go cross-compile
-  $($.go('get github.com/mitchellh/gox'))
-
-  if (opts.prefix) {
-    process.env.PKG_CONFIG_PATH = ospath.join(opts.prefix, 'lib', 'pkgconfig')
-  }
-
-  if (opts.cc) {
-    process.env.CC = opts.cc
-  }
-  if (opts.cxx) {
-    process.env.CXX = opts.cxx
-  }
-
-  let TARGET = 'capsulerun/capsulerun'
-
-  if (os === 'windows') {
-    TARGET += '.exe'
-  }
-
-  const pkg = 'github.com/itchio/capsule'
-  $.sh(`mkdir -p ${pkg}`)
-
-  // rsync will complain about vanishing files sometimes, who knows where they come from
-  $($.sh(`rm -rf github.com`))
-  $($.sh(`rsync -az . ${pkg} || echo "rsync complained (code $?)"`))
-
-  // grab deps
-  process.env.GOOS = os
-  process.env.GOARCH = arch
-  $($.go(`get -v -d -t ${pkg}/capsulerun`))
-  delete process.env.GOOS
-  delete process.env.GOARCH
-
-  // compile
-  // todo: LDFLAGS?
-  $.say(`PATH before gox: ${process.env.PATH}`)
-  $($.sh(`gox -osarch "${os}/${arch}" -cgo -output="capsulerun/capsulerun" ${pkg}/capsulerun`))
-
-  // sign (win)
-  if (os === 'windows') {
-    const WIN_SIGN_KEY = 'Open Source Developer, Amos Wenger'
-    const WIN_SIGN_URL = 'http://timestamp.verisign.com/scripts/timstamp.dll'
-
-    $($.sh(`signtool.exe sign //v //s MY //n "${WIN_SIGN_KEY}" //t "${WIN_SIGN_URL}" ${TARGET}`))
-  }
-
-  $.sh(`rm -rf compile-artifacts`)
-  $.sh(`mkdir compile-artifacts`)
-  $.sh(`cp ${TARGET} compile-artifacts`)
 }
 
 function ci_compile_darwin () {
@@ -133,9 +75,11 @@ function ci_compile_darwin () {
     $($.sh('make'))
   })
 
-  ci_compile_capsulerun('darwin', 'amd64')
   $.sh(`mkdir -p compile-artifacts/libcapsule/${osarch}/`)
-  $.sh(`cp -rf build/libcapsule/libcapsule.dylib compile-artifacts/libcapsule/${osarch}/`)
+  $($.sh(`cp -rf build/libcapsule/libcapsule.dylib compile-artifacts/libcapsule/${osarch}/`))
+
+  $.sh(`mkdir -p compile-artifacts/capsulerun/${osarch}/`)
+  $($.sh(`cp -rf build/capsulerun/capsulerun compile-artifacts/capsulerun/${osarch}/`))
 }
 
 function ci_compile_linux () {
@@ -147,14 +91,14 @@ function ci_compile_linux () {
       cmake_extra: '-DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-Linux32.cmake',
       os: 'linux',
       arch: '386',
-      prefix: '/ffmpeg/32/prefix',
+      prefix: '/ffmpeg/32/prefix'
     },
     {
       dir: 'build64',
       cmake_extra: '',
       os: 'linux',
       arch: 'amd64',
-      prefix: '/ffmpeg/64/prefix',
+      prefix: '/ffmpeg/64/prefix'
     }
   ]
 
@@ -167,50 +111,14 @@ function ci_compile_linux () {
       $($.sh(`make`))
     })
     $.sh(`mkdir -p compile-artifacts/libcapsule/${osarch}`)
-    $.sh(`cp -rf ${spec.dir}/libcapsule/libcapsule.so compile-artifacts/libcapsule/${osarch}/`)
+    $($.sh(`cp -rf ${spec.dir}/libcapsule/libcapsule.so compile-artifacts/libcapsule/${osarch}/`))
 
-    ci_compile_capsulerun(spec.os, spec.arch, {
-      prefix: spec.prefix
-    })
     $.sh(`mkdir -p compile-artifacts/capsulerun/${osarch}`)
-    $.sh(`cp -rf capsulerun/capsulerun compile-artifacts/capsulerun/${osarch}/`)
-    const libs = $.get_output('ldd capsulerun/capsulerun | grep -E "lib(av|sw)" | cut -d " " -f 1 | sed -E "s/^[[:space:]]*//g"').trim().split('\n')
+    $($.sh(`cp -rf build/capsulerun/capsulerun compile-artifacts/capsulerun/${osarch}/`))
+    const libs = $.get_output('ldd build/capsulerun/capsulerun | grep -E "lib(av|sw)" | cut -d " " -f 1 | sed -E "s/^[[:space:]]*//g"').trim().split('\n')
     for (const lib of libs) {
-      $.sh(`cp -f ${spec.prefix}/lib/${lib} compile-artifacts/capsulerun/${osarch}/`)
+      $($.sh(`cp -f ${spec.prefix}/lib/${lib} compile-artifacts/capsulerun/${osarch}/`))
     }
-  }
-}
-
-function ci_compile_windows_mingw () {
-  $.sh(`rm -rf compile-artifacts`)
-  
-  const specs = [
-    {
-      os: 'windows',
-      arch: '386',
-      prefix: 'C:\\msys64\\mingw32',
-      cc: 'i686-w64-mingw32-gcc',
-      cxx: 'i686-w64-mingw32-g++'
-    },
-    {
-      os: 'windows',
-      arch: 'amd64',
-      prefix: 'C:\\msys64\\mingw64',
-      cc: 'x86_64-w64-mingw32-gcc',
-      cxx: 'x86_64-w64-mingw32-g++'
-    },
-  ]
-
-  for (const spec of specs) {
-    const osarch = spec.os + '-' + spec.arch
-    ci_compile_capsulerun(spec.os, spec.arch, {
-      prefix: spec.prefix,
-      cc: spec.cc,
-      cxx: spec.cxx
-    })
-
-    $.sh(`mkdir -p compile-artifacts/capsulerun/${osarch}`)
-    $.sh(`cp -rf capsulerun/capsulerun.exe compile-artifacts/capsulerun/${osarch}/`)
   }
 }
 
