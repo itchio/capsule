@@ -117,6 +117,9 @@ function ci_compile_linux () {
     $($.sh(`cp -rf ${spec.dir}/capsulerun/capsulerun compile-artifacts/capsulerun/${osarch}/`))
     const libs = $.get_output('ldd build/capsulerun/capsulerun | grep -E "lib(av|sw)" | cut -d " " -f 1 | sed -E "s/^[[:space:]]*//g"').trim().split('\n')
     for (const lib of libs) {
+      if (lib.length === 0) {
+        continue
+      }
       $($.sh(`cp -f ${spec.prefix}/lib/${lib} compile-artifacts/capsulerun/${osarch}/`))
     }
   }
