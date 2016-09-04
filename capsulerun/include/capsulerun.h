@@ -12,4 +12,6 @@
 
 #endif
 
+#define CAPSULE_MAX_PATH_LENGTH 16384
+
 int capsulerun_main (int argc, char **argv);
