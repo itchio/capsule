@@ -3,12 +3,15 @@
 
 extern "C" {
     #include <libavcodec/avcodec.h>
+    #include <libavformat/avformat.h>
     #include <libavutil/mathematics.h>
     #include <libavutil/imgutils.h>
     #include <libswscale/swscale.h>
 }
 
 void *encoder_func(void *p) {
+  int ret;
+
   AVCodec *codec;
   AVCodecContext *c = NULL;
 
@@ -19,6 +22,9 @@ void *encoder_func(void *p) {
   encoder_params_s *params = (encoder_params_s*) p;
 
   avcodec_register_all();
+  av_register_all();
+
+  av_log_set_level(AV_LOG_DEBUG);
 
   codec = avcodec_find_encoder(CODEC_ID_H264);
   if (!codec) {
@@ -26,23 +32,6 @@ void *encoder_func(void *p) {
   }
 
   printf("loaded codec\n");
-
-  c = avcodec_alloc_context3(codec);
-  if (!c) {
-    fprintf(stderr, "Could not allocate video codec context\n");
-    exit(1);
-  }
-
-  printf("allocated video codec context\n");
-
-  // open output file
-  FILE *output_file = fopen("capsule.h264", "wb");
-  if (output_file == NULL) {
-    printf("could not open output file for writing: %s\n", strerror(errno));
-    exit(1);
-  }
-
-  printf("opened output file\n");
 
   // open fifo
   FILE *fifo_file = fopen(params->fifo_path, "rb");
@@ -70,6 +59,33 @@ void *encoder_func(void *p) {
   int components = 3;
   int linesize = width * components;
 
+  AVFormatContext *oc;
+  AVOutputFormat *fmt;
+  AVStream *video_st;
+  double video_time;
+
+  const char *output_path = "capsule.mp4";
+
+  fmt = av_guess_format("mp4", NULL, NULL);
+
+  // allocate output media context
+  avformat_alloc_output_context2(&oc, fmt, NULL, NULL);
+  if (!oc) {
+      printf("could not allocate output context\n");
+      exit(1);
+  }
+
+  fmt = oc->oformat;
+
+  video_st = avformat_new_stream(oc, codec);
+  if (!video_st) {
+      printf("could not allocate stream\n");
+      exit(1);
+  }
+  video_st->id = oc->nb_streams - 1;
+  c = video_st->codec;
+  c->coder_type = AVMEDIA_TYPE_VIDEO;
+
   // sample parameters
   c->bit_rate = 400000;
   // resolution must be a multiple of two
@@ -86,7 +102,8 @@ void *encoder_func(void *p) {
   c->gop_size = 10;
   c->max_b_frames = 1;
   c->pix_fmt = AV_PIX_FMT_YUV420P;
-//   c->pix_fmt = AV_PIX_FMT_RGB24;
+
+  c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
   if (avcodec_open2(c, codec, NULL) < 0) {
     printf("could not open codec\n");
@@ -125,8 +142,6 @@ void *encoder_func(void *p) {
     sws_linesize[0] = linesize;
   }
 
-  int ret;
-
   /* the image can be allocated by any means and av_image_alloc() is
    * just the most convenient way if av_malloc() is to be used */
   ret = av_image_alloc(frame->data, frame->linesize, c->width, c->height,
@@ -136,12 +151,29 @@ void *encoder_func(void *p) {
       exit(1);
   }
 
+  av_dump_format(oc, 0, output_path, 1);
+
+  /* open the output file, if needed */
+  ret = avio_open(&oc->pb, output_path, AVIO_FLAG_WRITE);
+  if (ret < 0) {
+      fprintf(stderr, "Could not open '%s'\n", output_path);
+      exit(1);
+  }
+
+  // write stream header, if any
+  ret = avformat_write_header(oc, NULL);
+  if (ret < 0) {
+    printf("Error occured when opening output file\n");
+    exit(1);
+  }
+
   size_t total_read = 0;
   size_t last_print_read = 0;
 
   int x, y;
-  int i;
   int got_output;
+
+  frame->pts = 0;
 
   while (true) {
     size_t read = fread(buffer, 1, BUFFER_SIZE, fifo_file);
@@ -158,8 +190,6 @@ void *encoder_func(void *p) {
 
     sws_scale(sws, sws_in, sws_linesize, 0, c->height, frame->data, frame->linesize);
 
-    frame->pts = i;
-
     /* encode the image */
     ret = avcodec_encode_video2(c, &pkt, frame, &got_output);
     if (ret < 0) {
@@ -167,45 +197,60 @@ void *encoder_func(void *p) {
         exit(1);
     }
 
-    if (got_output) {
-        printf("Write frame %3d (size=%5d)\n", i, pkt.size);
-        fwrite(pkt.data, 1, pkt.size, output_file);
-        av_packet_unref(&pkt);
+    if (got_output && pkt.size) {
+        pkt.stream_index = video_st->index;
+
+        // printf("Write frame %3d (size=%5d)\n", i, pkt.size);
+        ret = av_interleaved_write_frame(oc, &pkt);
+        if (ret < 0) {
+            fprintf(stderr, "Error muxing frame\n");
+            exit(1);
+        }
     }
 
-    if ((total_read - last_print_read) > 1024 * 1024) {
-      last_print_read = total_read;
-      printf("read %.2f MB\n", ((double)total_read) / 1024.0 / 1024.0 );
-    }
+    // if ((total_read - last_print_read) > 1024 * 1024) {
+    //   last_print_read = total_read;
+    //   printf("read %.2f MB\n", ((double)total_read) / 1024.0 / 1024.0 );
+    // }
 
-    i++;
+    // write video frame
+    frame->pts += av_rescale_q(1, video_st->codec->time_base, video_st->time_base);
   }
 
+  int i;
 
   /* get the delayed frames */
   for (got_output = 1; got_output; i++) {
-    fflush(stdout);
- 
     ret = avcodec_encode_video2(c, &pkt, NULL, &got_output);
     if (ret < 0) {
       fprintf(stderr, "Error encoding frame\n");
       exit(1);
     }
  
-    if (got_output) {
-      printf("Write frame %3d (size=%5d)\n", i, pkt.size);
-      fwrite(pkt.data, 1, pkt.size, output_file);
-      av_packet_unref(&pkt);
+    if (got_output && pkt.size) {
+      pkt.stream_index = video_st->index;
+
+      printf("Write delayed frame %3d (size=%5d)\n", i, pkt.size);
+      ret = av_interleaved_write_frame(oc, &pkt);
+      if (ret < 0) {
+          fprintf(stderr, "Error muxing frame\n");
+          exit(1);
+      }
     }
   }
 
-  /* add sequence end code to have a real MPEG file */
-  fwrite(endcode, 1, sizeof(endcode), output_file);
-  fclose(output_file);
-  
+  // Write format trailer if any
+  ret = av_write_trailer(oc);
+  if (ret < 0) {
+    printf("failed to write trailer\n");
+    exit(1);
+  }
+
   avcodec_free_context(&c);
   av_freep(&frame->data[0]);
   av_frame_free(&frame);
+
+  avformat_free_context(oc);
 
   return NULL;
 }
