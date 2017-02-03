@@ -18,6 +18,11 @@
 // strerror
 #include <string.h>
 
+// errno
+#include <errno.h>
+
+// pthread
+#include <pthread.h>
 
 #include "capsulerun.h"
 
@@ -123,19 +128,19 @@ int capsulerun_main (int argc, char **argv) {
   }
 
   // spawn ffmpeg
-  int ffmpeg_err = posix_spawn(
-    &ffmpeg_pid,
-    ffmpeg_path,
-    &ffmpeg_actions, // file_actions
-    NULL, // spawn_attrs
-    ffmpeg_argv,
-    environ // environment
-  );
-  if (ffmpeg_err != 0) {
-    printf("ffmpeg spawn error %d: %s\n", ffmpeg_err, strerror(ffmpeg_err));
-  }
+  // int ffmpeg_err = posix_spawn(
+  //   &ffmpeg_pid,
+  //   ffmpeg_path,
+  //   &ffmpeg_actions, // file_actions
+  //   NULL, // spawn_attrs
+  //   ffmpeg_argv,
+  //   environ // environment
+  // );
+  // if (ffmpeg_err != 0) {
+  //   printf("ffmpeg spawn error %d: %s\n", ffmpeg_err, strerror(ffmpeg_err));
+  // }
 
-  printf("spawned ffmpeg (pid %d)\n", ffmpeg_pid);
+  // printf("spawned ffmpeg (pid %d)\n", ffmpeg_pid);
 
   // spawn game
   int child_err = posix_spawn(
@@ -151,6 +156,13 @@ int capsulerun_main (int argc, char **argv) {
   }
 
   printf("pid %d given to child %s\n", child_pid, executable_path);
+
+  struct encoder_params_s encoder_params = {
+    fifo_path: fifo_path
+  };
+
+  pthread_t encoder_thread;
+  pthread_create(&encoder_thread, NULL, encoder_func, &encoder_params);
 
   int child_status;
   pid_t wait_result;

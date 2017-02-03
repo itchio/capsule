@@ -10,6 +10,12 @@
 #elif defined(__linux__) || defined(__unix__)
 #define CAPSULERUN_LINUX
 
+struct encoder_params_s {
+  char *fifo_path;
+};
+
+void *encoder_func(void *p);
+
 #endif
 
 #define CAPSULE_MAX_PATH_LENGTH 16384

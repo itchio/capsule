@@ -252,10 +252,16 @@ FILE *capsule_open_log () {
   return fopen(CAPSULE_LOG_PATH, "w");
 }
 
-void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize) {
+void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize, int width, int height) {
   if (!outFile) {
     outFile = fopen("capsule.rawvideo", "wb");
     assert("Opened output file", !!outFile);
+
+    int64_t num = (int64_t) width;
+    fwrite(&num, sizeof(int64_t), 1, outFile);
+
+    num = (int64_t) height;
+    fwrite(&num, sizeof(int64_t), 1, outFile);
   }
 
   fwrite(frameData, 1, frameDataSize, outFile);
@@ -320,7 +326,7 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   }
   _realglReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
 
-  capsule_write_frame(frameData, frameDataSize);
+  capsule_write_frame(frameData, frameDataSize, width, height);
 
   clock_gettime(CLOCK_MONOTONIC, &ts);
 
@@ -333,7 +339,7 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   double ms_wanted = 1000.0 / 30.0;
   double ms_sleep = ms_wanted - ms_diff;
   if (ms_sleep > 1) {
-    timespec ts_sleep = timespec{
+    timespec ts_sleep = {
       tv_sec: 0,
       tv_nsec: (long)(ms_sleep * 1000.0 * 1000.0),
     };
