@@ -5,6 +5,7 @@ extern "C" {
     #include <libavcodec/avcodec.h>
     #include <libavutil/mathematics.h>
     #include <libavutil/imgutils.h>
+    #include <libswscale/swscale.h>
 }
 
 void *encoder_func(void *p) {
@@ -58,6 +59,14 @@ void *encoder_func(void *p) {
 
   printf("resolution: %ldx%ld\n", width, height);
 
+  // assuming RGB
+  const int BUFFER_SIZE = width * height * 3;
+  uint8_t *buffer = (uint8_t*) malloc(BUFFER_SIZE);
+  if (!buffer) {
+    printf("could not allocate buffer\n");
+    exit(1);
+  }
+
   // sample parameters
   c->bit_rate = 400000;
   // resolution must be a multiple of two
@@ -89,6 +98,17 @@ void *encoder_func(void *p) {
   frame->width = c->width;
   frame->height = c->height;
 
+  // initialize swscale context
+  struct SwsContext *sws = sws_getContext(
+    // input
+    frame->width, frame->height, AV_PIX_FMT_RGB24,
+    // output
+    frame->width, frame->height, c->pix_fmt,
+    // ???
+    0, 0, 0, 0
+  );
+  uint8_t *sws_in[1] = { buffer }; // we have one plane
+
   int ret;
 
   /* the image can be allocated by any means and av_image_alloc() is
@@ -100,19 +120,12 @@ void *encoder_func(void *p) {
       exit(1);
   }
 
-  // assuming RGB
-  const int BUFFER_SIZE = width * height * 3;
-  char *buffer = (char*) malloc(BUFFER_SIZE);
-  if (!buffer) {
-    printf("could not allocate buffer\n");
-    exit(1);
-  }
-
   size_t total_read = 0;
   size_t last_print_read = 0;
 
   int components = 3;
   int linesize = width * components;
+  int sws_linesize[1] = { linesize };
 
   int x, y;
   int i;
@@ -131,11 +144,7 @@ void *encoder_func(void *p) {
     pkt.data = NULL;
     pkt.size = 0;
 
-    for (y = 0; y < c->height; y++) {
-      for (x = 0; x < c->width; x++) {
-        frame->data[0][y * frame->linesize[0] + x] = buffer[y * linesize + x * components];
-      }
-    }
+    sws_scale(sws, sws_in, sws_linesize, 0, c->height, frame->data, frame->linesize);
 
     frame->pts = i;
 
