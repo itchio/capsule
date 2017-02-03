@@ -67,6 +67,9 @@ void *encoder_func(void *p) {
     exit(1);
   }
 
+  int components = 3;
+  int linesize = width * components;
+
   // sample parameters
   c->bit_rate = 400000;
   // resolution must be a multiple of two
@@ -107,7 +110,20 @@ void *encoder_func(void *p) {
     // ???
     0, 0, 0, 0
   );
-  uint8_t *sws_in[1] = { buffer }; // we have one plane
+
+  int sws_linesize[1];
+  uint8_t *sws_in[1];
+
+  int vflip = 1;
+
+  if (vflip) {
+    sws_in[0] = buffer + linesize*(height-1);
+    sws_linesize[0] = -linesize;
+  } else {
+    // specify negative stride to flip
+    sws_in[0] = buffer;
+    sws_linesize[0] = linesize;
+  }
 
   int ret;
 
@@ -122,10 +138,6 @@ void *encoder_func(void *p) {
 
   size_t total_read = 0;
   size_t last_print_read = 0;
-
-  int components = 3;
-  int linesize = width * components;
-  int sws_linesize[1] = { linesize };
 
   int x, y;
   int i;
