@@ -155,6 +155,7 @@ glXGetProcAddressARBType _realglXGetProcAddressARB;
 
 char *frameData;
 int frameNumber = 0;
+timespec old_ts, ts;
 
 typedef void* (*dlopen_type)(const char*, int);
 dlopen_type real_dlopen;
@@ -261,6 +262,18 @@ void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize)
   fflush(outFile);
 }
 
+timespec ts_diff(timespec start, timespec end) {
+	timespec temp;
+	if ((end.tv_nsec - start.tv_nsec) < 0) {
+		temp.tv_sec = end.tv_sec-start.tv_sec-1;
+		temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
+	} else {
+		temp.tv_sec = end.tv_sec-start.tv_sec;
+		temp.tv_nsec = end.tv_nsec-start.tv_nsec;
+	}
+	return temp;
+}
+
 void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   frameNumber++;
   if (frameNumber < 120) {
@@ -276,9 +289,9 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
     int viewport[4];
     _realglGetIntegerv(GL_VIEWPORT, viewport);
 
-    capsule_log("Viewport values: %d, %d, %d, %d", viewport[0], viewport[1], viewport[2], viewport[3]);
+    // capsule_log("Viewport values: %d, %d, %d, %d", viewport[0], viewport[1], viewport[2], viewport[3]);
     if (viewport[2] > 0 && viewport[3] > 0) {
-      capsule_log("Setting size from viewport");
+      // capsule_log("Setting size from viewport");
       width = viewport[2];
       height = viewport[3];
     } else {
@@ -308,14 +321,34 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   _realglReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
 
   capsule_write_frame(frameData, frameDataSize);
+
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+
+  timespec diff = ts_diff(old_ts, ts);
+
+  long nano_diff = ((long)(diff.tv_sec) * 1000 * 1000 * 1000) + diff.tv_nsec;
+  double ms_diff = ((double) nano_diff) / 1000.0 / 1000.0;
+  capsule_log("frame time: %d ns (%.4f ms). theoretical fps = %.2f", nano_diff, ms_diff, 1000.0 / ms_diff)
+
+  double ms_wanted = 1000.0 / 30.0;
+  double ms_sleep = ms_wanted - ms_diff;
+  if (ms_sleep > 1) {
+    timespec ts_sleep = timespec{
+      tv_sec: 0,
+      tv_nsec: (long)(ms_sleep * 1000.0 * 1000.0),
+    };
+    nanosleep(&ts_sleep, NULL);
+  }
+
+  clock_gettime(CLOCK_MONOTONIC, &old_ts);
 }
 
 #ifdef CAPSULE_LINUX
 extern "C" {
   void glXSwapBuffers (void *a, void *b) {
-    capsule_log("About to capture frame..");
+    // capsule_log("About to capture frame..");
     capsule_capture_frame(0, 0);
-    capsule_log("About to call real swap buffers..");
+    // capsule_log("About to call real swap buffers..");
     return _realglXSwapBuffers(a, b);
   }
 

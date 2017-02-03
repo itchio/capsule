@@ -30,6 +30,7 @@
 #if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
 #include <sys/types.h>
 #include <unistd.h>
+#include <time.h>
 #else
 #define getpid(a) 0
 #define pid_t int
