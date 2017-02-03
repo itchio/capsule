@@ -153,8 +153,6 @@ typedef void* (*glXGetProcAddressARBType)(const char*);
 glXGetProcAddressARBType _realglXGetProcAddressARB;
 #endif
 
-#define FRAME_WIDTH 512
-#define FRAME_HEIGHT 512
 char *frameData;
 int frameNumber = 0;
 
@@ -334,6 +332,7 @@ void __attribute__((constructor)) capsule_load() {
 
 #ifdef CAPSULE_LINUX
   capsule_log("LD_LIBRARY_PATH: %s", getenv("LD_LIBRARY_PATH"));
+  capsule_log("LD_PRELOAD: %s", getenv("LD_PRELOAD"));
 #endif
 }
 
