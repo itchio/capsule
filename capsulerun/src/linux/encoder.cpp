@@ -3,9 +3,12 @@
 
 extern "C" {
     #include <libavcodec/avcodec.h>
+
     #include <libavformat/avformat.h>
+
     #include <libavutil/mathematics.h>
     #include <libavutil/imgutils.h>
+
     #include <libswscale/swscale.h>
 }
 
@@ -17,7 +20,6 @@ void *encoder_func(void *p) {
 
   AVFrame *frame;
   AVPacket pkt;
-  uint8_t endcode[] = { 0, 0, 1, 0xb7 };
 
   encoder_params_s *params = (encoder_params_s*) p;
 
@@ -25,13 +27,6 @@ void *encoder_func(void *p) {
   av_register_all();
 
   av_log_set_level(AV_LOG_DEBUG);
-
-  codec = avcodec_find_encoder(CODEC_ID_H264);
-  if (!codec) {
-    printf("could not find codec H264\n");
-  }
-
-  printf("loaded codec\n");
 
   // open fifo
   FILE *fifo_file = fopen(params->fifo_path, "rb");
@@ -75,7 +70,14 @@ void *encoder_func(void *p) {
       exit(1);
   }
 
-  fmt = oc->oformat;
+  oc->oformat = fmt;
+
+  /* open the output file, if needed */
+  ret = avio_open(&oc->pb, output_path, AVIO_FLAG_WRITE);
+  if (ret < 0) {
+      fprintf(stderr, "Could not open '%s'\n", output_path);
+      exit(1);
+  }
 
   video_st = avformat_new_stream(oc, codec);
   if (!video_st) {
@@ -84,7 +86,10 @@ void *encoder_func(void *p) {
   }
   video_st->id = oc->nb_streams - 1;
   c = video_st->codec;
-  c->coder_type = AVMEDIA_TYPE_VIDEO;
+
+  c->codec_id = fmt->video_codec;
+  c->codec_type = AVMEDIA_TYPE_VIDEO;
+  c->pix_fmt = AV_PIX_FMT_YUV420P;
 
   // sample parameters
   c->bit_rate = 400000;
@@ -94,16 +99,21 @@ void *encoder_func(void *p) {
   // frames per second
   c->time_base = (AVRational){1,25};
 
-  // emit one intra frame every ten frames
-  // check frame pict_type before passing frame
-  // to encoder, if frame->pict_type is AV_PICTURE_TYPE_I
-  // then gop_size is ignored and the output of encoder
-  // will always be I frame irrespective to gop_size
-  c->gop_size = 10;
+  c->gop_size = 250;
   c->max_b_frames = 1;
-  c->pix_fmt = AV_PIX_FMT_YUV420P;
+
+  // H264
+  c->qmin = 10;
+  c->qmax = 51;
 
   c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+
+  codec = avcodec_find_encoder(c->codec_id);
+  if (!codec) {
+    printf("could not find codec\n");
+  }
+
+  printf("loaded codec\n");
 
   if (avcodec_open2(c, codec, NULL) < 0) {
     printf("could not open codec\n");
@@ -153,13 +163,6 @@ void *encoder_func(void *p) {
 
   av_dump_format(oc, 0, output_path, 1);
 
-  /* open the output file, if needed */
-  ret = avio_open(&oc->pb, output_path, AVIO_FLAG_WRITE);
-  if (ret < 0) {
-      fprintf(stderr, "Could not open '%s'\n", output_path);
-      exit(1);
-  }
-
   // write stream header, if any
   ret = avformat_write_header(oc, NULL);
   if (ret < 0) {
@@ -197,15 +200,18 @@ void *encoder_func(void *p) {
         exit(1);
     }
 
-    if (got_output && pkt.size) {
+    if (got_output) {
         pkt.stream_index = video_st->index;
 
         // printf("Write frame %3d (size=%5d)\n", i, pkt.size);
-        ret = av_interleaved_write_frame(oc, &pkt);
+        // ret = av_interleaved_write_frame(oc, &pkt);
+        ret = av_write_frame(oc, &pkt);
         if (ret < 0) {
             fprintf(stderr, "Error muxing frame\n");
             exit(1);
         }
+
+        av_packet_unref(&pkt);
     }
 
     // if ((total_read - last_print_read) > 1024 * 1024) {
@@ -221,6 +227,10 @@ void *encoder_func(void *p) {
 
   /* get the delayed frames */
   for (got_output = 1; got_output; i++) {
+    av_init_packet(&pkt);
+    pkt.data = NULL;
+    pkt.size = 0;
+
     ret = avcodec_encode_video2(c, &pkt, NULL, &got_output);
     if (ret < 0) {
       fprintf(stderr, "Error encoding frame\n");
@@ -232,10 +242,13 @@ void *encoder_func(void *p) {
 
       printf("Write delayed frame %3d (size=%5d)\n", i, pkt.size);
       ret = av_interleaved_write_frame(oc, &pkt);
+    //   ret = av_write_frame(oc, &pkt);
       if (ret < 0) {
           fprintf(stderr, "Error muxing frame\n");
           exit(1);
       }
+
+      av_packet_unref(&pkt);
     }
   }
 
@@ -246,10 +259,11 @@ void *encoder_func(void *p) {
     exit(1);
   }
 
-  avcodec_free_context(&c);
+  avcodec_close(video_st->codec);
   av_freep(&frame->data[0]);
   av_frame_free(&frame);
 
+  avio_close(oc->pb);
   avformat_free_context(oc);
 
   return NULL;
