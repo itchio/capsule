@@ -8,6 +8,7 @@ extern "C" {
 
     #include <libavutil/mathematics.h>
     #include <libavutil/imgutils.h>
+    #include <libavutil/opt.h>
 
     #include <libswscale/swscale.h>
 }
@@ -19,7 +20,6 @@ void *encoder_func(void *p) {
   AVCodecContext *c = NULL;
 
   AVFrame *frame;
-  AVPacket pkt;
 
   encoder_params_s *params = (encoder_params_s*) p;
 
@@ -79,15 +79,21 @@ void *encoder_func(void *p) {
       exit(1);
   }
 
-  video_st = avformat_new_stream(oc, codec);
+  video_st = avformat_new_stream(oc, 0);
   if (!video_st) {
       printf("could not allocate stream\n");
       exit(1);
   }
   video_st->id = oc->nb_streams - 1;
-  c = video_st->codec;
 
-  c->codec_id = fmt->video_codec;
+  c = avcodec_alloc_context3(codec);
+  if (!c) {
+      printf("could not allocate codec context\n");
+      exit(1);
+  }
+
+  // c->codec_id = fmt->video_codec;
+  c->codec_id = AV_CODEC_ID_H264;
   c->codec_type = AVMEDIA_TYPE_VIDEO;
   c->pix_fmt = AV_PIX_FMT_YUV420P;
 
@@ -97,10 +103,12 @@ void *encoder_func(void *p) {
   c->width = width;
   c->height = height;
   // frames per second
-  c->time_base = (AVRational){1,25};
+  video_st->time_base = (AVRational){1,25};
+  c->time_base = video_st->time_base;
 
-  c->gop_size = 250;
-  c->max_b_frames = 1;
+  c->gop_size = 120;
+  c->max_b_frames = 16;
+  c->rc_buffer_size = 0;
 
   // H264
   c->qmin = 10;
@@ -108,15 +116,26 @@ void *encoder_func(void *p) {
 
   c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
+  // av_opt_set(c->priv_data, "preset", "placebo", AV_OPT_SEARCH_CHILDREN);
+  av_opt_set(c->priv_data, "preset", "ultrafast", AV_OPT_SEARCH_CHILDREN);
+
   codec = avcodec_find_encoder(c->codec_id);
   if (!codec) {
     printf("could not find codec\n");
+    exit(1);
   }
 
   printf("loaded codec\n");
 
-  if (avcodec_open2(c, codec, NULL) < 0) {
+  ret = avcodec_open2(c, codec, NULL);
+  if (ret < 0) {
     printf("could not open codec\n");
+    exit(1);
+  }
+
+  ret = avcodec_parameters_from_context(video_st->codecpar, c);
+  if (ret < 0) {
+    printf("could not copy codec parameters\n");
     exit(1);
   }
 
@@ -177,78 +196,53 @@ void *encoder_func(void *p) {
   int got_output;
 
   frame->pts = 0;
+  int next_pts = 1;
 
   while (true) {
     size_t read = fread(buffer, 1, BUFFER_SIZE, fifo_file);
     total_read += read;
 
     if (read < BUFFER_SIZE) {
-      printf("Stopped reading\n");
+      printf("received last frame\n");
       break;
     }
 
-    av_init_packet(&pkt);
-    pkt.data = NULL;
-    pkt.size = 0;
+    // ret = av_frame_make_writable(frame);
+    // if (ret < 0) {
+    //   printf("couldn't make frame writable\n'");
+    //   exit(1);
+    // }
 
     sws_scale(sws, sws_in, sws_linesize, 0, c->height, frame->data, frame->linesize);
 
+    frame->pts = next_pts++;
+
     /* encode the image */
-    ret = avcodec_encode_video2(c, &pkt, frame, &got_output);
+    // write video frame
+    ret = avcodec_send_frame(c, frame);
     if (ret < 0) {
         fprintf(stderr, "Error encoding frame\n");
         exit(1);
     }
 
-    if (got_output) {
-        pkt.stream_index = video_st->index;
+    while (ret >= 0) {
+      AVPacket pkt;
+      av_init_packet(&pkt);
+      ret = avcodec_receive_packet(c, &pkt);
 
-        // printf("Write frame %3d (size=%5d)\n", i, pkt.size);
-        // ret = av_interleaved_write_frame(oc, &pkt);
-        ret = av_write_frame(oc, &pkt);
-        if (ret < 0) {
-            fprintf(stderr, "Error muxing frame\n");
-            exit(1);
-        }
-
-        av_packet_unref(&pkt);
-    }
-
-    // if ((total_read - last_print_read) > 1024 * 1024) {
-    //   last_print_read = total_read;
-    //   printf("read %.2f MB\n", ((double)total_read) / 1024.0 / 1024.0 );
-    // }
-
-    // write video frame
-    frame->pts += av_rescale_q(1, video_st->codec->time_base, video_st->time_base);
-  }
-
-  int i;
-
-  /* get the delayed frames */
-  for (got_output = 1; got_output; i++) {
-    av_init_packet(&pkt);
-    pkt.data = NULL;
-    pkt.size = 0;
-
-    ret = avcodec_encode_video2(c, &pkt, NULL, &got_output);
-    if (ret < 0) {
-      fprintf(stderr, "Error encoding frame\n");
-      exit(1);
-    }
- 
-    if (got_output && pkt.size) {
-      pkt.stream_index = video_st->index;
-
-      printf("Write delayed frame %3d (size=%5d)\n", i, pkt.size);
-      ret = av_interleaved_write_frame(oc, &pkt);
-    //   ret = av_write_frame(oc, &pkt);
-      if (ret < 0) {
-          fprintf(stderr, "Error muxing frame\n");
+      if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
+          fprintf(stderr, "Error encoding a video frame\n");
           exit(1);
+      } else if (ret >= 0) {
+          av_packet_rescale_ts(&pkt, c->time_base, video_st->time_base);
+          pkt.stream_index = video_st->index;
+          /* Write the compressed frame to the media file. */
+          ret = av_interleaved_write_frame(oc, &pkt);
+          if (ret < 0) {
+              fprintf(stderr, "Error while writing video frame\n");
+              exit(1);
+          }
       }
-
-      av_packet_unref(&pkt);
     }
   }
 
@@ -259,7 +253,7 @@ void *encoder_func(void *p) {
     exit(1);
   }
 
-  avcodec_close(video_st->codec);
+  avcodec_close(c);
   av_freep(&frame->data[0]);
   av_frame_free(&frame);
 
