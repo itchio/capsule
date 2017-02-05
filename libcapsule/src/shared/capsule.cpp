@@ -6,6 +6,12 @@
 #include <stdint.h>
 #include <string.h>
 
+// chrono::steady_clock
+#include <chrono>
+
+// this_thread
+#include <thread>
+
 #if defined(CAPSULE_WINDOWS)
 #include <windows.h>
 #define dlopen(a, b) LoadLibrary((a))
@@ -18,6 +24,8 @@
 #include <dlfcn.h>
 #define LIBHANDLE void*
 #endif
+
+using namespace std;
 
 FILE *logfile;
 
@@ -155,7 +163,7 @@ glXGetProcAddressARBType _realglXGetProcAddressARB;
 
 char *frameData;
 int frameNumber = 0;
-timespec old_ts, ts;
+chrono::time_point<chrono::steady_clock> old_ts, ts;
 
 typedef void* (*dlopen_type)(const char*, int);
 dlopen_type real_dlopen;
@@ -268,18 +276,6 @@ void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize,
   fflush(outFile);
 }
 
-timespec ts_diff(timespec start, timespec end) {
-	timespec temp;
-	if ((end.tv_nsec - start.tv_nsec) < 0) {
-		temp.tv_sec = end.tv_sec-start.tv_sec-1;
-		temp.tv_nsec = 1000000000+end.tv_nsec-start.tv_nsec;
-	} else {
-		temp.tv_sec = end.tv_sec-start.tv_sec;
-		temp.tv_nsec = end.tv_nsec-start.tv_nsec;
-	}
-	return temp;
-}
-
 void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   frameNumber++;
   if (frameNumber < 120) {
@@ -328,25 +324,15 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
 
   capsule_write_frame(frameData, frameDataSize, width, height);
 
-  clock_gettime(CLOCK_MONOTONIC, &ts);
+  ts = chrono::steady_clock::now();
+  auto delta = old_ts - ts;
+  auto wanted_delta = chrono::microseconds(1000000 / 30);
+  auto sleep_duration = wanted_delta - delta;
 
-  timespec diff = ts_diff(old_ts, ts);
-
-  long nano_diff = ((long)(diff.tv_sec) * 1000 * 1000 * 1000) + diff.tv_nsec;
-  double ms_diff = ((double) nano_diff) / 1000.0 / 1000.0;
-  capsule_log("frame time: %d ns (%.4f ms). theoretical fps = %.2f", nano_diff, ms_diff, 1000.0 / ms_diff)
-
-  double ms_wanted = 1000.0 / 30.0;
-  double ms_sleep = ms_wanted - ms_diff;
-  if (ms_sleep > 1) {
-    timespec ts_sleep = {
-      tv_sec: 0,
-      tv_nsec: (long)(ms_sleep * 1000.0 * 1000.0),
-    };
-    nanosleep(&ts_sleep, NULL);
+  if (sleep_duration > chrono::seconds(0)) {
+    this_thread::sleep_for(wanted_delta - delta);
   }
-
-  clock_gettime(CLOCK_MONOTONIC, &old_ts);
+  old_ts = chrono::steady_clock::now();
 }
 
 #ifdef CAPSULE_LINUX

@@ -7,13 +7,12 @@ capsule is released under the MIT license, see the `LICENSE` file.
 ## Linux
 
 ```bash
-mkdir build
-cd build
+mkdir build64
+cd build64
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 make -j4
 cd ..
-build/main
-LD_PRELOAD=build/libcapsule.so build/main
+capsulerun/capsulerun $PWD/libcapsule path/to/some/game.x86_64
 ```
 
 Might want to override mesa version:
@@ -41,8 +40,11 @@ When preparing `deps32/` make sure to remove `x64` directory
 ```
 mkdir build64
 cd build64
-/c/Program\ Files\ \(x86\)/cmake-3.5/bin/cmake.exe -G "Visual C++ 14 2015 Win64" ..
+/c/Program\ Files/CMake/bin/cmake.exe -G "Visual Studio 14 2015 Win64" ..
+msbuild ALL_BUILD.vxcproj
 ```
+
+(It looks like the generator name changed in CMake 3.7)
 
 (Drop the ` Win64` to build for 32-bit)
 
