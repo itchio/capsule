@@ -75,7 +75,7 @@ static CGWindowID windowId = kCGNullWindowID;
   CFDataRef dataRef = CGDataProviderCopyData(CGImageGetDataProvider(image));
   char *frameData = (char*) CFDataGetBytePtr(dataRef);
   size_t frameDataSize = CFDataGetLength(dataRef);
-  capsule_write_frame(frameData, frameDataSize);
+  capsule_write_frame(frameData, frameDataSize, width, height);
 
   CFRelease(dataRef);
   CGImageRelease(image);
