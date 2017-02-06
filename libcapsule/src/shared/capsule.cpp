@@ -286,7 +286,7 @@ char *capsule_log_path () {
 #else // defined CAPSULE_WINDOWS
 
 char *capsule_log_path () {
-  return "/tmp/capsule.log.txt"
+  return "/tmp/capsule.log.txt";
 }
 
 #endif
