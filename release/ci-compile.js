@@ -107,7 +107,7 @@ function ci_compile_linux () {
     $.sh(`rm -rf ${spec.dir}`)
     $.sh(`mkdir -p ${spec.dir}`)
     $.cd(spec.dir, function () {
-      $($.sh(`cmake .. ${spec.cmake_extra}`))
+      $($.sh(`cmake .. ${spec.cmake_extra} -DCAPSULE_FFMPEG_PREFIX=${spec.prefix}`))
       $($.sh(`make`))
     })
     $.sh(`mkdir -p compile-artifacts/libcapsule/${osarch}`)
