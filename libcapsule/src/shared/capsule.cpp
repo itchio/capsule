@@ -139,8 +139,18 @@ CAPSULE_DLL void capsule_install_windows_hooks () {
 }
 
 BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
-  capsule_log("DllMain called! reason = %d", reason);
-  if (reason == 1) {
+  switch (reason) {
+    case DLL_PROCESS_ATTACH:
+      capsule_log("DllMain (PROCESS_ATTACH)", reason); break;
+    case DLL_PROCESS_DETACH:
+      capsule_log("DllMain (PROCESS_DETACH)", reason); break;
+    case DLL_THREAD_ATTACH:
+      capsule_log("DllMain (THREAD_ATTACH)", reason); break;
+    case DLL_THREAD_DETACH:
+      capsule_log("DllMain (THREAD_DETACH)", reason); break;
+  }
+
+  if (reason == DLL_PROCESS_ATTACH) {
     // we've just been attached to a process
 	  capsule_install_windows_hooks();
   }
@@ -257,8 +267,30 @@ void* dlopen (const char * filename, int flag) {
 FILE *outFile;
 
 FILE *capsule_open_log () {
-  return fopen(CAPSULE_LOG_PATH, "w");
+  return fopen(capsule_log_path(), "w");
 }
+
+#ifdef CAPSULE_WINDOWS
+
+#define CAPSULE_LOG_PATH_SIZE 32*1024
+char *_capsule_log_path;
+
+char *capsule_log_path () {
+  if (!_capsule_log_path) {
+    _capsule_log_path = (char*) malloc(CAPSULE_LOG_PATH_SIZE);
+    ExpandEnvironmentStrings("%APPDATA%\\capsule.log.txt", _capsule_log_path, CAPSULE_LOG_PATH_SIZE);
+  }
+  return _capsule_log_path;
+}
+
+#else // defined CAPSULE_WINDOWS
+
+char *capsule_log_path () {
+  return "/tmp/capsule.log.txt"
+}
+
+#endif
+
 
 void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize, int width, int height) {
   if (!outFile) {

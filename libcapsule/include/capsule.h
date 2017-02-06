@@ -64,7 +64,8 @@ extern FILE *logfile;
 extern "C" {
 #endif
 
-FILE *capsule_open_log ();
+FILE *capsule_open_log();
+char *capsule_log_path();
 
 #ifdef CAPSULE_WINDOWS
 CAPSULE_DLL void capsule_install_windows_hooks ();
