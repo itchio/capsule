@@ -32,6 +32,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     ${capsulerun_SOURCE_DIR}/linux/encoder.cpp
     ${capsulerun_SOURCE_DIR}/linux/main.cpp
   )
+  add_definitions(-D__STDC_CONSTANT_MACROS)
 endif()
 
 add_executable(capsulerun ${capsulerun_SRC})
