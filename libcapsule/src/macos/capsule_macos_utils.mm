@@ -4,21 +4,21 @@
 #import <objc/runtime.h>
 #include <Foundation/NSObjCRuntime.h>
 
-void capsule_swizzle (Class class, SEL originalSelector, SEL swizzledSelector) {
+void capsule_swizzle (Class clazz, SEL originalSelector, SEL swizzledSelector) {
   NSLog(@"Getting original");
-  Method originalMethod = class_getInstanceMethod(class, originalSelector);
+  Method originalMethod = class_getInstanceMethod(clazz, originalSelector);
   NSLog(@"Getting swizzled");
-  Method swizzledMethod = class_getInstanceMethod(class, swizzledSelector);
+  Method swizzledMethod = class_getInstanceMethod(clazz, swizzledSelector);
 
-  NSLog(@"Adding method, class = %@", class);
-  BOOL didAddMethod = class_addMethod(class,
+  NSLog(@"Adding method, class = %@", clazz);
+  BOOL didAddMethod = class_addMethod(clazz,
     originalSelector,
     method_getImplementation(swizzledMethod),
     method_getTypeEncoding(swizzledMethod));
 
   if (didAddMethod) {
     NSLog(@"Added method, replacing");
-    class_replaceMethod(class, swizzledSelector,
+    class_replaceMethod(clazz, swizzledSelector,
       method_getImplementation(originalMethod),
       method_getTypeEncoding(originalMethod));
   } else {
