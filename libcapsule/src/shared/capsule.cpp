@@ -90,7 +90,6 @@ glSwapBuffersType _glSwapBuffers;
 glSwapBuffersType fnSwapBuffers;
 
 void CAPSULE_STDCALL _fakeSwapBuffers (void *hdc) {
-  capsule_log("In fakeSwapBuffers");
   capsule_capture_frame(0, 0);
   fnSwapBuffers(hdc);
 }
@@ -379,13 +378,13 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   capsule_write_frame(frameData, frameDataSize, width, height);
 
   ts = chrono::steady_clock::now();
-  auto delta = old_ts - ts;
+  auto delta = ts - old_ts;
   auto wanted_delta = chrono::microseconds(1000000 / 30);
   auto sleep_duration = wanted_delta - delta;
 
-  // if (sleep_duration > chrono::seconds(0)) {
-  //   this_thread::sleep_for(wanted_delta - delta);
-  // }
+  if (sleep_duration > chrono::seconds(0)) {
+    this_thread::sleep_for(wanted_delta - delta);
+  }
   old_ts = chrono::steady_clock::now();
 }
 
