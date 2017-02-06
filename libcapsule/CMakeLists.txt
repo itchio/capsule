@@ -24,10 +24,10 @@ set(libcapsule_SRC
 
 if(APPLE)
   list(APPEND libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/macos/capsule_macos_utils.m
-    ${libcapsule_SOURCE_DIR}/macos/capsule_NSWindow.m
-    ${libcapsule_SOURCE_DIR}/macos/capsule_NSApplication.m
-    ${libcapsule_SOURCE_DIR}/macos/capsule_CGL.m
+    ${libcapsule_SOURCE_DIR}/macos/capsule_macos_utils.mm
+    ${libcapsule_SOURCE_DIR}/macos/capsule_NSWindow.mm
+    ${libcapsule_SOURCE_DIR}/macos/capsule_NSApplication.mm
+    ${libcapsule_SOURCE_DIR}/macos/capsule_CGL.mm
     ${libcapsule_SOURCE_DIR}/macos/capsule_CoreAudio.mm
 
     ${libcapsule_SOURCE_DIR}/macos/playthrough/CAPlayThrough.cpp
