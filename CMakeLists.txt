@@ -4,6 +4,8 @@ project(capsule)
 
 option(OSX_UNIVERSAL "Build an OSX universal binary" ON)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+
 set(CAPSULE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libcapsule/include)
 
 # Universal binary only makes sense on OSX
