@@ -21,10 +21,8 @@
 
 #if defined(CAPSULE_WINDOWS)
 #define CAPSULE_STDCALL __stdcall
-#define CAPSULE_LOG_PATH "C:\\capsule.log.txt"
 #else
 #define CAPSULE_STDCALL
-#define CAPSULE_LOG_PATH "/tmp/capsule.log.txt"
 #endif
 
 #if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
@@ -36,16 +34,17 @@
 #define pid_t int
 #endif
 
-
 #ifdef CAPSULE_WINDOWS
+
 #ifdef BUILD_CAPSULE_DLL
 #define CAPSULE_DLL __declspec(dllexport)
-#else
+#else // BUILD_CAPSULE_DLL
 #define CAPSULE_DLL __declspec(dllimport)
-#endif
-#else
+#endif // BUILD_CAPSULE_DLL
+
+#else // CAPSULE_WINDOWS
 #define CAPSULE_DLL
-#endif
+#endif // CAPSULE_WINDOWS
 
 extern FILE *logfile;
 
@@ -65,7 +64,8 @@ extern "C" {
 #endif
 
 FILE *capsule_open_log();
-char *capsule_log_path();
+
+wchar_t *capsule_log_path();
 
 #ifdef CAPSULE_WINDOWS
 CAPSULE_DLL void capsule_install_windows_hooks ();

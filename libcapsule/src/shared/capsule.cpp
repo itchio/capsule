@@ -69,16 +69,20 @@ void CAPSULE_STDCALL ensure_own_opengl() {
 		_realglReadPixels = (glReadPixelsType)dlsym(gl_handle, "glReadPixels");
 		assert("Got glReadPixels address", !!_realglReadPixels);
 	}
+
+#ifndef CAPSULE_WINDOWS
 	if (!_realglGetRenderbufferParameteriv) {
 		ensure_opengl();
 		_realglGetRenderbufferParameteriv = (glGetRenderbufferParameterivType)dlsym(gl_handle, "glGetRenderbufferParameteriv");
 		assert("Got glGetRenderbufferParameteriv address", !!_realglGetRenderbufferParameteriv);
 	}
+#endif
 }
 
 #ifdef CAPSULE_WINDOWS
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <NktHookLib.h>
 
 typedef void (CAPSULE_STDCALL *glSwapBuffersType)(void*);
 glSwapBuffersType _glSwapBuffers;
@@ -91,51 +95,65 @@ void CAPSULE_STDCALL _fakeSwapBuffers (void *hdc) {
   fnSwapBuffers(hdc);
 }
 
-// std::shared_ptr<PLH::Detour> swapBuffersDetour(new PLH::Detour);
+CNktHookLib cHookMgr;
 static int capsule_inited = 0;
 
 CAPSULE_DLL void capsule_install_windows_hooks () {
   if (capsule_inited) return;
   capsule_inited = 1;
 
+  cHookMgr.SetEnableDebugOutput(TRUE);
+
   capsule_log("Installing capsule windows hooks");
 
-  HMODULE mh = GetModuleHandle("opengl32.dll");
+  HINSTANCE mh;
+
+  mh = NktHookLibHelpers::GetModuleBaseAddress(L"opengl32.dll");
   capsule_log("OpenGL handle: %p", mh);
-  // if (mh) {
-	//   ensure_own_opengl();
-  //
-  //   _glSwapBuffers = (glSwapBuffersType) GetProcAddress(mh, "wglSwapBuffers");
-  //   capsule_log("SwapBuffers handle: %p", _glSwapBuffers);
-  //
-  //   if (_glSwapBuffers) {
-  //     capsule_log("Attempting to install glSwapBuffers hook");
-  //
-  //     swapBuffersDetour->SetupHook((BYTE*) _glSwapBuffers, (BYTE*) _fakeSwapBuffers);
-  //     swapBuffersDetour->Hook();
-	//     capsule_log("Well I think we're doing fine!");
-  //   }
+  if (mh) {
+    ensure_own_opengl();
+
+    _glSwapBuffers = (glSwapBuffersType) NktHookLibHelpers::GetProcedureAddress(mh, "wglGetProcAddress");
+    capsule_log("GetProcAddress handle: %p", _glSwapBuffers);
+
+    _glSwapBuffers = (glSwapBuffersType) NktHookLibHelpers::GetProcedureAddress(mh, "wglSwapBuffers");
+    capsule_log("SwapBuffers handle: %p", _glSwapBuffers);
+  
+    if (_glSwapBuffers) {
+      capsule_log("Attempting to install glSwapBuffers hook");
+
+      DWORD err;
+
+      SIZE_T hookId;
+
+      err = cHookMgr.Hook(&hookId, (LPVOID *) &fnSwapBuffers, _glSwapBuffers, _fakeSwapBuffers, 0);
+      if (err != ERROR_SUCCESS) {
+        capsule_log("Hooking derped with error %d (%x)", err, err);
+      } else {
+        capsule_log("Well I think we're doing fine!");
+      }
+    }
+  }
+
+  // HMODULE m8 = GetModuleHandle("d3d8.dll");
+  // capsule_log("Direct3D8 handle: %p", m8);
+
+  // if (m8) {
+  //   capsule_d3d8_sniff();
   // }
 
-  HMODULE m8 = GetModuleHandle("d3d8.dll");
-  capsule_log("Direct3D8 handle: %p", m8);
+  // HMODULE m9 = GetModuleHandle("d3d9.dll");
+  // capsule_log("Direct3D9 handle: %p", m9);
 
-  if (m8) {
-    capsule_d3d8_sniff();
-  }
+  // HMODULE m10 = GetModuleHandle("d3d10.dll");
+  // capsule_log("Direct3D10 handle: %p", m10);
 
-  HMODULE m9 = GetModuleHandle("d3d9.dll");
-  capsule_log("Direct3D9 handle: %p", m9);
+  // HMODULE m11 = GetModuleHandle("d3d11.dll");
+  // capsule_log("Direct3D11 handle: %p", m11);
 
-  HMODULE m10 = GetModuleHandle("d3d10.dll");
-  capsule_log("Direct3D10 handle: %p", m10);
-
-  HMODULE m11 = GetModuleHandle("d3d11.dll");
-  capsule_log("Direct3D11 handle: %p", m11);
-
-  if (m11) {
-	  capsule_d3d11_sniff();
-  }
+  // if (m11) {
+	//   capsule_d3d11_sniff();
+  // }
 }
 
 BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
@@ -193,7 +211,7 @@ void CAPSULE_STDCALL load_opengl (const char *openglPath) {
   ensure_real_dlopen();
   gl_handle = real_dlopen(openglPath, (RTLD_NOW|RTLD_LOCAL));
 #else
-  gl_handle = dlopen(openglPath, (RTLD_NOW|RTLD_LOCAL));
+  gl_handle = dlopen(L"OPENGL32.DLL", (RTLD_NOW|RTLD_LOCAL));
 #endif
   assert("Loaded real OpenGL lib", !!gl_handle);
   capsule_log("Loaded opengl!");
@@ -267,18 +285,22 @@ void* dlopen (const char * filename, int flag) {
 FILE *outFile;
 
 FILE *capsule_open_log () {
+#ifdef CAPSULE_WINDOWS
+  return _wfopen(capsule_log_path(), L"w");
+#else // CAPSULE_WINDOWS
   return fopen(capsule_log_path(), "w");
+#endif // CAPSULE_WINDOWS
 }
 
 #ifdef CAPSULE_WINDOWS
 
 #define CAPSULE_LOG_PATH_SIZE 32*1024
-char *_capsule_log_path;
+wchar_t *_capsule_log_path;
 
-char *capsule_log_path () {
+wchar_t *capsule_log_path () {
   if (!_capsule_log_path) {
-    _capsule_log_path = (char*) malloc(CAPSULE_LOG_PATH_SIZE);
-    ExpandEnvironmentStrings("%APPDATA%\\capsule.log.txt", _capsule_log_path, CAPSULE_LOG_PATH_SIZE);
+    _capsule_log_path = (wchar_t*) malloc(sizeof(wchar_t) * CAPSULE_LOG_PATH_SIZE);
+    ExpandEnvironmentStrings(L"%APPDATA%\\capsule.log.txt", _capsule_log_path, CAPSULE_LOG_PATH_SIZE);
   }
   return _capsule_log_path;
 }
@@ -361,9 +383,9 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   auto wanted_delta = chrono::microseconds(1000000 / 30);
   auto sleep_duration = wanted_delta - delta;
 
-  if (sleep_duration > chrono::seconds(0)) {
-    this_thread::sleep_for(wanted_delta - delta);
-  }
+  // if (sleep_duration > chrono::seconds(0)) {
+  //   this_thread::sleep_for(wanted_delta - delta);
+  // }
   old_ts = chrono::steady_clock::now();
 }
 

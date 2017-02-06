@@ -21,6 +21,8 @@ set(CMAKE_FIND_FRAMEWORK LAST)
 set(CMAKE_C_FLAGS "${COMPILE_FLAGS} ${CMAKE_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${COMPILE_FLAGS} ${CMAKE_CXX_FLAGS} -std=c++11")
 
+add_definitions(-D_UNICODE)
+
 if(WIN32)
   if(MSVC)
     set(DEPS_PREFIX https://dl.itch.ovh/capsule-deps)

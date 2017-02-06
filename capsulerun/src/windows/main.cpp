@@ -75,14 +75,6 @@ int capsulerun_main (int argc, char **argv) {
     DWORD exitCode;
     GetExitCodeProcess(pi.hProcess, &exitCode);
     printf("Exit code = %d (%x)\n", exitCode, exitCode);
-
-    // for (;;) {
-    //   printf("Sleeping...\n");
-    //   Sleep(1000);
-    // }
-
-    // CloseHandle(pi.hThread);
-    // CloseHandle(pi.hProcess);
   } else {
     printf("Error %lu: Cannot launch process and inject dll.\n", err);
   }
