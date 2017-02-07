@@ -17,6 +17,7 @@ ${capsulerun_SOURCE_DIR}/shared/main.cpp)
 
 if(WIN32)
   list(APPEND capsulerun_SRC
+    ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
     ${capsulerun_SOURCE_DIR}/windows/main.cpp
   )
 endif()
@@ -29,7 +30,7 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/linux/encoder.cpp
+    ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
     ${capsulerun_SOURCE_DIR}/linux/main.cpp
   )
   add_definitions(-D__STDC_CONSTANT_MACROS)
@@ -40,6 +41,7 @@ add_executable(capsulerun ${capsulerun_SRC})
 if(WIN32)
   add_dependencies(capsulerun capsule_deps)
   target_link_libraries(capsulerun ${DEVIARE_INPROC_LIBRARY})
+  target_link_libraries(capsulerun ${AVUTIL_LIBRARY} ${AVCODEC_LIBRARY} ${SWSCALE_LIBRARY} ${AVFORMAT_LIBRARY})
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
@@ -53,5 +55,4 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   include_directories(${AVUTIL_INCLUDE_DIRS} ${AVCODEC_INCLUDE_DIRS} ${SWSCALE_INCLUDE_DIRS} ${AVFORMAT_INCLUDE_DIRS})
   target_link_libraries(capsulerun ${AVUTIL_LDFLAGS} ${AVCODEC_LDFLAGS} ${X264_LDFLAGS} ${SWSCALE_LDFLAGS} ${AVFORMAT_LDFLAGS}) 
   target_link_libraries(capsulerun ${AVUTIL_LIBRARIES} ${AVCODEC_LIBRARIES} ${X264_LIBRARIES} ${SWSCALE_LIBRARIES} ${AVFORMAT_LIBRARIES})
-  target_link_libraries(capsulerun -lpthread)
 endif()

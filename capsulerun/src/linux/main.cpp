@@ -21,10 +21,27 @@
 // errno
 #include <errno.h>
 
-// pthread
-#include <pthread.h>
+// thread
+#include <thread>
 
 #include "capsulerun.h"
+
+using namespace std;
+
+typedef struct encoder_private_s {
+  FILE *fifo_file;
+} encoder_private_t;
+
+int receive_resolution (p *encoder_private_t, int64_t *width, int64_t *height) {
+  // FIXME: error checking
+  fread(width, sizeof(int64_t), 1, p->fifo_file);
+  fread(height, sizeof(int64_t), 1, p->fifo_file);
+  return 0;
+}
+
+int receive_frame (p *encoder_private_t, uint8_t *buffer, size_t buffer_size) {
+  return fread(buffer, 1, buffer_size, p->fifo_file);
+}
 
 int capsulerun_main (int argc, char **argv) {
   printf("thanks for flying capsule on GNU/Linux\n");
@@ -47,11 +64,6 @@ int capsulerun_main (int argc, char **argv) {
 
   pid_t child_pid;
   char **child_argv = &argv[2];
-
-  // char *env[2];
-  // // TODO: respect outside LD_PRELOAD ?
-  // env[0] = so_preload;
-  // env[1] = NULL;
 
   if (setenv("LD_PRELOAD", libcapsule_path, 1 /* replace */) != 0) {
     printf("couldn't set LD_PRELOAD'\n");
@@ -157,12 +169,27 @@ int capsulerun_main (int argc, char **argv) {
 
   printf("pid %d given to child %s\n", child_pid, executable_path);
 
-  struct encoder_params_s encoder_params = {
-    fifo_path: fifo_path
-  };
+  FILE *fifo_file = fopen(fifo_path);
 
-  pthread_t encoder_thread;
-  pthread_create(&encoder_thread, NULL, encoder_func, &encoder_params);
+  // open fifo
+  FILE *fifo_file = fopen(params->fifo_path, "rb");
+  if (fifo_file == NULL) {
+    printf("could not open fifo for reading: %s\n", strerror(errno));
+    exit(1);
+  }
+
+  printf("opened fifo\n");
+
+  struct encoder_private_s {
+
+  }
+
+  struct encoder_params_s encoder_params = {
+    user_data: fifo_file,
+    receive_resolution: receive_resolution,
+    receive_frame: receive_frame,
+  };
+  thread encoder_thread(encoder_run, &encoder_params);
 
   int child_status;
   pid_t wait_result;
@@ -184,6 +211,9 @@ int capsulerun_main (int argc, char **argv) {
       printf("continued\n");
     }
   } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
+
+  printf("waiting for encoder thread...\n");
+  encoder_thread.join();
 
   return 0;
 }

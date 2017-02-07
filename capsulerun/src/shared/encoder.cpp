@@ -13,39 +13,24 @@ extern "C" {
     #include <libswscale/swscale.h>
 }
 
-void *encoder_func(void *p) {
+void encoder_run(encoder_params_t *params) {
   int ret;
 
-  AVCodec *codec;
-  AVCodecContext *c = NULL;
-
-  AVFrame *frame;
-
-  encoder_params_s *params = (encoder_params_s*) p;
-
-  avcodec_register_all();
   av_register_all();
-
   av_log_set_level(AV_LOG_DEBUG);
 
-  // open fifo
-  FILE *fifo_file = fopen(params->fifo_path, "rb");
-  if (fifo_file == NULL) {
-    printf("could not open fifo for reading: %s\n", strerror(errno));
+  int64_t width, height;
+  ret = params->receive_resolution(params->private_data, &width, &height);
+  if (ret != 0) {
+    printf("could not receive resolution");
     exit(1);
   }
 
-  printf("opened fifo\n");
-
-  int64_t width, height;
-  fread(&width, sizeof(int64_t), 1, fifo_file);
-  fread(&height, sizeof(int64_t), 1, fifo_file);
-
-  printf("resolution: %ldx%ld\n", width, height);
+  printf("resolution: %dx%d\n", (int) width, (int) height);
 
   // assuming RGB
-  const int BUFFER_SIZE = width * height * 3;
-  uint8_t *buffer = (uint8_t*) malloc(BUFFER_SIZE);
+  const int buffer_size = width * height * 3;
+  uint8_t *buffer = (uint8_t*) malloc(buffer_size);
   if (!buffer) {
     printf("could not allocate buffer\n");
     exit(1);
@@ -86,14 +71,23 @@ void *encoder_func(void *p) {
   }
   video_st->id = oc->nb_streams - 1;
 
-  c = avcodec_alloc_context3(codec);
+  AVCodecID codec_id = AV_CODEC_ID_H264;
+
+  AVCodec *codec = avcodec_find_encoder(codec_id);
+  if (!codec) {
+    printf("could not find codec\n");
+    exit(1);
+  }
+
+  printf("found codec\n");
+
+  AVCodecContext *c = avcodec_alloc_context3(codec);
   if (!c) {
       printf("could not allocate codec context\n");
       exit(1);
   }
 
-  // c->codec_id = fmt->video_codec;
-  c->codec_id = AV_CODEC_ID_H264;
+  c->codec_id = codec_id;
   c->codec_type = AVMEDIA_TYPE_VIDEO;
   c->pix_fmt = AV_PIX_FMT_YUV420P;
 
@@ -103,7 +97,7 @@ void *encoder_func(void *p) {
   c->width = width;
   c->height = height;
   // frames per second
-  video_st->time_base = (AVRational){1,25};
+  video_st->time_base = AVRational{1,25};
   c->time_base = video_st->time_base;
 
   c->gop_size = 120;
@@ -119,14 +113,6 @@ void *encoder_func(void *p) {
   // av_opt_set(c->priv_data, "preset", "placebo", AV_OPT_SEARCH_CHILDREN);
   av_opt_set(c->priv_data, "preset", "ultrafast", AV_OPT_SEARCH_CHILDREN);
 
-  codec = avcodec_find_encoder(c->codec_id);
-  if (!codec) {
-    printf("could not find codec\n");
-    exit(1);
-  }
-
-  printf("loaded codec\n");
-
   ret = avcodec_open2(c, codec, NULL);
   if (ret < 0) {
     printf("could not open codec\n");
@@ -139,7 +125,7 @@ void *encoder_func(void *p) {
     exit(1);
   }
 
-  frame = av_frame_alloc();
+  AVFrame *frame = av_frame_alloc();
   if (!frame) {
     printf("could not allocate frame\n");
   }
@@ -199,19 +185,13 @@ void *encoder_func(void *p) {
   int next_pts = 1;
 
   while (true) {
-    size_t read = fread(buffer, 1, BUFFER_SIZE, fifo_file);
+    size_t read = params->receive_frame(params->private_data, buffer, buffer_size);
     total_read += read;
 
-    if (read < BUFFER_SIZE) {
+    if (read < buffer_size) {
       printf("received last frame\n");
       break;
     }
-
-    // ret = av_frame_make_writable(frame);
-    // if (ret < 0) {
-    //   printf("couldn't make frame writable\n'");
-    //   exit(1);
-    // }
 
     sws_scale(sws, sws_in, sws_linesize, 0, c->height, frame->data, frame->linesize);
 
@@ -259,7 +239,5 @@ void *encoder_func(void *p) {
 
   avio_close(oc->pb);
   avformat_free_context(oc);
-
-  return NULL;
 }
 

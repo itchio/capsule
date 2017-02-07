@@ -38,6 +38,11 @@ if(WIN32)
       get_filename_component(DEVIARE_INPROC_LIBRARY ${DEPS_DIR}/lib/NktHookLib.lib REALPATH)
     endif()
 
+    get_filename_component(AVUTIL_LIBRARY ${DEPS_DIR}/bin/avutil.lib REALPATH)
+    get_filename_component(AVCODEC_LIBRARY ${DEPS_DIR}/bin/avcodec.lib REALPATH)
+    get_filename_component(SWSCALE_LIBRARY ${DEPS_DIR}/bin/swscale.lib REALPATH)
+    get_filename_component(AVFORMAT_LIBRARY ${DEPS_DIR}/bin/avformat.lib REALPATH)
+
     include(ExternalProject)
     ExternalProject_Add(
       capsule_deps
