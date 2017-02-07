@@ -1,9 +1,6 @@
 
 #pragma once
 
-// int64_t etc.
-#include <stdint.h>
-
 #if defined(_WIN32)
 #define CAPSULERUN_WINDOWS
 
@@ -15,6 +12,13 @@
 #endif // linux stuff defined
 
 #define CAPSULE_MAX_PATH_LENGTH 16384
+
+// int64_t etc.
+#include <stdint.h>
+
+#if defined(CAPSULERUN_LINUX)
+#include <sys/types.h>
+#endif // CAPSULERUN_LINUX
 
 int capsulerun_main (int argc, char **argv);
 

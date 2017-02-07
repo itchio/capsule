@@ -65,7 +65,11 @@ extern "C" {
 
 FILE *capsule_open_log();
 
+#ifdef CAPSULE_WINDOWS
 wchar_t *capsule_log_path();
+#else
+char *capsule_log_path();
+#endif // CAPSULE_WINDOWS
 
 #ifdef CAPSULE_WINDOWS
 CAPSULE_DLL void capsule_install_windows_hooks ();
