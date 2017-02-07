@@ -38,10 +38,12 @@ if(WIN32)
       get_filename_component(DEVIARE_INPROC_LIBRARY ${DEPS_DIR}/lib/NktHookLib.lib REALPATH)
     endif()
 
-    get_filename_component(AVUTIL_LIBRARY ${DEPS_DIR}/bin/avutil.lib REALPATH)
-    get_filename_component(AVCODEC_LIBRARY ${DEPS_DIR}/bin/avcodec.lib REALPATH)
-    get_filename_component(SWSCALE_LIBRARY ${DEPS_DIR}/bin/swscale.lib REALPATH)
-    get_filename_component(AVFORMAT_LIBRARY ${DEPS_DIR}/bin/avformat.lib REALPATH)
+    get_filename_component(FFMPEG_LIBRARY_DIR ${DEPS_DIR}/bin REALPATH)
+
+    set(AVUTIL_DLL avutil-55.dll)
+    set(AVCODEC_DLL avcodec-57.dll)
+    set(SWSCALE_DLL swscale-4.dll)
+    set(AVFORMAT_DLL avformat-57.dll)
 
     include(ExternalProject)
     ExternalProject_Add(

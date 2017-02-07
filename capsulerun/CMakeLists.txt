@@ -41,7 +41,17 @@ add_executable(capsulerun ${capsulerun_SRC})
 if(WIN32)
   add_dependencies(capsulerun capsule_deps)
   target_link_libraries(capsulerun ${DEVIARE_INPROC_LIBRARY})
-  target_link_libraries(capsulerun ${AVUTIL_LIBRARY} ${AVCODEC_LIBRARY} ${SWSCALE_LIBRARY} ${AVFORMAT_LIBRARY})
+
+  foreach(NEEDED_LIB avutil.lib avcodec.lib swscale.lib avformat.lib)
+    target_link_libraries(capsulerun ${FFMPEG_LIBRARY_DIR}/${NEEDED_LIB})
+  endforeach(NEEDED_LIB)
+
+  foreach(NEEDED_DLL ${AVUTIL_DLL} ${AVCODEC_DLL} ${SWSCALE_DLL} ${AVFORMAT_DLL})
+    add_custom_command(TARGET capsulerun POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      "${FFMPEG_LIBRARY_DIR}/${NEEDED_DLL}"
+      $<TARGET_FILE_DIR:capsulerun>)
+  endforeach(NEEDED_DLL)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
