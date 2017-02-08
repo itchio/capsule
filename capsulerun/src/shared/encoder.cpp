@@ -71,75 +71,74 @@ void encoder_run(encoder_params_t *params) {
   }
   video_st->id = oc->nb_streams - 1;
 
-  AVCodecID codec_id = AV_CODEC_ID_H264;
+  AVCodecID vcodec_id = AV_CODEC_ID_H264;
 
-  AVCodec *codec = avcodec_find_encoder(codec_id);
-  if (!codec) {
-    printf("could not find codec\n");
+  AVCodec *vcodec = avcodec_find_encoder(vcodec_id);
+  if (!vcodec) {
+    printf("could not find video codec\n");
     exit(1);
   }
 
-  printf("found codec\n");
+  printf("found video codec\n");
 
-  AVCodecContext *c = avcodec_alloc_context3(codec);
-  if (!c) {
+  AVCodecContext *vc = avcodec_alloc_context3(vcodec);
+  if (!vc) {
       printf("could not allocate codec context\n");
       exit(1);
   }
 
-  c->codec_id = codec_id;
-  c->codec_type = AVMEDIA_TYPE_VIDEO;
-  c->pix_fmt = AV_PIX_FMT_YUV420P;
+  vc->codec_id = vcodec_id;
+  vc->codec_type = AVMEDIA_TYPE_VIDEO;
+  vc->pix_fmt = AV_PIX_FMT_YUV420P;
 
   // sample parameters
-  c->bit_rate = 5000000;
+  vc->bit_rate = 5000000;
   // resolution must be a multiple of two
-  c->width = width;
-  c->height = height;
+  vc->width = width;
+  vc->height = height;
   // frames per second - pts is in microseconds
   video_st->time_base = AVRational{1,1000000};
-  c->time_base = video_st->time_base;
+  vc->time_base = video_st->time_base;
 
-  c->gop_size = 120;
-  c->max_b_frames = 16;
-  c->rc_buffer_size = 0;
+  vc->gop_size = 120;
+  vc->max_b_frames = 16;
+  vc->rc_buffer_size = 0;
 
   // H264
-  c->qmin = 10;
-  c->qmax = 51;
+  vc->qmin = 10;
+  vc->qmax = 51;
 
-  c->flags |= CODEC_FLAG_GLOBAL_HEADER;
+  vc->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
-  // av_opt_set(c->priv_data, "preset", "placebo", AV_OPT_SEARCH_CHILDREN);
-  // av_opt_set(c->priv_data, "preset", "ultrafast", AV_OPT_SEARCH_CHILDREN);
-  av_opt_set(c->priv_data, "preset", "veryfast", AV_OPT_SEARCH_CHILDREN);
+  // see also "placebo" and "ultrafast" presets
+  av_opt_set(vc->priv_data, "preset", "veryfast", AV_OPT_SEARCH_CHILDREN);
 
-  ret = avcodec_open2(c, codec, NULL);
+  ret = avcodec_open2(vc, vcodec, NULL);
   if (ret < 0) {
-    printf("could not open codec\n");
+    printf("could not open video codec\n");
     exit(1);
   }
 
-  ret = avcodec_parameters_from_context(video_st->codecpar, c);
+  ret = avcodec_parameters_from_context(video_st->codecpar, vc);
   if (ret < 0) {
-    printf("could not copy codec parameters\n");
+    printf("could not copy video codec parameters\n");
     exit(1);
   }
 
-  AVFrame *frame = av_frame_alloc();
-  if (!frame) {
-    printf("could not allocate frame\n");
+  AVFrame *vframe = av_frame_alloc();
+  if (!vframe) {
+    printf("could not allocate video frame\n");
   }
-  frame->format = c->pix_fmt;
-  frame->width = c->width;
-  frame->height = c->height;
+  vframe->format = vc->pix_fmt;
+  vframe->width = vc->width;
+  vframe->height = vc->height;
 
   // initialize swscale context
   struct SwsContext *sws = sws_getContext(
     // input
-    frame->width, frame->height, AV_PIX_FMT_BGRA,
+    vframe->width, vframe->height, AV_PIX_FMT_BGRA,
     // output
-    frame->width, frame->height, c->pix_fmt,
+    vframe->width, vframe->height, vc->pix_fmt,
     // ???
     0, 0, 0, 0
   );
@@ -160,11 +159,17 @@ void encoder_run(encoder_params_t *params) {
 
   /* the image can be allocated by any means and av_image_alloc() is
    * just the most convenient way if av_malloc() is to be used */
-  ret = av_image_alloc(frame->data, frame->linesize, c->width, c->height,
-                       c->pix_fmt, 32);
+  ret = av_image_alloc(
+      vframe->data,
+      vframe->linesize,
+      vc->width,
+      vc->height,
+      vc->pix_fmt,
+      32 /* alignment */
+  );
   if (ret < 0) {
-      fprintf(stderr, "Could not allocate raw picture buffer\n");
-      exit(1);
+    fprintf(stderr, "Could not allocate raw picture buffer\n");
+    exit(1);
   }
 
   av_dump_format(oc, 0, output_path, 1);
@@ -182,8 +187,8 @@ void encoder_run(encoder_params_t *params) {
   int x, y;
   int got_output;
 
-  frame->pts = 0;
-  int next_pts = 0;
+  vframe->pts = 0;
+  int vnext_pts = 0;
 
   while (true) {
     int64_t delta;
@@ -195,32 +200,32 @@ void encoder_run(encoder_params_t *params) {
       break;
     }
 
-    sws_scale(sws, sws_in, sws_linesize, 0, c->height, frame->data, frame->linesize);
+    sws_scale(sws, sws_in, sws_linesize, 0, vc->height, vframe->data, vframe->linesize);
 
-    next_pts += delta;
-    frame->pts = next_pts;
+    vnext_pts += delta;
+    vframe->pts = vnext_pts;
 
     /* encode the image */
     // write video frame
-    ret = avcodec_send_frame(c, frame);
+    ret = avcodec_send_frame(vc, vframe);
     if (ret < 0) {
         fprintf(stderr, "Error encoding frame\n");
         exit(1);
     }
 
     while (ret >= 0) {
-      AVPacket pkt;
-      av_init_packet(&pkt);
-      ret = avcodec_receive_packet(c, &pkt);
+      AVPacket vpkt;
+      av_init_packet(&vpkt);
+      ret = avcodec_receive_packet(vc, &vpkt);
 
       if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
           fprintf(stderr, "Error encoding a video frame\n");
           exit(1);
       } else if (ret >= 0) {
-          av_packet_rescale_ts(&pkt, c->time_base, video_st->time_base);
-          pkt.stream_index = video_st->index;
+          av_packet_rescale_ts(&vpkt, vc->time_base, video_st->time_base);
+          vpkt.stream_index = video_st->index;
           /* Write the compressed frame to the media file. */
-          ret = av_interleaved_write_frame(oc, &pkt);
+          ret = av_interleaved_write_frame(oc, &vpkt);
           if (ret < 0) {
               fprintf(stderr, "Error while writing video frame\n");
               exit(1);
@@ -236,9 +241,9 @@ void encoder_run(encoder_params_t *params) {
     exit(1);
   }
 
-  avcodec_close(c);
-  av_freep(&frame->data[0]);
-  av_frame_free(&frame);
+  avcodec_close(vc);
+  av_freep(&vframe->data[0]);
+  av_frame_free(&vframe);
 
   avio_close(oc->pb);
   avformat_free_context(oc);

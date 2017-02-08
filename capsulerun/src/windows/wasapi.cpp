@@ -186,5 +186,4 @@ void wasapi_mess_around () {
   fclose(output_file);
 
   printf("wasapi mess around: done!\n");
-  exit(0);
 }
