@@ -2,25 +2,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-//////////////////////
-// <WASAPI>
-//////////////////////
-
-// IMMDeviceEnumerator, IMMDevice
-#include <mmDeviceapi.h>
-// IAudioClient, IAudioCaptureClient
-#include <audioclient.h>
-// PKEY_Device_FriendlyName
-#include <Functiondiscoverykeys_devpkey.h>
-
-// REFERENCE_TIME time units per second and per millisecond
-#define REFTIMES_PER_SEC  10000000
-#define REFTIMES_PER_MILLISEC  10000
-
-//////////////////////
-// </WASAPI>
-//////////////////////
-
 #include "capsulerun.h"
 
 using namespace std;
@@ -30,7 +11,7 @@ const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 const IID IID_IAudioClient = __uuidof(IAudioClient);
 const IID IID_IAudioCaptureClient = __uuidof(IAudioCaptureClient);
 
-void wasapi_mess_around () {
+void wasapi_start (encoder_private_t *p) {
   HRESULT hr;
 
   IMMDeviceEnumerator *pEnumerator = NULL;
@@ -38,11 +19,15 @@ void wasapi_mess_around () {
 
   CoInitialize(NULL);
 
+  printf("Creating enumerator instance\n");
+
   hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void**)&pEnumerator);
   if (hr != S_OK) {
     printf("Could not create device enumerator instance\n");
     exit(1);
   }
+
+  printf("Getting default audio endpoint\n");
 
   hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &pDevice);
   if (hr != S_OK) {
@@ -50,12 +35,16 @@ void wasapi_mess_around () {
     exit(1);
   }
 
+  printf("Opening property store\n");
+
   IPropertyStore *pProps = NULL;
   hr = pDevice->OpenPropertyStore(STGM_READ, &pProps);
   if (hr != S_OK) {
     printf("Could not get open endpoint property store\n");
     exit(1);
   }
+
+  printf("Getting audio endpoint friendly name\n");
 
   PROPVARIANT varName;
   // Initialize container for property value.
@@ -74,11 +63,15 @@ void wasapi_mess_around () {
   IAudioClient *pAudioClient = NULL;
   IAudioCaptureClient *pCaptureClient = NULL;
 
+  printf("Activating device\n");
+
   hr = pDevice->Activate(IID_IAudioClient, CLSCTX_ALL, NULL, (void**)&pAudioClient);
   if (hr != S_OK) {
     printf("Could not activate audio device");
     exit(1);
   }
+
+  printf("Getting mix format\n");
 
   WAVEFORMATEX *pwfx = NULL;
   hr = pAudioClient->GetMixFormat(&pwfx);
@@ -86,13 +79,6 @@ void wasapi_mess_around () {
     printf("Could not get mix format");
     exit(1);
   }
-
-  printf("======================\n");
-  printf("Audio format:\n");
-  printf("Channels: %d\n", pwfx->nChannels);
-  printf("Samples per sec: %d\n", pwfx->nSamplesPerSec);
-  printf("Bits per sample: %d\n", pwfx->wBitsPerSample);
-  printf("======================\n");
 
   REFERENCE_TIME hnsRequestedDuration = REFTIMES_PER_SEC;
   hr = pAudioClient->Initialize(
@@ -132,58 +118,63 @@ void wasapi_mess_around () {
     exit(1);
   }
 
+  p->pAudioClient = pAudioClient;
+  p->pCaptureClient = pCaptureClient;
+  p->pwfx = pwfx;
+}
+
+int wasapi_receive_audio_format (encoder_private_t *p, audio_format_t *afmt) {
+  afmt->channels = p->pwfx->nChannels;
+  afmt->samplerate = p->pwfx->nSamplesPerSec;
+  afmt->samplewidth = p->pwfx->wBitsPerSample;
+  return 0;
+}
+
+void *wasapi_receive_audio_frames (encoder_private_t *p, int *num_frames) {
   BYTE *pData;
-  UINT32 numFramesAvailable;
   DWORD flags;
+  HRESULT hr;
+  UINT32 numFramesAvailable;
 
-  FILE *output_file = fopen("audio.raw", "wb");
-
-  size_t bytesPerFrame = pwfx->wBitsPerSample / 8 * pwfx->nChannels;
-
-  int rounds = 20;
-
-  while (rounds > 0) {
-    Sleep(200);
-
-    while (true) {
-      hr = pCaptureClient->GetBuffer(
-        &pData,
-        &numFramesAvailable,
-        &flags,
-        NULL,
-        NULL
-      );
-      if (hr != S_OK) {
-        if (hr == AUDCLNT_S_BUFFER_EMPTY) {
-          // good!
-          break;
-        }
-
-        printf("Could not get buffer: error %d (%x)", hr, hr);
-        exit(1);
-      }
-
-      // printf("Got %d audio frames\n", numFramesAvailable);
-
-      // TODO: this is wrong
-      size_t bufferSize = numFramesAvailable * bytesPerFrame;
-      fwrite(pData, 1, bufferSize, output_file);
-
-      pCaptureClient->ReleaseBuffer(numFramesAvailable);
+  if (p->num_frames_received > 0) {
+    hr = p->pCaptureClient->ReleaseBuffer(p->num_frames_received);
+    if (hr != S_OK) {
+      printf("Could not release buffer: error %d (%x)\n", hr, hr);
+      exit(1);
     }
-
-    rounds--;
-
-    // printf("Going around!\n");
   }
 
-  hr = pAudioClient->Stop();
+  hr = p->pCaptureClient->GetBuffer(
+    &pData,
+    &numFramesAvailable,
+    &flags,
+    NULL,
+    NULL
+  );
+  if (hr != S_OK) {
+    if (hr == AUDCLNT_S_BUFFER_EMPTY) {
+      // good!
+      *num_frames = 0;
+      p->num_frames_received = 0;
+      return NULL;
+    }
+
+    printf("Could not get buffer: error %d (%x)\n", hr, hr);
+    exit(1);
+  }
+
+  *num_frames = numFramesAvailable;
+  p->num_frames_received = numFramesAvailable;
+
+  return pData;
+}
+
+void wasapi_stop (encoder_private_t *p) {
+  HRESULT hr;
+
+  hr = p->pAudioClient->Stop();
   if (hr != S_OK) {
     printf("Could not stop capture");
     exit(1);
   }
-
-  fclose(output_file);
-
-  printf("wasapi mess around: done!\n");
 }

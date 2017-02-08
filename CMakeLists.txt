@@ -42,8 +42,9 @@ if(WIN32)
 
     set(AVUTIL_DLL avutil-55.dll)
     set(AVCODEC_DLL avcodec-57.dll)
-    set(SWSCALE_DLL swscale-4.dll)
     set(AVFORMAT_DLL avformat-57.dll)
+    set(SWSCALE_DLL swscale-4.dll)
+    set(SWRESAMPLE_DLL swresample-2.dll)
 
     include(ExternalProject)
     ExternalProject_Add(

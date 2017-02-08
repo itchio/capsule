@@ -43,11 +43,11 @@ if(WIN32)
   add_dependencies(capsulerun capsule_deps)
   target_link_libraries(capsulerun ${DEVIARE_INPROC_LIBRARY})
 
-  foreach(NEEDED_LIB avutil.lib avcodec.lib swscale.lib avformat.lib)
+  foreach(NEEDED_LIB avutil.lib avcodec.lib avformat.lib swscale.lib swresample.lib)
     target_link_libraries(capsulerun ${FFMPEG_LIBRARY_DIR}/${NEEDED_LIB})
   endforeach(NEEDED_LIB)
 
-  foreach(NEEDED_DLL ${AVUTIL_DLL} ${AVCODEC_DLL} ${SWSCALE_DLL} ${AVFORMAT_DLL})
+  foreach(NEEDED_DLL ${AVUTIL_DLL} ${AVCODEC_DLL} ${AVFORMAT_DLL} ${SWSCALE_DLL} ${SWRESAMPLE_DLL})
     add_custom_command(TARGET capsulerun POST_BUILD
       COMMAND ${CMAKE_COMMAND} -E copy_if_different
       "${FFMPEG_LIBRARY_DIR}/${NEEDED_DLL}"
