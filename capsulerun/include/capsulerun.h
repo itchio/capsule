@@ -37,3 +37,9 @@ typedef struct encoder_params_s {
 void encoder_run(encoder_params_t *params);
 
 #endif
+
+#if defined(CAPSULERUN_WINDOWS)
+
+void wasapi_mess_around(void);
+
+#endif

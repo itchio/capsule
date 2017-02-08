@@ -67,6 +67,8 @@ int capsulerun_main (int argc, char **argv) {
     exit(1);
   }
 
+  wasapi_mess_around();
+
   char *libcapsule_dir = argv[1];
   char *executable_path = argv[2];
 
