@@ -307,7 +307,7 @@ wchar_t *capsule_log_path () {
 #else // defined CAPSULE_WINDOWS
 
 char *capsule_log_path () {
-  return "/tmp/capsule.log.txt";
+  return (char*) "/tmp/capsule.log.txt";
 }
 
 #endif
@@ -315,7 +315,20 @@ char *capsule_log_path () {
 
 void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize, int width, int height) {
   if (!outFile) {
+#ifdef CAPSULE_WINDOWS
+    const int pipe_path_len = CAPSULE_LOG_PATH_SIZE;
+    wchar_t *pipe_path = (wchar_t*) malloc(sizeof(wchar_t) * pipe_path_len);
+    pipe_path[0] = '\0';
+    GetEnvironmentVariable(L"CAPSULE_PIPE_PATH", pipe_path, pipe_path_len);
+    assert("Got pipe path", wcslen(pipe_path) > 0);
+
+    capsule_log("Pipe path: %S", pipe_path);
+
+    outFile = _wfopen(pipe_path, L"wb");
+    free(pipe_path);
+#else
     outFile = fopen("capsule.rawvideo", "wb");
+#endif
     assert("Opened output file", !!outFile);
 
     int64_t num = (int64_t) width;

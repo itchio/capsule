@@ -92,7 +92,7 @@ void encoder_run(encoder_params_t *params) {
   c->pix_fmt = AV_PIX_FMT_YUV420P;
 
   // sample parameters
-  c->bit_rate = 400000;
+  c->bit_rate = 4000000;
   // resolution must be a multiple of two
   c->width = width;
   c->height = height;
