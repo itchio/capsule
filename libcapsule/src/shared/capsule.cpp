@@ -206,11 +206,11 @@ void CAPSULE_STDCALL ensure_real_dlopen() {
 
 void CAPSULE_STDCALL load_opengl (const char *openglPath) {
   capsule_log("Loading real opengl from %s", openglPath);
-#ifdef CAPSULE_LINUX
+#ifdef CAPSULE_WINDOWS
+  gl_handle = dlopen(L"OPENGL32.DLL", (RTLD_NOW|RTLD_LOCAL));
+#else
   ensure_real_dlopen();
   gl_handle = real_dlopen(openglPath, (RTLD_NOW|RTLD_LOCAL));
-#else
-  gl_handle = dlopen(L"OPENGL32.DLL", (RTLD_NOW|RTLD_LOCAL));
 #endif
   assert("Loaded real OpenGL lib", !!gl_handle);
   capsule_log("Loaded opengl!");
