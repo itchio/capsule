@@ -96,8 +96,8 @@ void encoder_run(encoder_params_t *params) {
   // resolution must be a multiple of two
   c->width = width;
   c->height = height;
-  // frames per second
-  video_st->time_base = AVRational{1,60};
+  // frames per second - pts is in microseconds
+  video_st->time_base = AVRational{1,1000000};
   c->time_base = video_st->time_base;
 
   c->gop_size = 120;
@@ -183,10 +183,11 @@ void encoder_run(encoder_params_t *params) {
   int got_output;
 
   frame->pts = 0;
-  int next_pts = 1;
+  int next_pts = 0;
 
   while (true) {
-    size_t read = params->receive_frame(params->private_data, buffer, buffer_size);
+    int64_t delta;
+    size_t read = params->receive_frame(params->private_data, buffer, buffer_size, &delta);
     total_read += read;
 
     if (read < buffer_size) {
@@ -196,7 +197,8 @@ void encoder_run(encoder_params_t *params) {
 
     sws_scale(sws, sws_in, sws_linesize, 0, c->height, frame->data, frame->linesize);
 
-    frame->pts = next_pts++;
+    next_pts += delta;
+    frame->pts = next_pts;
 
     /* encode the image */
     // write video frame

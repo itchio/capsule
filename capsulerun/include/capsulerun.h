@@ -25,7 +25,7 @@ int capsulerun_main (int argc, char **argv);
 #if defined(CAPSULERUN_LINUX) || defined(CAPSULERUN_WINDOWS)
 
 typedef int (*receive_resolution_t)(void *private_data, int64_t *width, int64_t *height);
-typedef int (*receive_frame_t)(void *private_data, uint8_t *buffer, size_t buffer_size);
+typedef int (*receive_frame_t)(void *private_data, uint8_t *buffer, size_t buffer_size, int64_t *delta);
 
 typedef struct encoder_params_s {
   void *private_data;

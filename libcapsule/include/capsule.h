@@ -2,6 +2,7 @@
 #pragma once
 
 #include <stdio.h>
+#include <stdint.h>
 
 #if defined(_WIN32)
 #define DEFAULT_OPENGL "OPENGL32.DLL"
@@ -77,7 +78,9 @@ void capsule_d3d8_sniff();
 void capsule_d3d11_sniff();
 #endif
 
-void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize, int width, int height);
+void CAPSULE_STDCALL capsule_write_resolution (int width, int height);
+void CAPSULE_STDCALL capsule_write_delta (int64_t delta);
+void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize);
 void CAPSULE_STDCALL capsule_capture_frame (int width, int height);
 
 void* glXGetProcAddressARB (const char*);

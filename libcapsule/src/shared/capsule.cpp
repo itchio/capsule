@@ -313,8 +313,7 @@ char *capsule_log_path () {
 
 #endif
 
-
-void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize, int width, int height) {
+int ensure_outfile() {
   if (!outFile) {
 #ifdef CAPSULE_WINDOWS
     const int pipe_path_len = CAPSULE_LOG_PATH_SIZE;
@@ -331,17 +330,32 @@ void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize,
     outFile = fopen("capsule.rawvideo", "wb");
 #endif
     assert("Opened output file", !!outFile);
-
-    int64_t num = (int64_t) width;
-    fwrite(&num, sizeof(int64_t), 1, outFile);
-
-    num = (int64_t) height;
-    fwrite(&num, sizeof(int64_t), 1, outFile);
+    return 1;
   }
 
-  fwrite(frameData, 1, frameDataSize, outFile);
-  fflush(outFile);
+  return 0;
 }
+
+void CAPSULE_STDCALL capsule_write_resolution (int width, int height) {
+  ensure_outfile();
+  int64_t num = (int64_t) width;
+  fwrite(&num, sizeof(int64_t), 1, outFile);
+
+  num = (int64_t) height;
+  fwrite(&num, sizeof(int64_t), 1, outFile);
+}
+
+void CAPSULE_STDCALL capsule_write_delta (int64_t delta) {
+  ensure_outfile();
+  fwrite(&delta, 1, sizeof(int64_t), outFile);
+}
+
+void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize) {
+  ensure_outfile();
+  fwrite(frameData, 1, frameDataSize, outFile);
+}
+
+int first_frame = 1;
 
 void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   ts = chrono::steady_clock::now();
@@ -352,6 +366,7 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
     // skip frame
     return;
   }
+  old_ts = chrono::steady_clock::now();
 
   frameNumber++;
   if (frameNumber < 120) {
@@ -398,17 +413,14 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   }
   _realglReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
 
-  capsule_write_frame(frameData, frameDataSize, width, height);
-
-  // ts = chrono::steady_clock::now();
-  // auto delta = ts - old_ts;
-  // auto wanted_delta = chrono::microseconds(1000000 / 30);
-  // auto sleep_duration = wanted_delta - delta;
-
-  // if (sleep_duration > chrono::seconds(0)) {
-  //   this_thread::sleep_for(wanted_delta - delta);
-  // }
-  old_ts = chrono::steady_clock::now();
+  if (first_frame) {
+    capsule_write_resolution(width, height);
+    capsule_write_delta((int64_t) 0);
+    first_frame = 0;
+  } else {
+    capsule_write_delta((int64_t) chrono::duration_cast<chrono::microseconds>(delta).count());
+  }
+  capsule_write_frame(frameData, frameDataSize);
 }
 
 #ifdef CAPSULE_LINUX
