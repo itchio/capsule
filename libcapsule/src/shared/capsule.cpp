@@ -275,6 +275,7 @@ void* dlopen (const char * filename, int flag) {
 #endif
 
 #define GL_RGB 6407
+#define GL_BGRA 32993
 #define GL_UNSIGNED_BYTE 5121
 #define GL_VIEWPORT 2978
 #define GL_RENDERBUFFER 36161
@@ -343,13 +344,22 @@ void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize,
 }
 
 void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
+  ts = chrono::steady_clock::now();
+  auto delta = ts - old_ts;
+  auto wanted_delta = chrono::microseconds(1000000 / 60);
+
+  if (delta < wanted_delta) {
+    // skip frame
+    return;
+  }
+
   frameNumber++;
   if (frameNumber < 120) {
     return;
   }
 
-  int components = 3;
-  int format = GL_RGB;
+  int components = 4;
+  int format = GL_BGRA;
 
   ensure_own_opengl();
 
@@ -390,14 +400,14 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
 
   capsule_write_frame(frameData, frameDataSize, width, height);
 
-  ts = chrono::steady_clock::now();
-  auto delta = ts - old_ts;
-  auto wanted_delta = chrono::microseconds(1000000 / 30);
-  auto sleep_duration = wanted_delta - delta;
+  // ts = chrono::steady_clock::now();
+  // auto delta = ts - old_ts;
+  // auto wanted_delta = chrono::microseconds(1000000 / 30);
+  // auto sleep_duration = wanted_delta - delta;
 
-  if (sleep_duration > chrono::seconds(0)) {
-    this_thread::sleep_for(wanted_delta - delta);
-  }
+  // if (sleep_duration > chrono::seconds(0)) {
+  //   this_thread::sleep_for(wanted_delta - delta);
+  // }
   old_ts = chrono::steady_clock::now();
 }
 

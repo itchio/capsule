@@ -28,15 +28,15 @@ void encoder_run(encoder_params_t *params) {
 
   printf("resolution: %dx%d\n", (int) width, (int) height);
 
-  // assuming RGB
-  const int buffer_size = width * height * 3;
+  // assuming BGRA
+  int components = 4;
+  const int buffer_size = width * height * components;
   uint8_t *buffer = (uint8_t*) malloc(buffer_size);
   if (!buffer) {
     printf("could not allocate buffer\n");
     exit(1);
   }
 
-  int components = 3;
   int linesize = width * components;
 
   AVFormatContext *oc;
@@ -92,12 +92,12 @@ void encoder_run(encoder_params_t *params) {
   c->pix_fmt = AV_PIX_FMT_YUV420P;
 
   // sample parameters
-  c->bit_rate = 4000000;
+  c->bit_rate = 5000000;
   // resolution must be a multiple of two
   c->width = width;
   c->height = height;
   // frames per second
-  video_st->time_base = AVRational{1,25};
+  video_st->time_base = AVRational{1,60};
   c->time_base = video_st->time_base;
 
   c->gop_size = 120;
@@ -111,7 +111,8 @@ void encoder_run(encoder_params_t *params) {
   c->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
   // av_opt_set(c->priv_data, "preset", "placebo", AV_OPT_SEARCH_CHILDREN);
-  av_opt_set(c->priv_data, "preset", "ultrafast", AV_OPT_SEARCH_CHILDREN);
+  // av_opt_set(c->priv_data, "preset", "ultrafast", AV_OPT_SEARCH_CHILDREN);
+  av_opt_set(c->priv_data, "preset", "veryfast", AV_OPT_SEARCH_CHILDREN);
 
   ret = avcodec_open2(c, codec, NULL);
   if (ret < 0) {
@@ -136,7 +137,7 @@ void encoder_run(encoder_params_t *params) {
   // initialize swscale context
   struct SwsContext *sws = sws_getContext(
     // input
-    frame->width, frame->height, AV_PIX_FMT_RGB24,
+    frame->width, frame->height, AV_PIX_FMT_BGRA,
     // output
     frame->width, frame->height, c->pix_fmt,
     // ???
