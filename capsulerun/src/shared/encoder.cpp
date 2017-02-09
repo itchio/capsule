@@ -322,6 +322,11 @@ void encoder_run(encoder_params_t *params) {
 
   FILE *raw_audio = fopen("audio.raw", "wb");
 
+  int samples_received = 0;
+  int samples_used = 0;
+  int in_sample_size = afmt_in.channels * afmt_in.samplewidth / 8;
+  float *in_samples;
+
   while (true) {
     size_t read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
     printf(">> video timestamp                 = %d, approx %.4f seconds\n", (int) timestamp, ((double) timestamp) / 1000000.0);
@@ -366,16 +371,13 @@ void encoder_run(encoder_params_t *params) {
     }
 
     if (params->has_audio) {
-      int audio_frames_generated = 0;
+      int audio_frames_copied = 0;
 
       // while video frame is ahead of audio
       while (av_compare_ts(vframe->pts, video_st->time_base, aframe->pts, audio_st->time_base) >= 0) {
-        factor *= 0.99;
-        if (factor < 0.5) {
-          factor = 1.0;
-        }
+        int samples_filled = 0;
+        int samples_needed = aframe->nb_samples;
 
-        audio_frames_generated++;
         ret = av_frame_make_writable(aframe);
         if (ret < 0) {
           fprintf(stderr, "Could not make audio frame writable\n");
@@ -384,15 +386,27 @@ void encoder_run(encoder_params_t *params) {
 
         float *left_samples = (float *) aframe->data[0];
         float *right_samples = (float *) aframe->data[1];
-        for (int j = 0; j < aframe->nb_samples; j++) {
-          float sample = sin(t);
-          left_samples[j] = sample;
-          right_samples[j] = sample;
-          t += tincr * factor;
-          if (t >= 2 * M_PI) {
-            t -= 2 * M_PI;
+
+        while (samples_filled < samples_needed) {
+          if (samples_used >= samples_received) {
+            samples_used = 0;
+
+            in_samples = (float *) params->receive_audio_frames(params->private_data, &samples_received);
+            if (samples_received == 0) {
+              printf("audio buffer underrun :(\n");
+              break;
+            }
+          }
+
+          while (samples_used < samples_received && samples_filled < samples_needed) {
+            left_samples[samples_filled]  = in_samples[samples_used * 2];
+            right_samples[samples_filled] = in_samples[samples_used * 2 + 1];
+            samples_filled++;
+            samples_used++;
           }
         }
+
+        audio_frames_copied++;
 
         aframe->pts = anext_pts;
         anext_pts += aframe->nb_samples;
@@ -428,7 +442,7 @@ void encoder_run(encoder_params_t *params) {
         }
       }
 
-      printf("Generated %d audio frames\n", audio_frames_generated);
+      printf("Copied %d audio frames\n", audio_frames_copied);
 
       while (ret >= 0) {
         AVPacket apkt;
@@ -454,20 +468,7 @@ void encoder_run(encoder_params_t *params) {
     if (last_frame) {
       break;
     }
-
-    int samples_received;
-    int in_sample_size = 2 * 4;
-
-    while (true) {
-      uint8_t *in_samples = (uint8_t *) params->receive_audio_frames(params->private_data, &samples_received);
-      if (in_samples && samples_received > 0) {
-        fwrite(in_samples, 1, in_sample_size * samples_received, raw_audio);
-      } else {
-        break;
-      }
-    }
   }
-  fclose(raw_audio);
 
   // delayed video frames
   ret = avcodec_send_frame(vc, NULL);
