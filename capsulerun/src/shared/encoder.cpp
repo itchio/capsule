@@ -320,6 +320,8 @@ void encoder_run(encoder_params_t *params) {
   float factor = 1.0;
   int64_t timestamp;
 
+  FILE *raw_audio = fopen("audio.raw", "wb");
+
   while (true) {
     size_t read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
     printf(">> video timestamp                 = %d, approx %.4f seconds\n", (int) timestamp, ((double) timestamp) / 1000000.0);
@@ -452,7 +454,20 @@ void encoder_run(encoder_params_t *params) {
     if (last_frame) {
       break;
     }
+
+    int samples_received;
+    int in_sample_size = 2 * 4;
+
+    while (true) {
+      uint8_t *in_samples = (uint8_t *) params->receive_audio_frames(params->private_data, &samples_received);
+      if (in_samples && samples_received > 0) {
+        fwrite(in_samples, 1, in_sample_size * samples_received, raw_audio);
+      } else {
+        break;
+      }
+    }
   }
+  fclose(raw_audio);
 
   // delayed video frames
   ret = avcodec_send_frame(vc, NULL);
