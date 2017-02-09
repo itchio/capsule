@@ -329,7 +329,7 @@ void encoder_run(encoder_params_t *params) {
 
   while (true) {
     size_t read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
-    printf(">> video timestamp                 = %d, approx %.4f seconds\n", (int) timestamp, ((double) timestamp) / 1000000.0);
+    // printf(">> video timestamp                 = %d, approx %.4f seconds\n", (int) timestamp, ((double) timestamp) / 1000000.0);
     total_read += read;
 
     if (read < buffer_size) {
@@ -357,9 +357,9 @@ void encoder_run(encoder_params_t *params) {
           fprintf(stderr, "Error encoding a video frame\n");
           exit(1);
       } else if (ret >= 0) {
-          printf(">> vpkt timestamp before rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
+          // printf(">> vpkt timestamp before rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
           av_packet_rescale_ts(&vpkt, vc->time_base, video_st->time_base);
-          printf(">>                after  rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
+          // printf(">>                after  rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
           vpkt.stream_index = video_st->index;
           /* Write the compressed frame to the media file. */
           ret = av_interleaved_write_frame(oc, &vpkt);
@@ -442,7 +442,7 @@ void encoder_run(encoder_params_t *params) {
         }
       }
 
-      printf("Copied %d audio frames\n", audio_frames_copied);
+      // printf("Copied %d audio frames\n", audio_frames_copied);
 
       while (ret >= 0) {
         AVPacket apkt;
@@ -486,9 +486,9 @@ void encoder_run(encoder_params_t *params) {
         fprintf(stderr, "Error encoding a video frame\n");
         exit(1);
     } else if (ret >= 0) {
-        printf(">> vpkt timestamp before rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
+        // printf(">> vpkt timestamp before rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
         av_packet_rescale_ts(&vpkt, vc->time_base, video_st->time_base);
-        printf(">>                after  rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
+        // printf(">>                after  rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
         vpkt.stream_index = video_st->index;
         /* Write the compressed frame to the media file. */
         ret = av_interleaved_write_frame(oc, &vpkt);
