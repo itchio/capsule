@@ -107,6 +107,8 @@ CAPSULE_DLL void capsule_install_windows_hooks () {
 
   HINSTANCE mh;
 
+  LoadLibrary(L"opengl32.dll");
+
   mh = NktHookLibHelpers::GetModuleBaseAddress(L"opengl32.dll");
   capsule_log("OpenGL handle: %p", mh);
   if (mh) {

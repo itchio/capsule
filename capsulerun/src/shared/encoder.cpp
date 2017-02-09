@@ -305,9 +305,6 @@ void encoder_run(encoder_params_t *params) {
   size_t total_read = 0;
   size_t last_print_read = 0;
 
-  int x, y;
-  int got_output;
-
   vframe->pts = 0;
   int vnext_pts = 0;
   int anext_pts = 0;
@@ -394,6 +391,11 @@ void encoder_run(encoder_params_t *params) {
             in_samples = (float *) params->receive_audio_frames(params->private_data, &samples_received);
             if (samples_received == 0) {
               printf("audio buffer underrun :(\n");
+              while (samples_filled < samples_needed) {
+                left_samples[samples_filled]  = 0.0;
+                right_samples[samples_filled] = 0.0;
+                samples_filled++;
+              }
               break;
             }
           }
