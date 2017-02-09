@@ -362,12 +362,11 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   auto delta = ts - old_ts;
   auto wanted_delta = chrono::microseconds(1000000 / 60);
 
-  if (delta < wanted_delta) {
+  if (delta < wanted_delta && !first_frame) {
     // skip frame
     return;
   }
-  // old_ts = chrono::steady_clock::now();
-  old_ts += wanted_delta;
+  old_ts = chrono::steady_clock::now();
 
   frameNumber++;
   if (frameNumber < 120) {
