@@ -190,7 +190,7 @@ glXGetProcAddressARBType _realglXGetProcAddressARB;
 
 char *frameData;
 int frameNumber = 0;
-chrono::time_point<chrono::steady_clock> old_ts, ts;
+chrono::time_point<chrono::steady_clock> old_ts, ts, first_ts;
 
 typedef void* (*dlopen_type)(const char*, int);
 dlopen_type real_dlopen;
@@ -345,9 +345,9 @@ void CAPSULE_STDCALL capsule_write_resolution (int width, int height) {
   fwrite(&num, sizeof(int64_t), 1, outFile);
 }
 
-void CAPSULE_STDCALL capsule_write_delta (int64_t delta) {
+void CAPSULE_STDCALL capsule_write_timestamp (int64_t timestamp) {
   ensure_outfile();
-  fwrite(&delta, 1, sizeof(int64_t), outFile);
+  fwrite(&timestamp, 1, sizeof(int64_t), outFile);
 }
 
 void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize) {
@@ -366,7 +366,8 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
     // skip frame
     return;
   }
-  old_ts = chrono::steady_clock::now();
+  // old_ts = chrono::steady_clock::now();
+  old_ts += wanted_delta;
 
   frameNumber++;
   if (frameNumber < 120) {
@@ -415,10 +416,13 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
 
   if (first_frame) {
     capsule_write_resolution(width, height);
-    capsule_write_delta((int64_t) 0);
+    capsule_write_timestamp((int64_t) 0);
     first_frame = 0;
+    first_ts = chrono::steady_clock::now();
+    old_ts = chrono::steady_clock::now();
   } else {
-    capsule_write_delta((int64_t) chrono::duration_cast<chrono::microseconds>(delta).count());
+    auto frame_timestamp = chrono::steady_clock::now() - first_ts;
+    capsule_write_timestamp((int64_t) chrono::duration_cast<chrono::microseconds>(frame_timestamp).count());
   }
   capsule_write_frame(frameData, frameDataSize);
 }

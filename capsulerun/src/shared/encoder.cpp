@@ -316,27 +316,29 @@ void encoder_run(encoder_params_t *params) {
   t = 0;
   tincr = 2 * M_PI * 440.0 / ac->sample_rate;
 
+  int last_frame = 0;
+  float factor = 1.0;
+  int64_t timestamp;
+
   while (true) {
-    int64_t delta;
-    size_t read = params->receive_video_frame(params->private_data, buffer, buffer_size, &delta);
+    size_t read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
+    printf(">> video timestamp                 = %d, approx %.4f seconds\n", (int) timestamp, ((double) timestamp) / 1000000.0);
     total_read += read;
 
     if (read < buffer_size) {
-      printf("received last frame\n");
-      break;
-    }
+      last_frame = true;
+    } else {
+      sws_scale(sws, sws_in, sws_linesize, 0, vc->height, vframe->data, vframe->linesize);
 
-    sws_scale(sws, sws_in, sws_linesize, 0, vc->height, vframe->data, vframe->linesize);
+      vnext_pts = timestamp;
+      vframe->pts = vnext_pts;
 
-    vnext_pts += delta;
-    vframe->pts = vnext_pts;
-
-    /* encode the image */
-    // write video frame
-    ret = avcodec_send_frame(vc, vframe);
-    if (ret < 0) {
-        fprintf(stderr, "Error encoding video frame\n");
-        exit(1);
+      // write video frame
+      ret = avcodec_send_frame(vc, vframe);
+      if (ret < 0) {
+          fprintf(stderr, "Error encoding video frame\n");
+          exit(1);
+      }
     }
 
     while (ret >= 0) {
@@ -348,7 +350,9 @@ void encoder_run(encoder_params_t *params) {
           fprintf(stderr, "Error encoding a video frame\n");
           exit(1);
       } else if (ret >= 0) {
+          printf(">> vpkt timestamp before rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
           av_packet_rescale_ts(&vpkt, vc->time_base, video_st->time_base);
+          printf(">>                after  rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
           vpkt.stream_index = video_st->index;
           /* Write the compressed frame to the media file. */
           ret = av_interleaved_write_frame(oc, &vpkt);
@@ -362,9 +366,12 @@ void encoder_run(encoder_params_t *params) {
     if (params->has_audio) {
       int audio_frames_generated = 0;
 
-      // while next video frame is ahead of audio
-      while (av_compare_ts(vnext_pts, video_st->time_base, anext_pts, audio_st->time_base) >= 0) {
-        tincr *= 0.999;
+      // while video frame is ahead of audio
+      while (av_compare_ts(vframe->pts, video_st->time_base, aframe->pts, audio_st->time_base) >= 0) {
+        factor *= 0.99;
+        if (factor < 0.5) {
+          factor = 1.0;
+        }
 
         audio_frames_generated++;
         ret = av_frame_make_writable(aframe);
@@ -375,11 +382,14 @@ void encoder_run(encoder_params_t *params) {
 
         float *left_samples = (float *) aframe->data[0];
         float *right_samples = (float *) aframe->data[1];
-        for (int j = 0; j < ac->frame_size; j++) {
-          float sample = (int)(sin(t) * 10000);
+        for (int j = 0; j < aframe->nb_samples; j++) {
+          float sample = sin(t);
           left_samples[j] = sample;
           right_samples[j] = sample;
-          t += tincr;
+          t += tincr * factor;
+          if (t >= 2 * M_PI) {
+            t -= 2 * M_PI;
+          }
         }
 
         aframe->pts = anext_pts;
@@ -418,77 +428,6 @@ void encoder_run(encoder_params_t *params) {
 
       printf("Generated %d audio frames\n", audio_frames_generated);
 
-      // TODO: make this less dumb (synchronize audio & video)
-      // for (;;) {
-      //   int num_audio_frames;
-      //   uint8_t *audio_data = (uint8_t *) params->receive_audio_frames(params->private_data, &num_audio_frames);
-
-      //   if (num_audio_frames == 0) {
-      //     break;
-      //   }
-      //   // fprintf(stderr, "Received %d audio frames\n", num_audio_frames);
-
-      //   int in_frame_size = afmt_in.channels * afmt_in.samplewidth / 8;
-      //   int audio_data_size = num_audio_frames * in_frame_size;
-
-      //   printf("audio_buffer_size = %d, audio_data_size = %d\n", audio_buffer_size, audio_data_size);        
-      //   for (int i = 0; i < audio_data_size; i += audio_buffer_size) {
-      //     size_t offset = audio_buffer_size * i;
-
-      //     int in_nb_samples = audio_buffer_size / in_frame_size;
-      //     if (offset + (in_nb_samples * in_frame_size) > audio_data_size) {
-      //       in_nb_samples = (audio_data_size - offset) / in_frame_size;
-      //     }
-
-      //     int out_nb_samples = in_nb_samples;
-      //     const uint8_t *src_data[1] = { audio_data + offset };
-      //     uint8_t *dst_data[1] = { audio_buffer };
-
-      //     // printf("in_nb_samples = %d\n", in_nb_samples);
-      //     printf("out_nb_samples = %d\n", out_nb_samples);
-
-      //     ret = swr_convert(
-      //       swr,
-      //       dst_data,
-      //       out_nb_samples,
-      //       src_data,
-      //       in_nb_samples
-      //     );
-      //     if (ret < 0) {
-      //       fprintf(stderr, "Could not convert samples\n");
-      //       exit(1);
-      //     }
-
-      //     // aframe->nb_samples = out_nb_samples;
-      //     // aframe->nb_samples = audio_buffer_size / in_frame_size;
-      //     aframe->pts = anext_pts;
-      //     anext_pts += aframe->nb_samples;
-
-      //     // ret = avcodec_fill_audio_frame(
-      //     //   aframe,
-      //     //   ac->channels,
-      //     //   ac->sample_fmt,
-      //     //   audio_buffer,
-      //     //   audio_buffer_size,
-      //     //   0
-      //     // );
-      //     // if (ret < 0) {
-      //     //   printf("could fill audio frame\n");
-      //     //   exit(1);
-      //     // }
-
-      //     ret = avcodec_send_frame(ac, aframe);
-      //     if (ret < 0) {
-      //       const int err_string_size = 16 * 1024;
-      //       char err_string[err_string_size];
-      //       err_string[0] = '\0';
-      //       av_strerror(ret, err_string, err_string_size);
-      //       printf("Error encoding audio frame: error %d (%x) - %s\n", ret, ret, err_string);
-      //       exit(1);
-      //     }
-      //   }
-      // }
-
       while (ret >= 0) {
         AVPacket apkt;
         av_init_packet(&apkt);
@@ -508,6 +447,66 @@ void encoder_run(encoder_params_t *params) {
             }
         }
       }
+    }
+
+    if (last_frame) {
+      break;
+    }
+  }
+
+  // delayed video frames
+  ret = avcodec_send_frame(vc, NULL);
+  if (ret < 0) {
+    fprintf(stderr, "couldn't flush video codec\n");
+    exit(1);
+  }
+
+  while (ret >= 0) {
+    AVPacket vpkt;
+    av_init_packet(&vpkt);
+    ret = avcodec_receive_packet(vc, &vpkt);
+
+    if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
+        fprintf(stderr, "Error encoding a video frame\n");
+        exit(1);
+    } else if (ret >= 0) {
+        printf(">> vpkt timestamp before rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
+        av_packet_rescale_ts(&vpkt, vc->time_base, video_st->time_base);
+        printf(">>                after  rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
+        vpkt.stream_index = video_st->index;
+        /* Write the compressed frame to the media file. */
+        ret = av_interleaved_write_frame(oc, &vpkt);
+        if (ret < 0) {
+            fprintf(stderr, "Error while writing video frame\n");
+            exit(1);
+        }
+    }
+  }
+
+  // delayed audio frames
+  ret = avcodec_send_frame(ac, NULL);
+  if (ret < 0) {
+    fprintf(stderr, "couldn't flush audio codec\n");
+    exit(1);
+  }
+
+  while (ret >= 0) {
+    AVPacket apkt;
+    av_init_packet(&apkt);
+    ret = avcodec_receive_packet(ac, &apkt);
+
+    if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
+        fprintf(stderr, "Error encoding a audio frame\n");
+        exit(1);
+    } else if (ret >= 0) {
+        av_packet_rescale_ts(&apkt, ac->time_base, audio_st->time_base);
+        apkt.stream_index = audio_st->index;
+        /* Write the compressed frame to the media file. */
+        ret = av_interleaved_write_frame(oc, &apkt);
+        if (ret < 0) {
+            fprintf(stderr, "Error while writing audio frame\n");
+            exit(1);
+        }
     }
   }
 

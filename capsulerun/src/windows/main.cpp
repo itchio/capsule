@@ -34,14 +34,14 @@ int receive_resolution (encoder_private_t *p, int64_t *width, int64_t *height) {
   return 0;
 }
 
-int receive_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *delta) {
+int receive_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
   DWORD bytes_read = 0;
   DWORD total_bytes_read = 0;
   BOOL success = TRUE;
 
-  success = ReadFile(p->pipe_handle, delta, sizeof(int64_t), &bytes_read, NULL);
+  success = ReadFile(p->pipe_handle, timestamp, sizeof(int64_t), &bytes_read, NULL);
   if (!success || bytes_read < sizeof(int64_t)) {
-    printf("Could not read delta\n");
+    printf("Could not read timestamp\n");
     return 0;
   }
 
