@@ -5,8 +5,8 @@
 const $ = require('./common')
 
 function ci_compile (args) {
-  if (args.length !== 1) {
-    throw new Error(`ci-compile expects one arguments, not ${args.length}. (got: ${args.join(', ')})`)
+  if (args.length < 1) {
+    throw new Error(`ci-compile expects at least one argument, not ${args.length}. (got: ${args.join(', ')})`)
   }
   const [os] = args
 
