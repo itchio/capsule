@@ -331,7 +331,9 @@ int ensure_outfile() {
     outFile = _wfopen(pipe_path, L"wb");
     free(pipe_path);
 #else
-    outFile = fopen("capsule.rawvideo", "wb");
+    char *pipe_path = getenv("CAPSULE_PIPE_PATH");
+    capsule_log("Pipe path: %s", pipe_path);
+    outFile = fopen(pipe_path, "wb");
 #endif
     assert("Opened output file", !!outFile);
     return 1;
@@ -456,6 +458,7 @@ void __attribute__((constructor)) capsule_load() {
 #ifdef CAPSULE_LINUX
   capsule_log("LD_LIBRARY_PATH: %s", getenv("LD_LIBRARY_PATH"));
   capsule_log("LD_PRELOAD: %s", getenv("LD_PRELOAD"));
+  capsule_log("CAPSULE_PIPE_PATH: %s", getenv("CAPSULE_PIPE_PATH"));
 #endif
 }
 

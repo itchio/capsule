@@ -71,10 +71,9 @@ int capsulerun_main (int argc, char **argv) {
     exit(1);
   }
 
-  char cwd[CAPSULE_MAX_PATH_LENGTH];
-  getcwd(cwd, CAPSULE_MAX_PATH_LENGTH);
   char fifo_path[CAPSULE_MAX_PATH_LENGTH];
-  const int fifo_path_length = snprintf(fifo_path, CAPSULE_MAX_PATH_LENGTH, "%s/capsule.rawvideo", cwd);
+  // FIXME: /tmp is dumb and bad
+  const int fifo_path_length = snprintf(fifo_path, CAPSULE_MAX_PATH_LENGTH, "/tmp/capsule.rawvideo");
 
   if (fifo_path_length > CAPSULE_MAX_PATH_LENGTH) {
     printf("fifo path too long (%d > %d)\n", fifo_path_length, CAPSULE_MAX_PATH_LENGTH);
@@ -91,6 +90,48 @@ int capsulerun_main (int argc, char **argv) {
     exit(1);
   }
 
+  // TODO: abstract that stuff away, like seriously what even
+  char capsule_pipe_path_envvar[CAPSULE_MAX_PATH_LENGTH];
+  const int capsule_pipe_path_envvar_length = snprintf(capsule_pipe_path_envvar, CAPSULE_MAX_PATH_LENGTH, "CAPSULE_PIPE_PATH=%s", fifo_path);
+  if (capsule_pipe_path_envvar_length > CAPSULE_MAX_PATH_LENGTH) {
+    printf("capsule pipe path envvar too long (%d > %d)\n", capsule_pipe_path_envvar_length, CAPSULE_MAX_PATH_LENGTH);
+    exit(1);
+  }
+
+  int parent_environ_size = 0;
+  char **parent_environ = environ;
+  while (*parent_environ) {
+    parent_environ_size++;
+    parent_environ++;
+  }
+
+  int additional_envvars = 1;
+  int child_environ_size = parent_environ_size + additional_envvars;
+  char **child_environ = (char **) malloc(child_environ_size + 1);
+
+  int i = 0;
+  for (i = 0; i < parent_environ_size; i++) {
+    child_environ[i] = environ[i];
+  }
+  child_environ[i++] = capsule_pipe_path_envvar;
+  if (i != child_environ_size) {
+    fprintf(stderr, "Internal error: environment manipulation failed (%d != %d)\n", i, child_environ_size);
+    exit(1);
+  }
+  child_environ[child_environ_size] = NULL;
+
+  int dump_env = 0;
+  if (dump_env) {
+    char **cei = child_environ;
+    fprintf(stderr, "=======================\n");
+    fprintf(stderr, "Child environment:\n");
+    while (*cei) {
+      fprintf(stderr, "%s\n", *cei);
+      cei++;
+    }
+    fprintf(stderr, "=======================\n");
+  }
+
   // spawn game
   int child_err = posix_spawn(
     &child_pid,
@@ -98,7 +139,7 @@ int capsulerun_main (int argc, char **argv) {
     NULL, // file_actions
     NULL, // spawn_attrs
     child_argv,
-    environ // environment
+    child_environ // environment
   );
   if (child_err != 0) {
     printf("child spawn error %d: %s\n", child_err, strerror(child_err));
