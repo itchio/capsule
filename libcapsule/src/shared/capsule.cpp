@@ -438,8 +438,10 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
 #ifdef CAPSULE_LINUX
 extern "C" {
   void glXSwapBuffers (void *a, void *b) {
-    // capsule_log("About to capture frame..");
-    capsule_capture_frame(0, 0);
+    if (capsule_x11_should_capture()) {
+      // capsule_log("About to capture frame..");
+      capsule_capture_frame(0, 0);
+    }
     // capsule_log("About to call real swap buffers..");
     return _realglXSwapBuffers(a, b);
   }
@@ -459,6 +461,7 @@ void __attribute__((constructor)) capsule_load() {
   capsule_log("LD_LIBRARY_PATH: %s", getenv("LD_LIBRARY_PATH"));
   capsule_log("LD_PRELOAD: %s", getenv("LD_PRELOAD"));
   capsule_log("CAPSULE_PIPE_PATH: %s", getenv("CAPSULE_PIPE_PATH"));
+  capsule_x11_init();
 #endif
 }
 

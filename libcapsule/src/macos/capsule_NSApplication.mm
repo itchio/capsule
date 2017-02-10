@@ -21,8 +21,8 @@
 static CapsuleFixedRecorder *recorder;
 
 - (void)capsule_sendEvent:(NSEvent*)event {
-  if (([event type] == NSKeyDown && [event keyCode] == kVK_F9) || ([event type] == NSRightMouseDown)) {
-    NSLog(@"F9 pressed! %@", event);
+  if (([event type] == NSKeyDown && [event keyCode] == kVK_F11) || ([event type] == NSRightMouseDown)) {
+    NSLog(@"F11 pressed! %@", event);
     if (capsule_capturing) {
       [[NSSound soundNamed:@"Pop"] play];
       capsule_capturing = 0;

@@ -37,6 +37,12 @@ if(APPLE)
   )
 endif()
 
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+  list(APPEND libcapsule_SRC
+    ${libcapsule_SOURCE_DIR}/linux/x11.cpp
+  )
+endif()
+
 if(WIN32)
   list(APPEND libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/windows/capsule_d3d8.cpp

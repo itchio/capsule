@@ -35,6 +35,11 @@
 #define pid_t int
 #endif
 
+#ifdef CAPSULE_LINUX
+int capsule_x11_init();
+int capsule_x11_should_capture();
+#endif
+
 #ifdef CAPSULE_WINDOWS
 
 #ifdef BUILD_CAPSULE_DLL
