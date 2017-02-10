@@ -79,7 +79,7 @@ function ci_compile_darwin () {
   $.sh('rm -rf build')
   $.sh('mkdir -p build')
   $.cd('build', function () {
-    $($.sh('cmake ..'))
+    $($.sh('cmake .. -DOSX_UNIVERSAL=OFF'))
     $($.sh('make'))
   })
 
