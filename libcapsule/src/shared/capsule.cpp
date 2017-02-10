@@ -262,6 +262,7 @@ void* dlopen (const char * filename, int flag) {
     load_opengl(filename);
 
     if (!strcmp(filename, "libGL.so.1")) {
+      real_dlopen(filename, flag);
       capsule_log("Faking libGL for %s", filename);
       return real_dlopen(NULL, RTLD_NOW|RTLD_LOCAL);
     } else {

@@ -22,6 +22,7 @@ int capsule_x11_should_capture() {
 void capsule_x11_capture_flip() {
     lock_guard<mutex> lock(state_mutex);
     _capsule_x11_should_capture = !_capsule_x11_should_capture;
+    fprintf(stderr, "capsule_x11: should capture = %d\n", _capsule_x11_should_capture);
 }
 
 void capsule_x11_poll () {
@@ -56,7 +57,7 @@ int capsule_x11_init() {
         Mod2Mask | Mod3Mask,
     };
 
-    int keycode = XKeysymToKeycode(capsule_x11_dpy, XK_F11);
+    int keycode = XKeysymToKeycode(capsule_x11_dpy, XK_F9);
     Window grab_window = capsule_x11_root;
     Bool owner_events = False;
     int pointer_mode = GrabModeAsync;
