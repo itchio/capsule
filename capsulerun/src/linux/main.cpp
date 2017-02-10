@@ -28,11 +28,6 @@
 
 using namespace std;
 
-typedef struct encoder_private_s {
-  FILE *fifo_file;
-  uint8_t *audio_buffer;
-} encoder_private_t;
-
 int receive_video_resolution (encoder_private_t *p, int64_t *width, int64_t *height) {
   // FIXME: error checking
   fread(width, sizeof(int64_t), 1, p->fifo_file);
@@ -47,24 +42,6 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
   }
 
   return fread(buffer, 1, buffer_size, p->fifo_file);
-}
-
-#define AUDIO_NB_SAMPLES 1024
-
-int receive_audio_format (encoder_private_t *p, audio_format_t *fmt) {
-  fmt->channels = 2;
-  fmt->samplerate = 44100;
-  fmt->samplewidth = 32;
-  int bufsize = AUDIO_NB_SAMPLES * fmt->channels * (fmt->samplewidth / 8);
-  p->audio_buffer = (uint8_t *) malloc(bufsize);
-  memset(p->audio_buffer, 0, bufsize);
-  return 0;
-}
-
-void *receive_audio_frames (encoder_private_t *p, int *frames_received) {
-  // TODO: pulseaudio call
-  *frames_received = AUDIO_NB_SAMPLES;
-  return p->audio_buffer;
 }
 
 int capsulerun_main (int argc, char **argv) {
