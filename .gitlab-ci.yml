@@ -26,12 +26,22 @@ compile-darwin:
     paths:
       - compile-artifacts
 
-compile-linux:
+compile-linux-386:
   stage: build
   tags:
-    - dropsy
+    - docker-capsule-32
   script:
-    - release/ci-compile.js linux
+    - release/ci-compile.js linux 386
+  artifacts:
+    paths:
+      - compile-artifacts
+
+compile-linux-amd64:
+  stage: build
+  tags:
+    - docker-capsule-64
+  script:
+    - release/ci-compile.js linux amd64
   artifacts:
     paths:
       - compile-artifacts

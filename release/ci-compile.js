@@ -10,6 +10,14 @@ function ci_compile (args) {
   }
   const [os] = args
 
+  let arch = "";
+  if (os === "linux") {
+    if (args.length !== 2) {
+      throw new Error(`ci-compile expects two arguments (os arch), not ${args.length}. (got: ${args.join(', ')})`)
+    }
+    arch = args[1];
+  }
+
   $.say(`Compiling ${$.app_name()}`)
 
   switch (os) {
@@ -22,7 +30,7 @@ function ci_compile (args) {
       break
     }
     case 'linux': {
-      ci_compile_linux()
+      ci_compile_linux(arch)
       break
     }
     default: {
@@ -82,7 +90,7 @@ function ci_compile_darwin () {
   $($.sh(`cp -rf build/capsulerun/capsulerun compile-artifacts/capsulerun/${osarch}/`))
 }
 
-function ci_compile_linux () {
+function ci_compile_linux (arch) {
   $.sh(`rm -rf compile-artifacts`)
 
   const specs = [
@@ -102,7 +110,18 @@ function ci_compile_linux () {
     }
   ]
 
-  for (const spec of specs) {
+  let spec = null;
+  for (const candidate of specs) {
+    if (candidate.arch === arch) {
+      spec = candidate;
+    }
+  }
+
+  if (!spec) {
+    throw new Error(`arch not handled: ${arch}`);
+  }
+
+  {
     const osarch = spec.os + '-' + spec.arch
     $.sh(`rm -rf ${spec.dir}`)
     $.sh(`mkdir -p ${spec.dir}`)
