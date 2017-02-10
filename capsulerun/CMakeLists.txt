@@ -65,4 +65,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     include_directories(${${NEEDED_LIB}_PKG_INCLUDE_DIRS})
     target_link_libraries(capsulerun ${${NEEDED_LIB}_PKG_LDFLAGS} ${${NEEDED_LIB}_PKG_LIBRARIES})
   endforeach(NEEDED_LIB)
+
+  # needed on old Debian for reasons? (probably because of libpulse-simple?)
+  target_link_libraries(capsulerun -lpthread)
 endif()
