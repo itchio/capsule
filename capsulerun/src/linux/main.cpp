@@ -32,14 +32,19 @@ typedef struct encoder_private_s {
   FILE *fifo_file;
 } encoder_private_t;
 
-int receive_resolution (encoder_private_t *p, int64_t *width, int64_t *height) {
+int receive_video_resolution (encoder_private_t *p, int64_t *width, int64_t *height) {
   // FIXME: error checking
   fread(width, sizeof(int64_t), 1, p->fifo_file);
   fread(height, sizeof(int64_t), 1, p->fifo_file);
   return 0;
 }
 
-int receive_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size) {
+int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
+  int read_bytes = fread(timestamp, 1, sizeof(int64_t), p->fifo_file);
+  if (read_bytes == 0) {
+    return 0;
+  }
+
   return fread(buffer, 1, buffer_size, p->fifo_file);
 }
 
@@ -114,15 +119,16 @@ int capsulerun_main (int argc, char **argv) {
 
   printf("opened fifo\n");
 
-  struct encoder_private_s private_data = {
-    fifo_file: fifo_file,
-  };
+  struct encoder_private_s private_data;
+  memset(&private_data, 0, sizeof(private_data));
+  private_data.fifo_file = fifo_file;
 
-  struct encoder_params_s encoder_params = {
-    private_data: &private_data,
-    receive_resolution: (receive_resolution_t) receive_resolution,
-    receive_frame: (receive_frame_t) receive_frame,
-  };
+  struct encoder_params_s encoder_params;
+  memset(&encoder_params, 0, sizeof(encoder_params));
+  encoder_params.private_data = &private_data;
+  encoder_params.receive_video_resolution = (receive_video_resolution_t) receive_video_resolution;
+  encoder_params.receive_video_frame = (receive_video_frame_t) receive_video_frame;
+
   thread encoder_thread(encoder_run, &encoder_params);
 
   int child_status;

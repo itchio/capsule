@@ -311,7 +311,9 @@ void encoder_run(encoder_params_t *params) {
 
   float t, tincr;
   t = 0;
-  tincr = 2 * M_PI * 440.0 / ac->sample_rate;
+  if (params->has_audio) {
+    tincr = 2 * M_PI * 440.0 / ac->sample_rate;
+  }
 
   int last_frame = 0;
   float factor = 1.0;
@@ -502,29 +504,31 @@ void encoder_run(encoder_params_t *params) {
   }
 
   // delayed audio frames
-  ret = avcodec_send_frame(ac, NULL);
-  if (ret < 0) {
-    fprintf(stderr, "couldn't flush audio codec\n");
-    exit(1);
-  }
+  if (params->has_audio) {
+    ret = avcodec_send_frame(ac, NULL);
+    if (ret < 0) {
+      fprintf(stderr, "couldn't flush audio codec\n");
+      exit(1);
+    }
 
-  while (ret >= 0) {
-    AVPacket apkt;
-    av_init_packet(&apkt);
-    ret = avcodec_receive_packet(ac, &apkt);
+    while (ret >= 0) {
+      AVPacket apkt;
+      av_init_packet(&apkt);
+      ret = avcodec_receive_packet(ac, &apkt);
 
-    if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-        fprintf(stderr, "Error encoding a audio frame\n");
-        exit(1);
-    } else if (ret >= 0) {
-        av_packet_rescale_ts(&apkt, ac->time_base, audio_st->time_base);
-        apkt.stream_index = audio_st->index;
-        /* Write the compressed frame to the media file. */
-        ret = av_interleaved_write_frame(oc, &apkt);
-        if (ret < 0) {
-            fprintf(stderr, "Error while writing audio frame\n");
-            exit(1);
-        }
+      if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
+          fprintf(stderr, "Error encoding a audio frame\n");
+          exit(1);
+      } else if (ret >= 0) {
+          av_packet_rescale_ts(&apkt, ac->time_base, audio_st->time_base);
+          apkt.stream_index = audio_st->index;
+          /* Write the compressed frame to the media file. */
+          ret = av_interleaved_write_frame(oc, &apkt);
+          if (ret < 0) {
+              fprintf(stderr, "Error while writing audio frame\n");
+              exit(1);
+          }
+      }
     }
   }
 
@@ -538,6 +542,11 @@ void encoder_run(encoder_params_t *params) {
   avcodec_close(vc);
   av_freep(&vframe->data[0]);
   av_frame_free(&vframe);
+
+  if (params->has_audio) {
+    avcodec_close(ac);
+    av_frame_free(&aframe);
+  }
 
   avio_close(oc->pb);
   avformat_free_context(oc);
