@@ -208,11 +208,13 @@ void CAPSULE_STDCALL ensure_real_dlopen() {
 
 void CAPSULE_STDCALL load_opengl (const char *openglPath) {
   capsule_log("Loading real opengl from %s", openglPath);
-#ifdef CAPSULE_WINDOWS
+#if defined(CAPSULE_WINDOWS)
   gl_handle = dlopen(L"OPENGL32.DLL", (RTLD_NOW|RTLD_LOCAL));
-#else
+#elif defined(CAPSULE_LINUX)
   ensure_real_dlopen();
   gl_handle = real_dlopen(openglPath, (RTLD_NOW|RTLD_LOCAL));
+#else
+  gl_handle = dlopen(openglPath, (RTLD_NOW|RTLD_LOCAL));
 #endif
   assert("Loaded real OpenGL lib", !!gl_handle);
   capsule_log("Loaded opengl!");
@@ -366,14 +368,17 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
 
   if (delta < wanted_delta && !first_frame) {
     // skip frame
+    capsule_log("Skipping frame! ts = %.2f\n");
     return;
   }
   old_ts = chrono::steady_clock::now();
 
   frameNumber++;
+#ifndef CAPSULE_MAC
   if (frameNumber < 120) {
     return;
   }
+#endif
 
   int components = 4;
   int format = GL_BGRA;
