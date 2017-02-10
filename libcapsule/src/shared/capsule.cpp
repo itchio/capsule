@@ -1,6 +1,6 @@
 
 #include <capsule.h>
-
+ 
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -374,7 +374,7 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   old_ts = chrono::steady_clock::now();
 
   frameNumber++;
-#ifndef CAPSULE_MAC
+#ifndef CAPSULE_OSX
   if (frameNumber < 120) {
     return;
   }

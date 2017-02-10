@@ -25,6 +25,7 @@ endif()
 
 if(APPLE)
   list(APPEND capsulerun_SRC
+    ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
     ${capsulerun_SOURCE_DIR}/macos/main.cpp
   )
 endif()
@@ -54,6 +55,15 @@ if(WIN32)
       "${FFMPEG_LIBRARY_DIR}/${NEEDED_DLL}"
       $<TARGET_FILE_DIR:capsulerun>)
   endforeach(NEEDED_DLL)
+endif()
+
+if(APPLE)
+  include(FindPkgConfig)
+  foreach(NEEDED_LIB libavutil libavcodec libavformat libswscale libswresample x264)
+    PKG_CHECK_MODULES(${NEEDED_LIB}_PKG ${NEEDED_LIB})
+    include_directories(${${NEEDED_LIB}_PKG_INCLUDE_DIRS})
+    target_link_libraries(capsulerun ${${NEEDED_LIB}_PKG_LDFLAGS} ${${NEEDED_LIB}_PKG_LIBRARIES})
+  endforeach(NEEDED_LIB)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")

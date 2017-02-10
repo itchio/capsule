@@ -16,13 +16,11 @@
 // int64_t etc.
 #include <stdint.h>
 
-#if defined(CAPSULERUN_LINUX)
+#if defined(CAPSULERUN_LINUX) || defined(CAPSULERUN_OSX)
 #include <sys/types.h>
-#endif // CAPSULERUN_LINUX
+#endif // CAPSULERUN_LINUX || CAPSULERUN_OSX
 
 int capsulerun_main (int argc, char **argv);
-
-#if defined(CAPSULERUN_LINUX) || defined(CAPSULERUN_WINDOWS)
 
 typedef int (*receive_video_resolution_t)(void *private_data, int64_t *width, int64_t *height);
 typedef int (*receive_video_frame_t)(void *private_data, uint8_t *buffer, size_t buffer_size, int64_t *timestamp);
@@ -49,12 +47,12 @@ typedef struct encoder_params_s {
 
 void encoder_run(encoder_params_t *params);
 
-#endif
-
 #if defined(CAPSULERUN_WINDOWS)
 #include "capsulerun_windows.h"
 #elif defined(CAPSULERUN_LINUX)
 #include "capsulerun_linux.h"
+#elif defined(CAPSULERUN_OSX)
+#include "capsulerun_macos.h"
 #endif // CAPSULERUN_LINUX
 
 
