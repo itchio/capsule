@@ -45,7 +45,7 @@ void encoder_run(encoder_params_t *params) {
   if (params->has_audio) {
     ret = params->receive_audio_format(params->private_data, &afmt_in);
     if (ret != 0) {
-      printf("could not receive resolution");
+      printf("could not receive audio format");
       exit(1);
     }
 

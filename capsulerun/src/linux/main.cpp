@@ -30,6 +30,7 @@ using namespace std;
 
 typedef struct encoder_private_s {
   FILE *fifo_file;
+  uint8_t *audio_buffer;
 } encoder_private_t;
 
 int receive_video_resolution (encoder_private_t *p, int64_t *width, int64_t *height) {
@@ -46,6 +47,24 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
   }
 
   return fread(buffer, 1, buffer_size, p->fifo_file);
+}
+
+#define AUDIO_NB_SAMPLES 1024
+
+int receive_audio_format (encoder_private_t *p, audio_format_t *fmt) {
+  fmt->channels = 2;
+  fmt->samplerate = 44100;
+  fmt->samplewidth = 32;
+  int bufsize = AUDIO_NB_SAMPLES * fmt->channels * (fmt->samplewidth / 8);
+  p->audio_buffer = (uint8_t *) malloc(bufsize);
+  memset(p->audio_buffer, 0, bufsize);
+  return 0;
+}
+
+void *receive_audio_frames (encoder_private_t *p, int *frames_received) {
+  // TODO: pulseaudio call
+  *frames_received = AUDIO_NB_SAMPLES;
+  return p->audio_buffer;
 }
 
 int capsulerun_main (int argc, char **argv) {
@@ -128,6 +147,10 @@ int capsulerun_main (int argc, char **argv) {
   encoder_params.private_data = &private_data;
   encoder_params.receive_video_resolution = (receive_video_resolution_t) receive_video_resolution;
   encoder_params.receive_video_frame = (receive_video_frame_t) receive_video_frame;
+
+  encoder_params.has_audio = 1;
+  encoder_params.receive_audio_format = (receive_audio_format_t) receive_audio_format;
+  encoder_params.receive_audio_frames = (receive_audio_frames_t) receive_audio_frames;
 
   thread encoder_thread(encoder_run, &encoder_params);
 
