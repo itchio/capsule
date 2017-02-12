@@ -25,7 +25,7 @@ add_definitions(-D_UNICODE)
 
 if(WIN32)
   if(MSVC)
-    set(DEPS_PREFIX https://dl.itch.ovh/capsule-deps)
+    set(DEPS_PREFIX https://storage.googleapis.com/dl.itch.ovh/capsule-deps)
     set(DEPS_DIR ${PROJECT_BINARY_DIR}/deps)
 
     if(${CMAKE_GENERATOR} MATCHES "Win64$")
