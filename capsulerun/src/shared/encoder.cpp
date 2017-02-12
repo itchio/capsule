@@ -58,8 +58,10 @@ void encoder_run(encoder_params_t *params) {
 
   AVStream *video_st, *audio_st;
 
-  AVCodecID vcodec_id = AV_CODEC_ID_H264;
-  AVCodecID acodec_id = AV_CODEC_ID_AAC;
+  // AVCodecID vcodec_id = AV_CODEC_ID_H264;
+  AVCodecID vcodec_id = AV_CODEC_ID_FFV1;
+  // AVCodecID acodec_id = AV_CODEC_ID_AAC;
+  AVCodecID acodec_id = AV_CODEC_ID_PCM_S16LE;
   AVCodec *vcodec, *acodec;
   AVCodecContext *vc, *ac;
 
@@ -70,17 +72,21 @@ void encoder_run(encoder_params_t *params) {
 
   double video_time;
 
-  const char *output_path = "capsule.mp4";
+  const char *output_path = "capsule.avi";
 
-  fmt = av_guess_format("mp4", NULL, NULL);
+  // fmt = av_guess_format("mp4", NULL, NULL);
+  // fmt = av_guess_format(NULL, NULL, "video/avi");
+  // if (!fmt) {
+  //   printf("warning: could not guess format\n");
+  // }
 
   // allocate output media context
-  avformat_alloc_output_context2(&oc, fmt, NULL, NULL);
+  avformat_alloc_output_context2(&oc, fmt, NULL, output_path);
   if (!oc) {
       printf("could not allocate output context\n");
       exit(1);
   }
-  oc->oformat = fmt;
+  // oc->oformat = fmt;
 
   /* open the output file, if needed */
   ret = avio_open(&oc->pb, output_path, AVIO_FLAG_WRITE);

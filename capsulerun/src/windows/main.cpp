@@ -152,7 +152,7 @@ int capsulerun_main (int argc, char **argv) {
     ZeroMemory(&private_data, sizeof(encoder_private_s));
     private_data.pipe_handle = pipe_handle;
 
-    wasapi_start(&private_data);
+    // wasapi_start(&private_data);
 
     struct encoder_params_s encoder_params;
     ZeroMemory(&encoder_params, sizeof(encoder_private_s));
@@ -160,9 +160,9 @@ int capsulerun_main (int argc, char **argv) {
     encoder_params.receive_video_resolution = (receive_video_resolution_t) receive_resolution;
     encoder_params.receive_video_frame = (receive_video_frame_t) receive_frame;
 
-    encoder_params.has_audio = 1;
-    encoder_params.receive_audio_format = (receive_audio_format_t) wasapi_receive_audio_format;
-    encoder_params.receive_audio_frames = (receive_audio_frames_t) wasapi_receive_audio_frames;
+    // encoder_params.has_audio = 1;
+    // encoder_params.receive_audio_format = (receive_audio_format_t) wasapi_receive_audio_format;
+    // encoder_params.receive_audio_frames = (receive_audio_frames_t) wasapi_receive_audio_frames;
 
     printf("Starting encoder thread...\n");
     thread encoder_thread(encoder_run, &encoder_params);
