@@ -22,6 +22,7 @@
 
 #if defined(CAPSULE_WINDOWS)
 #define CAPSULE_STDCALL __stdcall
+#define CAPSULE_STDCALL __stdcall
 #else
 #define CAPSULE_STDCALL
 #endif
@@ -79,9 +80,9 @@ char *capsule_log_path();
 
 #ifdef CAPSULE_WINDOWS
 CAPSULE_DLL void capsule_install_windows_hooks ();
-void capsule_d3d8_sniff();
-void capsule_d3d11_sniff();
-#endif
+void capsule_install_opengl_hooks();
+void capsule_install_dxgi_hooks();
+#endif // CAPSULE_WINDOWS
 
 void CAPSULE_STDCALL capsule_write_resolution (int width, int height);
 void CAPSULE_STDCALL capsule_write_delta (int64_t delta);
@@ -95,3 +96,14 @@ int glXQueryExtension (void *a, void *b, void *c);
 #ifdef __cplusplus
 }
 #endif
+
+#ifdef CAPSULE_WINDOWS
+// Deviare-InProc, for hooking
+#include <NktHookLib.h>
+
+// LoadLibrary, etc.
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+
+extern CNktHookLib cHookMgr;
+#endif // CAPSULE_WINDOWS

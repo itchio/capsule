@@ -84,6 +84,9 @@ void CAPSULE_STDCALL ensure_own_opengl() {
 #include <windows.h>
 #include <NktHookLib.h>
 
+#include "../windows/graphics-hooks-info.h"
+#include "../windows/get-graphics-offsets/get-graphics-offsets.h"
+
 typedef void (CAPSULE_STDCALL *glSwapBuffersType)(void*);
 glSwapBuffersType _glSwapBuffers;
 glSwapBuffersType fnSwapBuffers;
@@ -102,113 +105,8 @@ HRESULT CAPSULE_STDCALL _fakeCreateDXGIFactory (REFIID riid, void** ppFactory) {
   return fnCreateDXGIFactory(riid, ppFactory);
 }
 
-CNktHookLib cHookMgr;
-static int capsule_inited = 0;
 
-CAPSULE_DLL void capsule_install_windows_hooks () {
-  if (capsule_inited) return;
-  capsule_inited = 1;
-
-  cHookMgr.SetEnableDebugOutput(TRUE);
-
-  capsule_log("Installing capsule windows hooks");
-
-  HINSTANCE mh;
-
-  LoadLibrary(L"opengl32.dll");
-
-  mh = NktHookLibHelpers::GetModuleBaseAddress(L"opengl32.dll");
-  capsule_log("OpenGL handle: %p", mh);
-  if (mh) {
-    ensure_own_opengl();
-
-    _glSwapBuffers = (glSwapBuffersType) NktHookLibHelpers::GetProcedureAddress(mh, "wglGetProcAddress");
-    capsule_log("GetProcAddress handle: %p", _glSwapBuffers);
-
-    _glSwapBuffers = (glSwapBuffersType) NktHookLibHelpers::GetProcedureAddress(mh, "wglSwapBuffers");
-    capsule_log("SwapBuffers handle: %p", _glSwapBuffers);
-  
-    if (_glSwapBuffers) {
-      capsule_log("Attempting to install glSwapBuffers hook");
-
-      DWORD err;
-
-      SIZE_T hookId;
-
-      err = cHookMgr.Hook(&hookId, (LPVOID *) &fnSwapBuffers, _glSwapBuffers, _fakeSwapBuffers, 0);
-      if (err != ERROR_SUCCESS) {
-        capsule_log("Hooking derped with error %d (%x)", err, err);
-      } else {
-        capsule_log("Well I think we're doing fine!");
-      }
-    }
-  }
-
-  // HMODULE m8 = GetModuleHandle("d3d8.dll");
-  // capsule_log("Direct3D8 handle: %p", m8);
-
-  // if (m8) {
-  //   capsule_d3d8_sniff();
-  // }
-
-  // HMODULE m9 = GetModuleHandle("d3d9.dll");
-  // capsule_log("Direct3D9 handle: %p", m9);
-
-  // HMODULE m10 = GetModuleHandle("d3d10.dll");
-  // capsule_log("Direct3D10 handle: %p", m10);
-
-  // HMODULE m11 = GetModuleHandle("d3d11.dll");
-  // capsule_log("Direct3D11 handle: %p", m11);
-
-  // if (m11) {
-	//   capsule_d3d11_sniff();
-  // }
-
-  LoadLibrary(L"dxgi.dll");
-
-  HMODULE dxgi = GetModuleHandle(L"dxgi.dll");
-  capsule_log("DXGI handle: %p", dxgi);
-
-  if (dxgi) {
-    _createDXGIFactory = (createDXGIFactoryType) NktHookLibHelpers::GetProcedureAddress(dxgi, "CreateDXGIFactory");
-    capsule_log("createDXGI handle: %p", _createDXGIFactory);
-
-    if (_createDXGIFactory) {
-      capsule_log("Attempting to install CreateDXGIFactory hook");
-    }
-
-    DWORD err;
-
-    SIZE_T hookId;
-
-    err = cHookMgr.Hook(&hookId, (LPVOID *) &fnCreateDXGIFactory, _createDXGIFactory, _fakeCreateDXGIFactory, 0);
-    if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking derped with error %d (%x)", err, err);
-    } else {
-      capsule_log("Well I think we're doing fine!");
-    }
-  }
-}
-
-BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
-  switch (reason) {
-    case DLL_PROCESS_ATTACH:
-      capsule_log("DllMain (PROCESS_ATTACH)", reason); break;
-    case DLL_PROCESS_DETACH:
-      capsule_log("DllMain (PROCESS_DETACH)", reason); break;
-    case DLL_THREAD_ATTACH:
-      capsule_log("DllMain (THREAD_ATTACH)", reason); break;
-    case DLL_THREAD_DETACH:
-      capsule_log("DllMain (THREAD_DETACH)", reason); break;
-  }
-
-  if (reason == DLL_PROCESS_ATTACH) {
-    // we've just been attached to a process
-	  capsule_install_windows_hooks();
-  }
-  return TRUE;
-}
-#endif
+#endif // CAPSULE_WINDOWS
 
 #ifdef CAPSULE_LINUX
 void glXSwapBuffers (void *a, void *b);

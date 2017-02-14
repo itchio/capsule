@@ -45,8 +45,9 @@ endif()
 
 if(WIN32)
   list(APPEND libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/windows/capsule_d3d8.cpp
-    ${libcapsule_SOURCE_DIR}/windows/capsule_d3d11.cpp
+    ${libcapsule_SOURCE_DIR}/windows/capsule_hooks.cpp
+    ${libcapsule_SOURCE_DIR}/windows/capsule_dxgi.cpp
+    ${libcapsule_SOURCE_DIR}/windows/capsule_opengl.cpp
   )
 endif()
 
