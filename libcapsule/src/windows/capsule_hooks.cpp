@@ -24,9 +24,11 @@ BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
     case DLL_PROCESS_DETACH:
       capsule_log("DllMain (PROCESS_DETACH)", reason); break;
     case DLL_THREAD_ATTACH:
-      capsule_log("DllMain (THREAD_ATTACH)", reason); break;
+      // just be quiet
+      /* capsule_log("DllMain (THREAD_ATTACH)", reason); */ break;
     case DLL_THREAD_DETACH:
-      capsule_log("DllMain (THREAD_DETACH)", reason); break;
+      // just be quiet
+      /* capsule_log("DllMain (THREAD_DETACH)", reason); */ break;
   }
 
   if (reason == DLL_PROCESS_ATTACH) {

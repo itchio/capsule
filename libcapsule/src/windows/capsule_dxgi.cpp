@@ -1,17 +1,70 @@
 
 #include <capsule.h>
 
+HMODULE dxgi;
+HMODULE d3d10;
+HMODULE d3d11;
+
 ///////////////////////////////////////////////
 // CreateDXGIFactory
 ///////////////////////////////////////////////
+
+#define CINTERFACE
+#include <dxgi.h>
+#undef CINTERFACE
 
 typedef HRESULT (CAPSULE_STDCALL *CreateDXGIFactory_t)(REFIID, void**);
 CreateDXGIFactory_t CreateDXGIFactory_real;
 SIZE_T CreateDXGIFactory_hookId;
 
+IDXGIFactory *g_factory = NULL;
+
+typedef HRESULT (CAPSULE_STDCALL *CreateSwapChain_t)(IDXGIFactory *, IUnknown *, DXGI_SWAP_CHAIN_DESC *, IDXGISwapChain **);
+CreateSwapChain_t CreateSwapChain_real;
+SIZE_T CreateSwapChain_hookId;
+
+HRESULT CAPSULE_STDCALL CreateSwapChain_hook (
+    IDXGIFactory *factory,
+    IUnknown *pDevice,
+    DXGI_SWAP_CHAIN_DESC *pDesc,
+    IDXGISwapChain **ppSwapChain
+  ) {
+  capsule_log("Before CreateSwapChain! same factory? %d", g_factory == factory);
+  HRESULT res = CreateSwapChain_real(factory, pDevice, pDesc, ppSwapChain);
+  capsule_log("After CreateSwapChain!");
+  return res;
+}
+
 HRESULT CAPSULE_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
-  capsule_log("Intercepted CreateDXGIFactory!");
-  return CreateDXGIFactory_real(riid, ppFactory);
+  capsule_log("Hooked_CreateDXGIFactory called with riid: %x", riid);
+  capsule_log("Before CreateDXGIFactory!");
+  HRESULT res = CreateDXGIFactory_real(riid, ppFactory);
+  capsule_log("After CreateDXGIFactory!");
+
+  if (SUCCEEDED(res) && ppFactory) {
+    capsule_log("Installing CreateSwapChain hook");
+    IDXGIFactory *factory = (IDXGIFactory *) *ppFactory;
+    g_factory = factory;
+
+    LPVOID CreateSwapChain_addr = factory->lpVtbl->CreateSwapChain;
+
+    DWORD err = cHookMgr.Hook(
+      &CreateSwapChain_hookId,
+      (LPVOID *) &CreateSwapChain_real,
+      CreateSwapChain_addr,
+      CreateSwapChain_hook,
+      0
+    );
+    if (err != ERROR_SUCCESS) {
+      capsule_log("Hooking CreateSwapChain derped with error %d (%x)", err, err);
+    } else {
+      capsule_log("Installed CreateSwapChain hook");
+    }
+  } else {
+    capsule_log("CreateDXGIFactory failed! Bailing out")
+  }
+
+  return res;
 }
 
 ///////////////////////////////////////////////
@@ -97,7 +150,7 @@ void capsule_install_dxgi_hooks () {
 
   // dxgi
 
-  HINSTANCE dxgi = LoadLibrary(L"dxgi.dll");
+  dxgi = LoadLibrary(L"dxgi.dll");
   if (!dxgi) {
     capsule_log("Could not load dxgi.dll, disabling D3D10/11 capture");
     return;
@@ -124,7 +177,7 @@ void capsule_install_dxgi_hooks () {
 
   // d3d10
 
-  HINSTANCE d3d10 = LoadLibrary(L"d3d10.dll");
+  d3d10 = LoadLibrary(L"d3d10.dll");
   if (!d3d10) {
     capsule_log("Could not load d3d10.dll, disabling D3D10/11 capture");
     return;
@@ -151,7 +204,7 @@ void capsule_install_dxgi_hooks () {
 
   // d3d11
 
-  HINSTANCE d3d11 = LoadLibrary(L"d3d11.dll");
+  d3d11 = LoadLibrary(L"d3d11.dll");
   if (!d3d11) {
     capsule_log("Could not load d3d11.dll, disabling D3D10/11 capture");
     return;
