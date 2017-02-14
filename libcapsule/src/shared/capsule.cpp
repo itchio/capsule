@@ -73,7 +73,7 @@ void CAPSULE_STDCALL ensure_own_opengl() {
 #ifndef CAPSULE_WINDOWS
 	if (!_realglGetRenderbufferParameteriv) {
 		ensure_opengl();
-		_realglGetRenderbufferParameteriv = (glGetRenderbufferParameterivType)dlsym(gl_handle, "glGetRenderbufferParameteriv");
+    _realglGetRenderbufferParameteriv = (glGetRenderbufferParameterivType)dlsym(gl_handle, "glGetRenderbufferParameteriv");
 		assert("Got glGetRenderbufferParameteriv address", !!_realglGetRenderbufferParameteriv);
 	}
 #endif
@@ -86,12 +86,20 @@ void CAPSULE_STDCALL ensure_own_opengl() {
 
 typedef void (CAPSULE_STDCALL *glSwapBuffersType)(void*);
 glSwapBuffersType _glSwapBuffers;
-
 glSwapBuffersType fnSwapBuffers;
 
 void CAPSULE_STDCALL _fakeSwapBuffers (void *hdc) {
   capsule_capture_frame(0, 0);
   fnSwapBuffers(hdc);
+}
+
+typedef HRESULT (CAPSULE_STDCALL *createDXGIFactoryType)(REFIID, void**);
+createDXGIFactoryType _createDXGIFactory;
+createDXGIFactoryType fnCreateDXGIFactory;
+
+HRESULT CAPSULE_STDCALL _fakeCreateDXGIFactory (REFIID riid, void** ppFactory) {
+  capsule_log("Intercepted CreateDXGIFactory!");
+  return fnCreateDXGIFactory(riid, ppFactory);
 }
 
 CNktHookLib cHookMgr;
@@ -155,6 +163,31 @@ CAPSULE_DLL void capsule_install_windows_hooks () {
   // if (m11) {
 	//   capsule_d3d11_sniff();
   // }
+
+  LoadLibrary(L"dxgi.dll");
+
+  HMODULE dxgi = GetModuleHandle(L"dxgi.dll");
+  capsule_log("DXGI handle: %p", dxgi);
+
+  if (dxgi) {
+    _createDXGIFactory = (createDXGIFactoryType) NktHookLibHelpers::GetProcedureAddress(dxgi, "CreateDXGIFactory");
+    capsule_log("createDXGI handle: %p", _createDXGIFactory);
+
+    if (_createDXGIFactory) {
+      capsule_log("Attempting to install CreateDXGIFactory hook");
+    }
+
+    DWORD err;
+
+    SIZE_T hookId;
+
+    err = cHookMgr.Hook(&hookId, (LPVOID *) &fnCreateDXGIFactory, _createDXGIFactory, _fakeCreateDXGIFactory, 0);
+    if (err != ERROR_SUCCESS) {
+      capsule_log("Hooking derped with error %d (%x)", err, err);
+    } else {
+      capsule_log("Well I think we're doing fine!");
+    }
+  }
 }
 
 BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
