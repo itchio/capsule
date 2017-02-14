@@ -18,14 +18,6 @@ extern "C" {
 
 using namespace std;
 
-// #define CAPSULERUN_PROFILE
-
-#ifdef CAPSULERUN_PROFILE
-#define eprintf(...) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
-#else
-#define eprintf(...)
-#endif
-
 void encoder_run(encoder_params_t *params) {
   int ret;
 
@@ -138,8 +130,8 @@ void encoder_run(encoder_params_t *params) {
 
   vc->codec_id = vcodec_id;
   vc->codec_type = AVMEDIA_TYPE_VIDEO;
-  vc->pix_fmt = AV_PIX_FMT_YUV420P;
-  // vc->pix_fmt = AV_PIX_FMT_YUV444P;
+  // vc->pix_fmt = AV_PIX_FMT_YUV420P;
+  vc->pix_fmt = AV_PIX_FMT_YUV444P;
 
   // resolution must be a multiple of two
   vc->width = width;
@@ -325,7 +317,14 @@ void encoder_run(encoder_params_t *params) {
 
   int last_frame = 0;
   float factor = 1.0;
-  int64_t timestamp;
+  int64_t timestamp = 0;
+  int64_t last_timestamp = 0;
+  const int FPS_SAMPLE_SIZE = 30;
+  float fps_samples[FPS_SAMPLE_SIZE];
+  for (int i = 0; i < FPS_SAMPLE_SIZE; i++) {
+    fps_samples[i] = 0.0f;
+  }
+  int current_fps_sample = 0;
 
   int samples_received = 0;
   int samples_used = 0;
@@ -337,8 +336,25 @@ void encoder_run(encoder_params_t *params) {
     size_t read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
     auto tt2 = chrono::steady_clock::now();
     eprintf("receive_frame took %.3f ms\n", (double) (chrono::duration_cast<chrono::microseconds>(tt2 - tt1).count()) / 1000.0);
-    // printf(">> video timestamp                 = %d, approx %.4f seconds\n", (int) timestamp, ((double) timestamp) / 1000000.0);
+    dprintf(">> video timestamp                 = %d, approx %.4f seconds\n", (int) timestamp, ((double) timestamp) / 1000000.0);
     total_read += read;
+
+    int delta = (timestamp - last_timestamp);
+    last_timestamp = timestamp;
+    if (delta == 0) {
+      delta = 16666;
+    }
+    float fps = 1000000.0f / (float) delta;
+    fps_samples[current_fps_sample] = fps;
+    current_fps_sample = (current_fps_sample + 1) % FPS_SAMPLE_SIZE;
+    float mean_fps = 0.0f;
+    for (int i = 0; i < FPS_SAMPLE_SIZE; i++) {
+      mean_fps += fps_samples[i];
+    }
+    mean_fps /= (float) FPS_SAMPLE_SIZE;
+
+    fprintf(stderr, "FPS: %.2f\n", mean_fps);
+    fflush(stderr);
 
     if (read < buffer_size) {
       last_frame = true;
