@@ -14,11 +14,25 @@ extern "C" {
     #include <libswresample/swresample.h>
 }
 
+#include <chrono>
+
+using namespace std;
+
+// #define CAPSULERUN_PROFILE
+
+#ifdef CAPSULERUN_PROFILE
+#define eprintf(...) { fprintf(stderr, __VA_ARGS__); fflush(stderr); }
+#else
+#define eprintf(...)
+#endif
+
 void encoder_run(encoder_params_t *params) {
   int ret;
 
   av_register_all();
+#ifdef CAPSULERUN_PROFILE
   av_log_set_level(AV_LOG_DEBUG);
+#endif
 
   // receive video format info
   int64_t width, height;
@@ -125,9 +139,8 @@ void encoder_run(encoder_params_t *params) {
   vc->codec_id = vcodec_id;
   vc->codec_type = AVMEDIA_TYPE_VIDEO;
   vc->pix_fmt = AV_PIX_FMT_YUV420P;
+  // vc->pix_fmt = AV_PIX_FMT_YUV444P;
 
-  // sample parameters
-  vc->bit_rate = 5000000;
   // resolution must be a multiple of two
   vc->width = width;
   vc->height = height;
@@ -140,13 +153,14 @@ void encoder_run(encoder_params_t *params) {
   vc->rc_buffer_size = 0;
 
   // H264
-  vc->qmin = 10;
-  vc->qmax = 51;
+  vc->qmin = 20;
+  vc->qmax = 20;
 
   vc->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
   // see also "placebo" and "ultrafast" presets
-  av_opt_set(vc->priv_data, "preset", "veryfast", AV_OPT_SEARCH_CHILDREN);
+  // av_opt_set(vc->priv_data, "preset", "veryfast", AV_OPT_SEARCH_CHILDREN);
+  av_opt_set(vc->priv_data, "preset", "ultrafast", AV_OPT_SEARCH_CHILDREN);
 
   ret = avcodec_open2(vc, vcodec, NULL);
   if (ret < 0) {
@@ -309,17 +323,9 @@ void encoder_run(encoder_params_t *params) {
   int vnext_pts = 0;
   int anext_pts = 0;
 
-  float t, tincr;
-  t = 0;
-  if (params->has_audio) {
-    tincr = 2 * M_PI * 440.0 / ac->sample_rate;
-  }
-
   int last_frame = 0;
   float factor = 1.0;
   int64_t timestamp;
-
-  FILE *raw_audio = fopen("audio.raw", "wb");
 
   int samples_received = 0;
   int samples_used = 0;
@@ -327,20 +333,31 @@ void encoder_run(encoder_params_t *params) {
   float *in_samples;
 
   while (true) {
+    auto tt1 = chrono::steady_clock::now();
     size_t read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
+    auto tt2 = chrono::steady_clock::now();
+    eprintf("receive_frame took %.3f ms\n", (double) (chrono::duration_cast<chrono::microseconds>(tt2 - tt1).count()) / 1000.0);
     // printf(">> video timestamp                 = %d, approx %.4f seconds\n", (int) timestamp, ((double) timestamp) / 1000000.0);
     total_read += read;
 
     if (read < buffer_size) {
       last_frame = true;
     } else {
+      auto ht1 = chrono::steady_clock::now();
       sws_scale(sws, sws_in, sws_linesize, 0, vc->height, vframe->data, vframe->linesize);
+      auto ht2 = chrono::steady_clock::now();
+      eprintf("scale took %.3f ms\n", (double) (chrono::duration_cast<chrono::microseconds>(ht2 - ht1).count()) / 1000.0);
 
       vnext_pts = timestamp;
       vframe->pts = vnext_pts;
 
       // write video frame
-      ret = avcodec_send_frame(vc, vframe);
+      {
+        auto t1 = chrono::steady_clock::now();
+        ret = avcodec_send_frame(vc, vframe);
+        auto t2 = chrono::steady_clock::now();
+        eprintf("send_frame took %.3f ms\n", (double) (chrono::duration_cast<chrono::microseconds>(t2 - t1).count()) / 1000.0);
+      }
       if (ret < 0) {
           fprintf(stderr, "Error encoding video frame\n");
           exit(1);
@@ -350,8 +367,8 @@ void encoder_run(encoder_params_t *params) {
     while (ret >= 0) {
       AVPacket vpkt;
       av_init_packet(&vpkt);
-      ret = avcodec_receive_packet(vc, &vpkt);
 
+      ret = avcodec_receive_packet(vc, &vpkt);
       if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
           fprintf(stderr, "Error encoding a video frame\n");
           exit(1);
@@ -360,6 +377,7 @@ void encoder_run(encoder_params_t *params) {
           av_packet_rescale_ts(&vpkt, vc->time_base, video_st->time_base);
           // printf(">>                after  rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
           vpkt.stream_index = video_st->index;
+
           /* Write the compressed frame to the media file. */
           ret = av_interleaved_write_frame(oc, &vpkt);
           if (ret < 0) {

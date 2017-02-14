@@ -363,25 +363,31 @@ void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize)
 }
 
 int first_frame = 1;
+int skipped_frames = 0;
 
 void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
-  ts = chrono::steady_clock::now();
-  auto delta = ts - old_ts;
-  auto wanted_delta = chrono::microseconds(1000000 / 60);
-
-  if (delta < wanted_delta && !first_frame) {
-    // skip frame
-    capsule_log("Skipping frame! ts = %.2f\n");
-    return;
-  }
-  old_ts = chrono::steady_clock::now();
-
   frameNumber++;
 #ifndef CAPSULE_OSX
   if (frameNumber < 120) {
     return;
   }
 #endif
+
+  // only capture up to N FPS
+  if (!first_frame) {
+    auto delta = chrono::steady_clock::now() - old_ts;
+    auto wanted_delta = chrono::microseconds(1000000 / 60);
+
+    if (delta < wanted_delta && !first_frame) {
+      // skip frame
+      skipped_frames++;
+      return;
+    }
+    // fprintf(stderr, "skipped %d frames\n", skipped_frames);
+    skipped_frames = 0;
+  }
+
+  old_ts = chrono::steady_clock::now();
 
   int components = 4;
   int format = GL_BGRA;
@@ -413,9 +419,9 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
     height += 2;
   }
 
-  if (frameNumber % 30 == 0) {
-    capsule_log("Saved %d frames. Current resolution = %dx%d", frameNumber, width, height);
-  }
+  // if (frameNumber % 30 == 0) {
+  //   capsule_log("Saved %d frames. Current resolution = %dx%d", frameNumber, width, height);
+  // }
 
   size_t frameDataSize = width * height * components;
   if (!frameData) {
@@ -428,7 +434,6 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
     capsule_write_timestamp((int64_t) 0);
     first_frame = 0;
     first_ts = chrono::steady_clock::now();
-    old_ts = chrono::steady_clock::now();
   } else {
     auto frame_timestamp = chrono::steady_clock::now() - first_ts;
     capsule_write_timestamp((int64_t) chrono::duration_cast<chrono::microseconds>(frame_timestamp).count());
