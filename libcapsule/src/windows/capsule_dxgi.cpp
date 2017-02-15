@@ -82,15 +82,15 @@ HRESULT CAPSULE_STDCALL Present_hook (
       uint8_t *pixels = (uint8_t *) mapped.pData;
 
       if (dxgi_first_frame) {
-        capsule_write_resolution(desc.Width, desc.Height);
-        capsule_write_timestamp((int64_t) 0);
+        capsule_write_video_format(desc.Width, desc.Height, CAPSULE_VIDEO_FORMAT_RGBA, 0 /* no vflip */);
+        capsule_write_video_timestamp((int64_t) 0);
         dxgi_first_frame = 0;
         dxgi_first_ts = chrono::steady_clock::now();
       } else {
         auto frame_timestamp = chrono::steady_clock::now() - dxgi_first_ts;
-        capsule_write_timestamp((int64_t) chrono::duration_cast<chrono::microseconds>(frame_timestamp).count());
+        capsule_write_video_timestamp((int64_t) chrono::duration_cast<chrono::microseconds>(frame_timestamp).count());
       }
-      capsule_write_frame((char *) pixels, desc.Width * desc.Height * 4);
+      capsule_write_video_frame((char *) pixels, desc.Width * desc.Height * 4);
       // capsule_log("Color of first pixel: %u, %u, %u, %u",
       //   pixels[0],
       //   pixels[1],

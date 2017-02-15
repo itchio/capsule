@@ -27,14 +27,16 @@ void encoder_run(encoder_params_t *params) {
 #endif
 
   // receive video format info
-  int64_t width, height;
-  ret = params->receive_video_resolution(params->private_data, &width, &height);
+  video_format_t vfmt_in;
+  ret = params->receive_video_format(params->private_data, &vfmt_in);
   if (ret != 0) {
-    printf("could not receive resolution");
+    printf("could not receive video format");
     exit(1);
   }
+  int64_t width = vfmt_in.width;
+  int64_t height = vfmt_in.height;
 
-  printf("video resolution: %dx%d\n", (int) width, (int) height);
+  printf("video resolution: %dx%d, format %d, vflip %d\n", (int) width, (int) height, (int) vfmt_in.format, (int) vfmt_in.vflip);
 
   int components = 4;
   const int buffer_size = width * height * components;
@@ -130,8 +132,8 @@ void encoder_run(encoder_params_t *params) {
 
   vc->codec_id = vcodec_id;
   vc->codec_type = AVMEDIA_TYPE_VIDEO;
-  // vc->pix_fmt = AV_PIX_FMT_YUV420P;
-  vc->pix_fmt = AV_PIX_FMT_YUV444P;
+  vc->pix_fmt = AV_PIX_FMT_YUV420P; // damn you twitter
+  // vc->pix_fmt = AV_PIX_FMT_YUV444P;
 
   // resolution must be a multiple of two
   vc->width = width;
@@ -214,6 +216,18 @@ void encoder_run(encoder_params_t *params) {
   vframe->width = vc->width;
   vframe->height = vc->height;
 
+  AVPixelFormat vpix_fmt;
+  switch (vfmt_in.format) {
+    case CAPSULE_VIDEO_FORMAT_RGBA:
+      vpix_fmt = AV_PIX_FMT_RGBA;
+      break;
+    case CAPSULE_VIDEO_FORMAT_BGRA:
+      vpix_fmt = AV_PIX_FMT_BGRA;
+      break;
+    default:
+      printf("Unknown video format %d, bailing out\n", vfmt_in.format);
+  }
+
   // audio frame
   uint8_t *audio_buffer;
   int audio_buffer_size;
@@ -240,7 +254,7 @@ void encoder_run(encoder_params_t *params) {
   // initialize swscale context
   sws = sws_getContext(
     // input
-    vframe->width, vframe->height, AV_PIX_FMT_BGRA,
+    vframe->width, vframe->height, vpix_fmt,
     // output
     vframe->width, vframe->height, vc->pix_fmt,
     // ???
@@ -250,7 +264,7 @@ void encoder_run(encoder_params_t *params) {
   int sws_linesize[1];
   uint8_t *sws_in[1];
 
-  int vflip = 1;
+  int vflip = vfmt_in.vflip;
 
   if (vflip) {
     sws_in[0] = buffer + linesize*(height-1);

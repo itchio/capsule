@@ -15,26 +15,44 @@ void toWideChar (const char *s, wchar_t **ws) {
   MultiByteToWideChar(CP_UTF8, 0, s, -1, *ws, wchars_num);
 }
 
-int receive_resolution (encoder_private_t *p, int64_t *width, int64_t *height) {
+int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
   DWORD bytes_read;
   BOOL success = FALSE;
 
-  success = ReadFile(p->pipe_handle, width, sizeof(int64_t), &bytes_read, NULL);
+  int64_t num;
+
+  success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
   if (!success || bytes_read < sizeof(int64_t)) {
     printf("Could not read width\n");
     return 1;
   }
+  vfmt->width = (int) num;
 
-  success = ReadFile(p->pipe_handle, height, sizeof(int64_t), &bytes_read, NULL);
+  success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
   if (!success || bytes_read < sizeof(int64_t)) {
     printf("Could not read height\n");
     return 1;
   }
+  vfmt->height = (int) num;
+
+  success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
+  if (!success || bytes_read < sizeof(int64_t)) {
+    printf("Could not read format\n");
+    return 1;
+  }
+  vfmt->format = (int) num;
+
+  success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
+  if (!success || bytes_read < sizeof(int64_t)) {
+    printf("Could not read vflip\n");
+    return 1;
+  }
+  vfmt->vflip = (int) num;
 
   return 0;
 }
 
-int receive_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
+int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
   DWORD bytes_read = 0;
   DWORD total_bytes_read = 0;
   BOOL success = TRUE;
@@ -157,8 +175,8 @@ int capsulerun_main (int argc, char **argv) {
     struct encoder_params_s encoder_params;
     ZeroMemory(&encoder_params, sizeof(encoder_private_s));
     encoder_params.private_data = &private_data;
-    encoder_params.receive_video_resolution = (receive_video_resolution_t) receive_resolution;
-    encoder_params.receive_video_frame = (receive_video_frame_t) receive_frame;
+    encoder_params.receive_video_format = (receive_video_format_t) receive_video_format;
+    encoder_params.receive_video_frame = (receive_video_frame_t) receive_video_frame;
 
     encoder_params.has_audio = 1;
     encoder_params.receive_audio_format = (receive_audio_format_t) wasapi_receive_audio_format;

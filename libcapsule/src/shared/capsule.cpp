@@ -274,21 +274,27 @@ int ensure_outfile() {
   return 0;
 }
 
-void CAPSULE_STDCALL capsule_write_resolution (int width, int height) {
+void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int format, int vflip) {
   ensure_outfile();
   int64_t num = (int64_t) width;
   fwrite(&num, sizeof(int64_t), 1, outFile);
 
   num = (int64_t) height;
   fwrite(&num, sizeof(int64_t), 1, outFile);
+
+  num = (int64_t) format;
+  fwrite(&num, sizeof(int64_t), 1, outFile);
+
+  num = (int64_t) vflip;
+  fwrite(&num, sizeof(int64_t), 1, outFile);
 }
 
-void CAPSULE_STDCALL capsule_write_timestamp (int64_t timestamp) {
+void CAPSULE_STDCALL capsule_write_video_timestamp (int64_t timestamp) {
   ensure_outfile();
   fwrite(&timestamp, 1, sizeof(int64_t), outFile);
 }
 
-void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize) {
+void CAPSULE_STDCALL capsule_write_video_frame (char *frameData, size_t frameDataSize) {
   ensure_outfile();
   fwrite(frameData, 1, frameDataSize, outFile);
 }
@@ -321,7 +327,6 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   old_ts = chrono::steady_clock::now();
 
   int components = 4;
-  int format = GL_BGRA;
 
   ensure_own_opengl();
 
@@ -358,18 +363,18 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   if (!frameData) {
     frameData = (char*) malloc(frameDataSize);
   }
-  _realglReadPixels(0, 0, width, height, format, GL_UNSIGNED_BYTE, frameData);
+  _realglReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, frameData);
 
   if (first_frame) {
-    capsule_write_resolution(width, height);
-    capsule_write_timestamp((int64_t) 0);
+    capsule_write_video_format(width, height, CAPSULE_VIDEO_FORMAT_BGRA, 1 /* vflip */);
+    capsule_write_video_timestamp((int64_t) 0);
     first_frame = 0;
     first_ts = chrono::steady_clock::now();
   } else {
     auto frame_timestamp = chrono::steady_clock::now() - first_ts;
-    capsule_write_timestamp((int64_t) chrono::duration_cast<chrono::microseconds>(frame_timestamp).count());
+    capsule_write_video_timestamp((int64_t) chrono::duration_cast<chrono::microseconds>(frame_timestamp).count());
   }
-  capsule_write_frame(frameData, frameDataSize);
+  capsule_write_video_frame(frameData, frameDataSize);
 }
 
 #ifdef CAPSULE_LINUX

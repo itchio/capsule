@@ -84,10 +84,16 @@ void capsule_install_opengl_hooks();
 void capsule_install_dxgi_hooks();
 #endif // CAPSULE_WINDOWS
 
-void CAPSULE_STDCALL capsule_write_resolution (int width, int height);
-void CAPSULE_STDCALL capsule_write_timestamp (int64_t timestamp);
-void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize);
+void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int format, int vflip);
+void CAPSULE_STDCALL capsule_write_video_timestamp (int64_t timestamp);
+void CAPSULE_STDCALL capsule_write_video_frame (char *frameData, size_t frameDataSize);
+
+// OpenGL-specific
 void CAPSULE_STDCALL capsule_capture_frame (int width, int height);
+
+// TODO: keep in sync with capsulerun.h or better yet, share a header file
+#define CAPSULE_VIDEO_FORMAT_RGBA 40069
+#define CAPSULE_VIDEO_FORMAT_BGRA 40070
 
 void* glXGetProcAddressARB (const char*);
 void glXSwapBuffers (void *a, void *b);

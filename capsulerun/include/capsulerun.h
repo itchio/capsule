@@ -22,7 +22,18 @@
 
 int capsulerun_main (int argc, char **argv);
 
-typedef int (*receive_video_resolution_t)(void *private_data, int64_t *width, int64_t *height);
+// TODO: keep in sync with capsule.h or better yet, share a header file
+#define CAPSULE_VIDEO_FORMAT_RGBA 40069
+#define CAPSULE_VIDEO_FORMAT_BGRA 40070
+
+typedef struct video_format_s {
+  int width;
+  int height;
+  int format;
+  int vflip;
+} video_format_t;
+
+typedef int (*receive_video_format_t)(void *private_data, video_format_t *vfmt);
 typedef int (*receive_video_frame_t)(void *private_data, uint8_t *buffer, size_t buffer_size, int64_t *timestamp);
 
 typedef struct audio_format_s {
@@ -31,13 +42,13 @@ typedef struct audio_format_s {
   int samplewidth;
 } audio_format_t;
 
-typedef int (*receive_audio_format_t)(void *private_data, audio_format_t *fmt);
+typedef int (*receive_audio_format_t)(void *private_data, audio_format_t *afmt);
 typedef void* (*receive_audio_frames_t)(void *private_data, int *num_frames);
 
 typedef struct encoder_params_s {
   void *private_data;
 
-  receive_video_resolution_t receive_video_resolution;
+  receive_video_format_t receive_video_format;
   receive_video_frame_t receive_video_frame;
 
   int has_audio;
