@@ -85,7 +85,7 @@ void capsule_install_dxgi_hooks();
 #endif // CAPSULE_WINDOWS
 
 void CAPSULE_STDCALL capsule_write_resolution (int width, int height);
-void CAPSULE_STDCALL capsule_write_delta (int64_t delta);
+void CAPSULE_STDCALL capsule_write_timestamp (int64_t timestamp);
 void CAPSULE_STDCALL capsule_write_frame (char *frameData, size_t frameDataSize);
 void CAPSULE_STDCALL capsule_capture_frame (int width, int height);
 

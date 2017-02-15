@@ -55,18 +55,18 @@ void encoder_run(encoder_params_t *params);
 #include "capsulerun_macos.h"
 #endif // CAPSULERUN_LINUX
 
-// #define CAPSULERUN_PROFILE
+#define CAPSULERUN_PROFILE
 
 #ifdef CAPSULERUN_PROFILE
-#define eprintf(...) { fprintf(stderr, "[capsule-profile] "); fprintf(stderr, __VA_ARGS__); fflush(stderr); }
+#define eprintf(...) { fprintf(stdout, "[capsule-profile] "); fprintf(stdout, __VA_ARGS__); fflush(stdout); }
 #else
 #define eprintf(...)
 #endif
 
-// #define CAPSULERUN_DEBUG
+#define CAPSULERUN_DEBUG
 
 #ifdef CAPSULERUN_DEBUG
-#define dprintf(...) { fprintf(stderr, "[capsule-debug] "); fprintf(stderr, __VA_ARGS__); fflush(stderr); }
+#define dprintf(...) { fprintf(stdout, "[capsule-debug] "); fprintf(stdout, __VA_ARGS__); fflush(stdout); }
 #else
 #define dprintf(...)
 #endif

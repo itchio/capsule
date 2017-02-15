@@ -14,6 +14,18 @@ IUnknown *g_device = NULL;
 IUnknown *g_device_context = NULL;
 
 ///////////////////////////////////////////////
+// FIXME: forgive me father this is all temporary I SWEAR
+///////////////////////////////////////////////
+
+#include <chrono>
+
+using namespace std;
+
+// oh boy that is not good
+int dxgi_first_frame = 1;
+chrono::time_point<chrono::steady_clock> dxgi_first_ts;
+
+///////////////////////////////////////////////
 // IDXGISwapChain::Present
 ///////////////////////////////////////////////
 
@@ -45,7 +57,11 @@ HRESULT CAPSULE_STDCALL Present_hook (
     } else {
       D3D11_TEXTURE2D_DESC desc = {0};
       pTexture->GetDesc(&desc);
-      capsule_log("Backbuffer size: %ux%u, format = %d", desc.Width, desc.Height, desc.Format);
+      // capsule_log("Backbuffer size: %ux%u, format = %d", desc.Width, desc.Height, desc.Format);
+
+      if (desc.Format != DXGI_FORMAT_R8G8B8A8_UNORM) {
+        capsule_log("WARNING: backbuffer format isn't R8G8B8A8_UNORM, things *will* look and/or go wrong");
+      }
 
       desc.Usage = D3D11_USAGE_STAGING;
       desc.BindFlags = 0;
@@ -64,12 +80,23 @@ HRESULT CAPSULE_STDCALL Present_hook (
       ctx->Map(pStagingTexture, 0, D3D11_MAP_READ, 0, &mapped);
 
       uint8_t *pixels = (uint8_t *) mapped.pData;
-      capsule_log("Color of first pixel: %u, %u, %u, %u",
-        pixels[0],
-        pixels[1],
-        pixels[2],
-        pixels[3]
-      );
+
+      if (dxgi_first_frame) {
+        capsule_write_resolution(desc.Width, desc.Height);
+        capsule_write_timestamp((int64_t) 0);
+        dxgi_first_frame = 0;
+        dxgi_first_ts = chrono::steady_clock::now();
+      } else {
+        auto frame_timestamp = chrono::steady_clock::now() - dxgi_first_ts;
+        capsule_write_timestamp((int64_t) chrono::duration_cast<chrono::microseconds>(frame_timestamp).count());
+      }
+      capsule_write_frame((char *) pixels, desc.Width * desc.Height * 4);
+      // capsule_log("Color of first pixel: %u, %u, %u, %u",
+      //   pixels[0],
+      //   pixels[1],
+      //   pixels[2],
+      //   pixels[3]
+      // );
 
       ctx->Unmap(pStagingTexture, 0);
       pStagingTexture->Release();
