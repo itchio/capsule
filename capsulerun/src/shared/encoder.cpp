@@ -345,6 +345,8 @@ void encoder_run(encoder_params_t *params) {
   int in_sample_size = afmt_in.channels * afmt_in.samplewidth / 8;
   float *in_samples;
 
+  int samples_filled = 0;
+
   while (true) {
     auto tt1 = chrono::steady_clock::now();
     size_t read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
@@ -422,8 +424,8 @@ void encoder_run(encoder_params_t *params) {
 
       // while video frame is ahead of audio
       while (av_compare_ts(vframe->pts, video_st->time_base, aframe->pts, audio_st->time_base) >= 0) {
-        int samples_filled = 0;
         int samples_needed = aframe->nb_samples;
+        int underrun = 0;
 
         ret = av_frame_make_writable(aframe);
         if (ret < 0) {
@@ -440,12 +442,7 @@ void encoder_run(encoder_params_t *params) {
 
             in_samples = (float *) params->receive_audio_frames(params->private_data, &samples_received);
             if (samples_received == 0) {
-              printf("audio buffer underrun :(\n");
-              while (samples_filled < samples_needed) {
-                left_samples[samples_filled]  = 0.0;
-                right_samples[samples_filled] = 0.0;
-                samples_filled++;
-              }
+              underrun = true;
               break;
             }
           }
@@ -458,10 +455,17 @@ void encoder_run(encoder_params_t *params) {
           }
         }
 
+        if (underrun) {
+          // we'll get more frames next time, no biggie
+          break;
+        }
+
         audio_frames_copied++;
 
         aframe->pts = anext_pts;
         anext_pts += aframe->nb_samples;
+
+        samples_filled = 0;
 
         ret = avcodec_send_frame(ac, aframe);
         if (ret < 0) {
