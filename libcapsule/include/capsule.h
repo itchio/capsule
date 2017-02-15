@@ -106,4 +106,8 @@ int glXQueryExtension (void *a, void *b, void *c);
 #include <windows.h>
 
 extern CNktHookLib cHookMgr;
+
+void* capsule_get_CreateSwapChain_address(void *);
+void* capsule_get_CreateSwapChainForHwnd_address(void *);
+void* capsule_get_Present_address(void *);
 #endif // CAPSULE_WINDOWS
