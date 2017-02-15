@@ -28,10 +28,13 @@
 
 using namespace std;
 
-int receive_video_resolution (encoder_private_t *p, int64_t *width, int64_t *height) {
+int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
   // FIXME: error checking
-  fread(width, sizeof(int64_t), 1, p->fifo_file);
-  fread(height, sizeof(int64_t), 1, p->fifo_file);
+  int64_t num;
+  fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->width = (int) num;
+  fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->height = (int) num;
+  fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->format = (int) num;
+  fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->vflip = (int) num;
   return 0;
 }
 
@@ -163,7 +166,7 @@ int capsulerun_main (int argc, char **argv) {
   struct encoder_params_s encoder_params;
   memset(&encoder_params, 0, sizeof(encoder_params));
   encoder_params.private_data = &private_data;
-  encoder_params.receive_video_resolution = (receive_video_resolution_t) receive_video_resolution;
+  encoder_params.receive_video_format = (receive_video_format_t) receive_video_format;
   encoder_params.receive_video_frame = (receive_video_frame_t) receive_video_frame;
 
   encoder_params.has_audio = 1;
