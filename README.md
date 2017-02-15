@@ -120,13 +120,14 @@ calls to them so that it may capture video and audio frames.
     * [ ] Win32 recording hotkey support
       * (but basic research done)
   * Video
-    * [ ] Direct3D 8 capture
     * [ ] Direct3D 9 capture
     * [ ] Direct3D 10 capture
     * [ ] Direct3D 11 capture
-      * [x] Hooks DXGI factory
-      * [ ] Hooks present
-      * [ ] Retrieves backbuffer
+      * [x] Hooks DXGI 1.0 factory creation
+      * [ ] Hooks DXGI 1.1 factory creation
+      * [ ] Hooks DXGI 1.3 factory creation
+      * [x] Hooks present
+      * [x] Retrieves & sends backbuffer
     * [ ] Direct3D 12 capture
     * [ ] Vulkan capture
   * CoreAudio capture
