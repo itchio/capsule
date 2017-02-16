@@ -23,6 +23,7 @@ using namespace std;
 
 // oh boy that is not good
 int dxgi_first_frame = 1;
+int dxgi_frame_count = 0;
 chrono::time_point<chrono::steady_clock> dxgi_first_ts;
 
 ///////////////////////////////////////////////
@@ -45,60 +46,104 @@ HRESULT CAPSULE_STDCALL Present_hook (
   capsule_log("Before Present!");
   HRESULT hr;
 
-  IDXGIResource *res = nullptr;
-  hr = swapChain->GetBuffer(0, __uuidof(IUnknown), (void**) &res);
-  if (FAILED(hr)) {
-    capsule_log("DXGI: GetBuffer failed");
-  } else {
-    ID3D11Texture2D *pTexture = nullptr;
-    hr = res->QueryInterface(__uuidof(ID3D11Texture2D), (void**) &pTexture);
+  dxgi_frame_count++;
+
+  if (dxgi_frame_count > 120) {
+    // capsule_log("Getting buffer");
+    IDXGIResource *res = nullptr;
+    hr = swapChain->GetBuffer(0, __uuidof(IUnknown), (void**) &res);
     if (FAILED(hr)) {
-      capsule_log("DXGI: Casting backbuffer to texture failed")
+      capsule_log("DXGI: GetBuffer failed");
     } else {
-      D3D11_TEXTURE2D_DESC desc = {0};
-      pTexture->GetDesc(&desc);
-      // capsule_log("Backbuffer size: %ux%u, format = %d", desc.Width, desc.Height, desc.Format);
-
-      if (desc.Format != DXGI_FORMAT_R8G8B8A8_UNORM) {
-        capsule_log("WARNING: backbuffer format isn't R8G8B8A8_UNORM, things *will* look and/or go wrong");
-      }
-
-      desc.Usage = D3D11_USAGE_STAGING;
-      desc.BindFlags = 0;
-      desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-      desc.MiscFlags = 0;
-
-      ID3D11Device *device = (ID3D11Device *) g_device;
-      ID3D11DeviceContext *ctx = (ID3D11DeviceContext *) g_device_context;
-
-      ID3D11Texture2D *pStagingTexture = nullptr;
-      device->CreateTexture2D(&desc, nullptr, &pStagingTexture);
-
-      ctx->CopyResource(pStagingTexture, pTexture);
-
-      D3D11_MAPPED_SUBRESOURCE mapped = {0};
-      ctx->Map(pStagingTexture, 0, D3D11_MAP_READ, 0, &mapped);
-
-      uint8_t *pixels = (uint8_t *) mapped.pData;
-
-      if (dxgi_first_frame) {
-        capsule_write_video_format(desc.Width, desc.Height, CAPSULE_VIDEO_FORMAT_RGBA, 0 /* no vflip */);
-        capsule_write_video_timestamp((int64_t) 0);
-        dxgi_first_frame = 0;
-        dxgi_first_ts = chrono::steady_clock::now();
+      // capsule_log("Casting to D3D11Texture");
+      ID3D11Texture2D *pTexture = nullptr;
+      hr = res->QueryInterface(__uuidof(ID3D11Texture2D), (void**) &pTexture);
+      if (FAILED(hr)) {
+        capsule_log("DXGI: Casting backbuffer to texture failed")
       } else {
-        auto frame_timestamp = chrono::steady_clock::now() - dxgi_first_ts;
-        capsule_write_video_timestamp((int64_t) chrono::duration_cast<chrono::microseconds>(frame_timestamp).count());
+        D3D11_TEXTURE2D_DESC desc = {0};
+        pTexture->GetDesc(&desc);
+        capsule_log("Backbuffer size: %ux%u, format = %d", desc.Width, desc.Height, desc.Format);
+        capsule_log("MipLevels = %d, ArraySize = %d, SampleDesc.Count = %d", desc.MipLevels, desc.ArraySize, desc.SampleDesc.Count);
+
+        if (desc.Format != DXGI_FORMAT_R8G8B8A8_UNORM) {
+          capsule_log("WARNING: backbuffer format isn't R8G8B8A8_UNORM, things *will* look and/or go wrong");
+        }
+
+        int multisampled = desc.SampleDesc.Count > 1;
+
+        desc.BindFlags = 0;
+        desc.MiscFlags = 0;
+        desc.MipLevels = 1;
+        desc.ArraySize = 1;
+        desc.SampleDesc.Count = 1;
+        desc.Usage = D3D11_USAGE_STAGING;
+        desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
+
+        ID3D11Device *device = (ID3D11Device *) g_device;
+        ID3D11DeviceContext *ctx = (ID3D11DeviceContext *) g_device_context;
+
+        ID3D11Texture2D *pResolveTexture = nullptr;
+
+        // capsule_log("Creating Texture2D, device = %p", g_device);
+        ID3D11Texture2D *pStagingTexture = nullptr;
+        hr = device->CreateTexture2D(&desc, nullptr, &pStagingTexture);
+        if (FAILED(hr)) {
+          capsule_log("Could not create staging texture (err %x)", hr)
+        }
+
+        // capsule_log("Copying resource, ctx = %p", g_device_context);
+        if (multisampled) {
+          desc.Usage = D3D11_USAGE_DEFAULT;
+          desc.CPUAccessFlags = 0;
+          hr = device->CreateTexture2D(&desc, nullptr, &pResolveTexture);
+          if (FAILED(hr)) {
+            capsule_log("Could not create resolve texture (err %x)", hr)
+          }
+
+          ctx->ResolveSubresource(pResolveTexture, 0, pTexture, 0, desc.Format);
+          ctx->CopyResource(pStagingTexture, pResolveTexture);
+        } else {
+          ctx->CopyResource(pStagingTexture, pTexture);
+        }
+
+        D3D11_MAPPED_SUBRESOURCE mapped = {0};
+        // capsule_log("Mapping staging texture");
+        hr = ctx->Map(pStagingTexture, 0, D3D11_MAP_READ, 0, &mapped);
+        if (FAILED(hr)) {
+          capsule_log("Could not map staging texture (err %x)", hr)
+        }
+
+        // capsule_log("Sending frame");
+        uint8_t *pixels = (uint8_t *) mapped.pData;
+
+        if (dxgi_first_frame) {
+          capsule_write_video_format(desc.Width, desc.Height, CAPSULE_VIDEO_FORMAT_RGBA, 0 /* no vflip */);
+          capsule_write_video_timestamp((int64_t) 0);
+          dxgi_first_frame = 0;
+          dxgi_first_ts = chrono::steady_clock::now();
+        } else {
+          auto frame_timestamp = chrono::steady_clock::now() - dxgi_first_ts;
+          capsule_write_video_timestamp((int64_t) chrono::duration_cast<chrono::microseconds>(frame_timestamp).count());
+        }
+        capsule_write_video_frame((char *) pixels, desc.Width * desc.Height * 4);
+
+        // capsule_log("Unmapping staging texture");
+        ctx->Unmap(pStagingTexture, 0);
+
+        // capsule_log("Releasing staging texture");
+        pStagingTexture->Release();
+
+        if (pResolveTexture) {
+          pResolveTexture->Release();
+        }
       }
-      capsule_write_video_frame((char *) pixels, desc.Width * desc.Height * 4);
 
-      ctx->Unmap(pStagingTexture, 0);
-      pStagingTexture->Release();
+      res->Release();
     }
-
-    res->Release();
   }
 
+  capsule_log("Calling present");
   HRESULT phr = Present_real(swapChain, SyncInterval, Flags);
   capsule_log("After Present! succeeded? %d", SUCCEEDED(phr));
   return phr;
@@ -332,27 +377,29 @@ void capsule_install_dxgi_hooks () {
   }
 
   // CreateDXGIFactory
-  LPVOID CreateDXGIFactory_addr = NktHookLibHelpers::GetProcedureAddress(dxgi, "CreateDXGIFactory");
-  if (!CreateDXGIFactory_addr) {
-    capsule_log("Could not find CreateDXGIFactory");
-    return;
-  }
+  if (false) {
+    LPVOID CreateDXGIFactory_addr = NktHookLibHelpers::GetProcedureAddress(dxgi, "CreateDXGIFactory");
+    if (!CreateDXGIFactory_addr) {
+      capsule_log("Could not find CreateDXGIFactory");
+      return;
+    }
 
-  err = cHookMgr.Hook(
-    &CreateDXGIFactory_hookId,
-    (LPVOID *) &CreateDXGIFactory_real,
-    CreateDXGIFactory_addr,
-    CreateDXGIFactory_hook,
-    0
-  );
-  if (err != ERROR_SUCCESS) {
-    capsule_log("Hooking CreateDXGIFactory derped with error %d (%x)", err, err);
-    return;
+    err = cHookMgr.Hook(
+      &CreateDXGIFactory_hookId,
+      (LPVOID *) &CreateDXGIFactory_real,
+      CreateDXGIFactory_addr,
+      CreateDXGIFactory_hook,
+      0
+    );
+    if (err != ERROR_SUCCESS) {
+      capsule_log("Hooking CreateDXGIFactory derped with error %d (%x)", err, err);
+      return;
+    }
+    capsule_log("Installed CreateDXGIFactory hook");
   }
-  capsule_log("Installed CreateDXGIFactory hook");
 
   // this makes games crash
-  if (false) {
+  if (true) {
     // CreateDXGIFactory1
     LPVOID CreateDXGIFactory1_addr = NktHookLibHelpers::GetProcedureAddress(dxgi, "CreateDXGIFactory1");
     if (!CreateDXGIFactory1_addr) {
