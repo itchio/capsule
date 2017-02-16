@@ -20,7 +20,9 @@ include_directories(${libcapsule_INCLUDE_DIRS} ${libcapsule_INCLUDE_DIR})
 add_definitions(-DBUILD_CAPSULE_DLL)
 
 set(libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/shared/capsule.cpp)
+    ${libcapsule_SOURCE_DIR}/shared/capsule.cpp
+    ${libcapsule_SOURCE_DIR}/shared/timer.cpp
+)
 
 if(APPLE)
   list(APPEND libcapsule_SRC
@@ -48,6 +50,8 @@ if(WIN32)
     ${libcapsule_SOURCE_DIR}/windows/hooks.cpp
     ${libcapsule_SOURCE_DIR}/windows/dxgi-capture.cpp
     ${libcapsule_SOURCE_DIR}/windows/dxgi-vtable-helpers.cpp
+    ${libcapsule_SOURCE_DIR}/windows/d3d10-capture.cpp
+    ${libcapsule_SOURCE_DIR}/windows/d3d11-capture.cpp
     ${libcapsule_SOURCE_DIR}/windows/opengl-capture.cpp
   )
 endif()

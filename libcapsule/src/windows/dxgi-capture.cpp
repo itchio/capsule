@@ -1,14 +1,21 @@
 
 #include <capsule.h>
-
-// #include <dxgi.h>
-// #include <dxgi1_2.h>
+#include "win-capture.h"
 
 #include "dxgi-vtable-helpers.h"
 #include "dxgi-util.h"
 
-IUnknown *g_device = NULL;
-IUnknown *g_device_context = NULL;
+typedef void (* dxgi_capture_func_t)(void *swap_ptr, void *backbuffer_ptr);
+typedef void (* dxgi_free_func_t)(void);
+
+// inspired from libobs
+struct dxgi_swap_data {
+  IDXGISwapChain *swap;
+  dxgi_capture_func_t capture;
+  dxgi_free_func_t free;
+};
+
+static struct dxgi_swap_data data = {};
 
 ///////////////////////////////////////////////
 // FIXME: forgive me father this is all temporary I SWEAR
@@ -16,19 +23,61 @@ IUnknown *g_device_context = NULL;
 
 #include <chrono>
 
-using namespace std;
+///////////////////////////////////////////////////
+// Detect D3D version, set up capture & free.
+// follows libobs's structure
+///////////////////////////////////////////////////
 
-// oh boy that is not good
-int dxgi_first_frame = 1;
-int dxgi_frame_count = 0;
-chrono::time_point<chrono::steady_clock> dxgi_first_ts;
+static bool setup_dxgi(IDXGISwapChain *swap) {
+  IUnknown *device;
+  HRESULT hr;
+
+  // libobs has some logic to ignore D3D10 for call of duty ghosts
+  // and just cause 3, but I'm going to make a judgement call and
+  // assume they're not ending up on itch.io anytime soon so we'll
+  // just roll with the no-workaround version here
+
+  hr = swap->GetDevice(__uuidof(ID3D10Device), (void**) &device);
+  if (SUCCEEDED(hr)) {
+    capsule_log("Found D3D10 Device!");
+    data.swap = swap;
+    data.capture = d3d10_capture;
+    data.free = d3d10_free;
+    device->Release();
+    return true;
+  }
+
+  hr = swap->GetDevice(__uuidof(ID3D11Device), (void**) &device);
+  if (SUCCEEDED(hr)) {
+    capsule_log("Found D3D11 Device!");
+    data.swap = swap;
+    data.capture = d3d11_capture;
+    data.free = d3d11_free;
+    device->Release();
+    return true;
+  }
+
+  return false;
+}
+
+static inline IUnknown *get_dxgi_backbuffer (IDXGISwapChain *swap) {
+  IDXGIResource *res = nullptr;
+  HRESULT hr;
+
+  hr = swap->GetBuffer(0, __uuidof(IUnknown), (void**) &res);
+  if (FAILED(hr)) {
+    capsule_log("get_dxgi_backbuffer: GetBuffer failed");
+  }
+
+  return res;
+}
 
 ///////////////////////////////////////////////
 // IDXGISwapChain::Present
 ///////////////////////////////////////////////
 
 typedef HRESULT (CAPSULE_STDCALL *Present_t)(
-  IDXGISwapChain *swapChain,
+  IDXGISwapChain *swap,
   UINT SyncInterval,
   UINT Flags
 );
@@ -36,114 +85,30 @@ Present_t Present_real;
 SIZE_T Present_hookId = 0;
 
 HRESULT CAPSULE_STDCALL Present_hook (
-  IDXGISwapChain *swapChain,
+  IDXGISwapChain *swap,
   UINT SyncInterval,
   UINT Flags
 ) {
   capsule_log("Before Present!");
   HRESULT hr;
 
-  dxgi_frame_count++;
+  if (!data.swap) {
+    setup_dxgi(swap);
+  }
 
-  if (dxgi_frame_count > 120) {
-    // capsule_log("Getting buffer");
-    IDXGIResource *res = nullptr;
-    hr = swapChain->GetBuffer(0, __uuidof(IUnknown), (void**) &res);
-    if (FAILED(hr)) {
-      capsule_log("DXGI: GetBuffer failed");
-    } else {
-      // capsule_log("Casting to D3D11Texture");
-      ID3D11Texture2D *pTexture = nullptr;
-      hr = res->QueryInterface(__uuidof(ID3D11Texture2D), (void**) &pTexture);
-      if (FAILED(hr)) {
-        capsule_log("DXGI: Casting backbuffer to texture failed")
-      } else {
-        D3D11_TEXTURE2D_DESC desc = {0};
-        pTexture->GetDesc(&desc);
-        capsule_log("Backbuffer size: %ux%u, format = %d", desc.Width, desc.Height, desc.Format);
-        capsule_log("MipLevels = %d, ArraySize = %d, SampleDesc.Count = %d", desc.MipLevels, desc.ArraySize, desc.SampleDesc.Count);
+  // libobs has logic to capture *after* Present (if you want to capture
+  // overlays). This isn't in capsule's scope, so we always capture before Present.
 
-        if (desc.Format != DXGI_FORMAT_R8G8B8A8_UNORM) {
-          capsule_log("WARNING: backbuffer format isn't R8G8B8A8_UNORM, things *will* look and/or go wrong");
-        }
-
-        int multisampled = desc.SampleDesc.Count > 1;
-
-        desc.BindFlags = 0;
-        desc.MiscFlags = 0;
-        desc.MipLevels = 1;
-        desc.ArraySize = 1;
-        desc.SampleDesc.Count = 1;
-        desc.Usage = D3D11_USAGE_STAGING;
-        desc.CPUAccessFlags = D3D11_CPU_ACCESS_READ;
-
-        ID3D11Device *device = (ID3D11Device *) g_device;
-        ID3D11DeviceContext *ctx = (ID3D11DeviceContext *) g_device_context;
-
-        ID3D11Texture2D *pResolveTexture = nullptr;
-
-        // capsule_log("Creating Texture2D, device = %p", g_device);
-        ID3D11Texture2D *pStagingTexture = nullptr;
-        hr = device->CreateTexture2D(&desc, nullptr, &pStagingTexture);
-        if (FAILED(hr)) {
-          capsule_log("Could not create staging texture (err %x)", hr)
-        }
-
-        // capsule_log("Copying resource, ctx = %p", g_device_context);
-        if (multisampled) {
-          desc.Usage = D3D11_USAGE_DEFAULT;
-          desc.CPUAccessFlags = 0;
-          hr = device->CreateTexture2D(&desc, nullptr, &pResolveTexture);
-          if (FAILED(hr)) {
-            capsule_log("Could not create resolve texture (err %x)", hr)
-          }
-
-          ctx->ResolveSubresource(pResolveTexture, 0, pTexture, 0, desc.Format);
-          ctx->CopyResource(pStagingTexture, pResolveTexture);
-        } else {
-          ctx->CopyResource(pStagingTexture, pTexture);
-        }
-
-        D3D11_MAPPED_SUBRESOURCE mapped = {0};
-        // capsule_log("Mapping staging texture");
-        hr = ctx->Map(pStagingTexture, 0, D3D11_MAP_READ, 0, &mapped);
-        if (FAILED(hr)) {
-          capsule_log("Could not map staging texture (err %x)", hr)
-        }
-
-        // capsule_log("Sending frame");
-        uint8_t *pixels = (uint8_t *) mapped.pData;
-
-        if (dxgi_first_frame) {
-          capsule_write_video_format(desc.Width, desc.Height, CAPSULE_PIX_FMT_RGBA, 0 /* no vflip */);
-          capsule_write_video_timestamp((int64_t) 0);
-          dxgi_first_frame = 0;
-          dxgi_first_ts = chrono::steady_clock::now();
-        } else {
-          auto frame_timestamp = chrono::steady_clock::now() - dxgi_first_ts;
-          capsule_write_video_timestamp((int64_t) chrono::duration_cast<chrono::microseconds>(frame_timestamp).count());
-        }
-        capsule_write_video_frame((char *) pixels, desc.Width * desc.Height * 4);
-
-        // capsule_log("Unmapping staging texture");
-        ctx->Unmap(pStagingTexture, 0);
-
-        // capsule_log("Releasing staging texture");
-        pStagingTexture->Release();
-
-        if (pResolveTexture) {
-          pResolveTexture->Release();
-        }
-      }
-
-      res->Release();
+  bool capture = (swap == data.swap) && !!data.capture && capsule_capture_ready();
+  if (capture) {
+    IUnknown *backbuffer = get_dxgi_backbuffer(data.swap);
+    if (!!backbuffer) {
+      data.capture(swap, backbuffer);
+      backbuffer->Release();
     }
   }
 
-  capsule_log("Calling present");
-  HRESULT phr = Present_real(swapChain, SyncInterval, Flags);
-  capsule_log("After Present! succeeded? %d", SUCCEEDED(phr));
-  return phr;
+  return Present_real(swap, SyncInterval, Flags);
 }
 
 ///////////////////////////////////////////////
@@ -186,21 +151,18 @@ HRESULT CAPSULE_STDCALL CreateSwapChainForHwnd_hook (
   HRESULT res = CreateSwapChainForHwnd_real(factory, pDevice, hWnd, pDesc, pFullscreenDesc, pRestrictToOutput, ppSwapChain);
   capsule_log("After CreateSwapChainForHwnd!");
 
+  if (FAILED(res)) {
+    capsule_log("Swap chain creation failed, bailing out");
+    return res;
+  }
+
   if (!Present_hookId) {
+    // just a little fluff for fun
     wchar_t new_title_buffer[title_buffer_size];
     new_title_buffer[0] = '\0';
     swprintf_s(new_title_buffer, title_buffer_size, L"[capsule] %s", title_buffer);
     SetWindowText(hWnd, new_title_buffer);
 
-    g_device = pDevice;
-    ((ID3D11Device *) pDevice)->GetImmediateContext((ID3D11DeviceContext **) &g_device_context);
-
-    if (FAILED(res)) {
-      capsule_log("Swap chain creation failed, bailing out");
-      return res;
-    }
-
-    capsule_log("Swap chain creation succeeded, swapChain = %p", *ppSwapChain);
     IDXGISwapChain *swapChain = (IDXGISwapChain *) *ppSwapChain;
 
     // Present
@@ -224,31 +186,6 @@ HRESULT CAPSULE_STDCALL CreateSwapChainForHwnd_hook (
 }
 
 ///////////////////////////////////////////////
-// IDXGIFactory::CreateSwapChain
-// Note: this seems deprecated/rarely used
-///////////////////////////////////////////////
-
-typedef HRESULT (CAPSULE_STDCALL *CreateSwapChain_t)(
-    IDXGIFactory *factory,
-    IUnknown *pDevice,
-    DXGI_SWAP_CHAIN_DESC *pDesc,
-    IDXGISwapChain **ppSwapChain
-);
-CreateSwapChain_t CreateSwapChain_real;
-SIZE_T CreateSwapChain_hookId;
-
-HRESULT CAPSULE_STDCALL CreateSwapChain_hook (
-    IDXGIFactory *factory,
-    IUnknown *pDevice,
-    DXGI_SWAP_CHAIN_DESC *pDesc,
-    IDXGISwapChain **ppSwapChain
-  ) {
-  HRESULT res = CreateSwapChain_real(factory, pDevice, pDesc, ppSwapChain);
-  capsule_log("After CreateSwapChain!");
-  return res;
-}
-
-///////////////////////////////////////////////
 // CreateDXGIFactory (DXGI 1.0)
 ///////////////////////////////////////////////
 
@@ -258,22 +195,6 @@ SIZE_T CreateDXGIFactory_hookId = 0;
 
 void install_swapchain_hooks (IDXGIFactory *factory) {
   DWORD err;
-
-  // CreateSwapChain
-  if (!CreateSwapChain_hookId) {
-    LPVOID CreateSwapChain_addr = capsule_get_CreateSwapChain_address((void *) factory);
-
-    err = cHookMgr.Hook(
-      &CreateSwapChain_hookId,
-      (LPVOID *) &CreateSwapChain_real,
-      CreateSwapChain_addr,
-      CreateSwapChain_hook,
-      0
-    );
-    if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking CreateSwapChain derped with error %d (%x)", err, err);
-    }
-  }
 
   // CreateSwapChainForHwnd
   if (!CreateSwapChainForHwnd_hookId) {

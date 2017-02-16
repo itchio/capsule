@@ -6,12 +6,6 @@
 #include <stdint.h>
 #include <string.h>
 
-// chrono::steady_clock
-#include <chrono>
-
-// this_thread
-#include <thread>
-
 #if defined(CAPSULE_WINDOWS)
 #include <windows.h>
 #define dlopen(a, b) LoadLibrary((a))
@@ -119,8 +113,6 @@ glXGetProcAddressARBType _realglXGetProcAddressARB;
 #endif
 
 char *frameData;
-int frameNumber = 0;
-chrono::time_point<chrono::steady_clock> old_ts, ts, first_ts;
 
 typedef void* (*dlopen_type)(const char*, int);
 dlopen_type real_dlopen;
@@ -286,45 +278,22 @@ void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int form
   fwrite(&num, sizeof(int64_t), 1, outFile);
 }
 
-void CAPSULE_STDCALL capsule_write_video_timestamp (int64_t timestamp) {
+void CAPSULE_STDCALL capsule_write_video_frame (int64_t timestamp, char *frameData, size_t frameDataSize) {
   ensure_outfile();
   fwrite(&timestamp, 1, sizeof(int64_t), outFile);
-}
-
-void CAPSULE_STDCALL capsule_write_video_frame (char *frameData, size_t frameDataSize) {
-  ensure_outfile();
   fwrite(frameData, 1, frameDataSize, outFile);
 }
 
-int first_frame = 1;
-int skipped_frames = 0;
-
 void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
-  frameNumber++;
-#ifndef CAPSULE_OSX
-  if (frameNumber < 120) {
+  static bool first_frame = true;
+
+  if (!capsule_capture_ready()) {
     return;
   }
-#endif
 
-  // only capture up to N FPS
-  if (!first_frame) {
-    auto delta = chrono::steady_clock::now() - old_ts;
-    auto wanted_delta = chrono::microseconds(1000000 / 60);
-
-    if (delta < wanted_delta && !first_frame) {
-      // skip frame
-      skipped_frames++;
-      return;
-    }
-    // fprintf(stderr, "skipped %d frames\n", skipped_frames);
-    skipped_frames = 0;
-  }
-
-  old_ts = chrono::steady_clock::now();
+  auto timestamp = capsule_frame_timestamp();
 
   int components = 4;
-
   ensure_own_opengl();
 
   if (width == 0 || height == 0) {
@@ -352,10 +321,6 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
     height += 2;
   }
 
-  // if (frameNumber % 30 == 0) {
-  //   capsule_log("Saved %d frames. Current resolution = %dx%d", frameNumber, width, height);
-  // }
-
   size_t frameDataSize = width * height * components;
   if (!frameData) {
     frameData = (char*) malloc(frameDataSize);
@@ -364,14 +329,9 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
 
   if (first_frame) {
     capsule_write_video_format(width, height, CAPSULE_PIX_FMT_BGRA, 1 /* vflip */);
-    capsule_write_video_timestamp((int64_t) 0);
-    first_frame = 0;
-    first_ts = chrono::steady_clock::now();
-  } else {
-    auto frame_timestamp = chrono::steady_clock::now() - first_ts;
-    capsule_write_video_timestamp((int64_t) chrono::duration_cast<chrono::microseconds>(frame_timestamp).count());
+    first_frame = false;
   }
-  capsule_write_video_frame(frameData, frameDataSize);
+  capsule_write_video_frame(timestamp, frameData, frameDataSize);
 }
 
 #ifdef CAPSULE_LINUX

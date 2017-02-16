@@ -72,23 +72,25 @@ extern FILE *logfile;
 extern "C" {
 #endif
 
-FILE *capsule_open_log();
+FILE *capsule_open_log ();
 
 #ifdef CAPSULE_WINDOWS
-wchar_t *capsule_log_path();
+wchar_t *capsule_log_path ();
 #else
-char *capsule_log_path();
+char *capsule_log_path ();
 #endif // CAPSULE_WINDOWS
 
 #ifdef CAPSULE_WINDOWS
 CAPSULE_DLL void capsule_install_windows_hooks ();
-void capsule_install_opengl_hooks();
-void capsule_install_dxgi_hooks();
+void capsule_install_opengl_hooks ();
+void capsule_install_dxgi_hooks ();
 #endif // CAPSULE_WINDOWS
 
+bool CAPSULE_STDCALL capsule_capture_ready ();
+int64_t CAPSULE_STDCALL capsule_frame_timestamp ();
+
 void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int format, int vflip);
-void CAPSULE_STDCALL capsule_write_video_timestamp (int64_t timestamp);
-void CAPSULE_STDCALL capsule_write_video_frame (char *frameData, size_t frameDataSize);
+void CAPSULE_STDCALL capsule_write_video_frame (int64_t timestamp, char *frameData, size_t frameDataSize);
 
 // OpenGL-specific
 void CAPSULE_STDCALL capsule_capture_frame (int width, int height);
