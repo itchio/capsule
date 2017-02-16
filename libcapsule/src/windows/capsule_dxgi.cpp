@@ -9,7 +9,6 @@ HMODULE d3d11;
 #include <dxgi.h>
 #include <dxgi1_2.h>
 
-IDXGIFactory *g_factory = NULL;
 IUnknown *g_device = NULL;
 IUnknown *g_device_context = NULL;
 
@@ -36,7 +35,7 @@ typedef HRESULT (CAPSULE_STDCALL *Present_t)(
   UINT Flags
 );
 Present_t Present_real;
-SIZE_T Present_hookId;
+SIZE_T Present_hookId = 0;
 
 HRESULT CAPSULE_STDCALL Present_hook (
   IDXGISwapChain *swapChain,
@@ -163,7 +162,7 @@ typedef HRESULT (CAPSULE_STDCALL *CreateSwapChainForHwnd_t)(
         IDXGISwapChain1                 **ppSwapChain
 );
 CreateSwapChainForHwnd_t CreateSwapChainForHwnd_real;
-SIZE_T CreateSwapChainForHwnd_hookId;
+SIZE_T CreateSwapChainForHwnd_hookId = 0;
 
 HRESULT CAPSULE_STDCALL CreateSwapChainForHwnd_hook (
         IDXGIFactory2                   *factory,
@@ -176,14 +175,23 @@ HRESULT CAPSULE_STDCALL CreateSwapChainForHwnd_hook (
   ) {
   DWORD err;
 
-  capsule_log("Before CreateSwapChainForHwnd! same factory? %d", g_factory == factory);
-  const int title_buffer_size = 1024;
+  capsule_log("Before CreateSwapChainForHwnd!");
+
+  // this part is just a mix of curiosity of hubris, aka
+  // "we have an hWnd! we can do wonderful things with it!"
+  const size_t title_buffer_size = 1024;
   wchar_t title_buffer[title_buffer_size];
   title_buffer[0] = '\0';
   GetWindowText(hWnd, title_buffer, title_buffer_size);
-  capsule_log("Hwnd title = %S", title_buffer);
+  capsule_log("Creating swapchain for window \"%S\"", title_buffer);
+
+  wchar_t new_title_buffer[title_buffer_size];
+  new_title_buffer[0] = '\0';
+  swprintf_s(new_title_buffer, title_buffer_size, L"[capsule] %s", title_buffer);
+  SetWindowText(hWnd, new_title_buffer);
+
   HRESULT res = CreateSwapChainForHwnd_real(factory, pDevice, hWnd, pDesc, pFullscreenDesc, pRestrictToOutput, ppSwapChain);
-  capsule_log("After CreateSwapChainForHwnd!")
+  capsule_log("After CreateSwapChainForHwnd!");
 
   g_device = pDevice;
   ((ID3D11Device *) pDevice)->GetImmediateContext((ID3D11DeviceContext **) &g_device_context);
@@ -235,7 +243,6 @@ HRESULT CAPSULE_STDCALL CreateSwapChain_hook (
     DXGI_SWAP_CHAIN_DESC *pDesc,
     IDXGISwapChain **ppSwapChain
   ) {
-  capsule_log("Before CreateSwapChain! same factory? %d", g_factory == factory);
   HRESULT res = CreateSwapChain_real(factory, pDevice, pDesc, ppSwapChain);
   capsule_log("After CreateSwapChain!");
   return res;
@@ -247,57 +254,54 @@ HRESULT CAPSULE_STDCALL CreateSwapChain_hook (
 
 typedef HRESULT (CAPSULE_STDCALL *CreateDXGIFactory_t)(REFIID, void**);
 CreateDXGIFactory_t CreateDXGIFactory_real;
-SIZE_T CreateDXGIFactory_hookId;
+SIZE_T CreateDXGIFactory_hookId = 0;
+
+void install_swapchain_hooks (IDXGIFactory *factory) {
+  DWORD err;
+
+  // CreateSwapChain
+  if (!CreateSwapChain_hookId) {
+    LPVOID CreateSwapChain_addr = capsule_get_CreateSwapChain_address((void *) factory);
+
+    err = cHookMgr.Hook(
+      &CreateSwapChain_hookId,
+      (LPVOID *) &CreateSwapChain_real,
+      CreateSwapChain_addr,
+      CreateSwapChain_hook,
+      0
+    );
+    if (err != ERROR_SUCCESS) {
+      capsule_log("Hooking CreateSwapChain derped with error %d (%x)", err, err);
+    }
+  }
+
+  // CreateSwapChainForHwnd
+  if (!CreateSwapChainForHwnd_hookId) {
+    LPVOID CreateSwapChainForHwnd_addr = capsule_get_CreateSwapChainForHwnd_address((void *) factory);
+
+    err = cHookMgr.Hook(
+      &CreateSwapChainForHwnd_hookId,
+      (LPVOID *) &CreateSwapChainForHwnd_real,
+      CreateSwapChainForHwnd_addr,
+      CreateSwapChainForHwnd_hook,
+      0
+    );
+    if (err != ERROR_SUCCESS) {
+      capsule_log("Hooking CreateSwapChainForHwnd derped with error %d (%x)", err, err);
+    }
+  }
+}
 
 HRESULT CAPSULE_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
   DWORD err;
 
-  capsule_log("Hooked_CreateDXGIFactory called with riid: %s", NameFromIID(riid).c_str());
-  capsule_log("Before CreateDXGIFactory!");
+  capsule_log("CreateDXGIFactory called with riid: %s", NameFromIID(riid).c_str());
   HRESULT res = CreateDXGIFactory_real(riid, ppFactory);
-  capsule_log("After CreateDXGIFactory!");
 
-  if (FAILED(res)) {
-    capsule_log("CreateDXGIFactory failed! Bailing out")
-    return res;
-  }
-
-  capsule_log("Installing swapchain hooks");
-  IDXGIFactory *factory = (IDXGIFactory *) *ppFactory;
-  g_factory = factory;
-
-  // TODO: dedup
-
-  // CreateSwapChain
-  LPVOID CreateSwapChain_addr = capsule_get_CreateSwapChain_address((void *) factory);
-
-  err = cHookMgr.Hook(
-    &CreateSwapChain_hookId,
-    (LPVOID *) &CreateSwapChain_real,
-    CreateSwapChain_addr,
-    CreateSwapChain_hook,
-    0
-  );
-  if (err != ERROR_SUCCESS) {
-    capsule_log("Hooking CreateSwapChain derped with error %d (%x)", err, err);
+  if (SUCCEEDED(res)) {
+    install_swapchain_hooks((IDXGIFactory *) *ppFactory);
   } else {
-    capsule_log("Installed CreateSwapChain hook");
-  }
-
-  // CreateSwapChainForHwnd
-  LPVOID CreateSwapChainForHwnd_addr = capsule_get_CreateSwapChainForHwnd_address((void *) factory);
-
-  err = cHookMgr.Hook(
-    &CreateSwapChainForHwnd_hookId,
-    (LPVOID *) &CreateSwapChainForHwnd_real,
-    CreateSwapChainForHwnd_addr,
-    CreateSwapChainForHwnd_hook,
-    0
-  );
-  if (err != ERROR_SUCCESS) {
-    capsule_log("Hooking CreateSwapChainForHwnd derped with error %d (%x)", err, err);
-  } else {
-    capsule_log("Installed CreateSwapChainForHwnd hook");
+    capsule_log("CreateDXGIFactory failed!");
   }
 
   return res;
@@ -315,51 +319,12 @@ HRESULT CAPSULE_STDCALL CreateDXGIFactory1_hook (REFIID riid, void** ppFactory) 
   DWORD err;
 
   capsule_log("Hooked_CreateDXGIFactory1 called with riid: %s", NameFromIID(riid).c_str());
-  capsule_log("Before CreateDXGIFactory1!");
   HRESULT res = CreateDXGIFactory1_real(riid, ppFactory);
-  capsule_log("After CreateDXGIFactory1!");
 
-  if (FAILED(res)) {
-    capsule_log("CreateDXGIFactory1 failed! Bailing out")
-    return res;
-  }
-
-  capsule_log("Installing swapchain hooks");
-  IDXGIFactory *factory = (IDXGIFactory *) *ppFactory;
-  g_factory = factory;
-
-  // TODO: dedup
-
-  // CreateSwapChain
-  LPVOID CreateSwapChain_addr = capsule_get_CreateSwapChain_address((void *) factory);
-
-  err = cHookMgr.Hook(
-    &CreateSwapChain_hookId,
-    (LPVOID *) &CreateSwapChain_real,
-    CreateSwapChain_addr,
-    CreateSwapChain_hook,
-    0
-  );
-  if (err != ERROR_SUCCESS) {
-    capsule_log("Hooking CreateSwapChain derped with error %d (%x)", err, err);
+  if (SUCCEEDED(res)) {
+    install_swapchain_hooks((IDXGIFactory *) *ppFactory);
   } else {
-    capsule_log("Installed CreateSwapChain hook");
-  }
-
-  // CreateSwapChainForHwnd
-  LPVOID CreateSwapChainForHwnd_addr = capsule_get_CreateSwapChainForHwnd_address((void *) factory);
-
-  err = cHookMgr.Hook(
-    &CreateSwapChainForHwnd_hookId,
-    (LPVOID *) &CreateSwapChainForHwnd_real,
-    CreateSwapChainForHwnd_addr,
-    CreateSwapChainForHwnd_hook,
-    0
-  );
-  if (err != ERROR_SUCCESS) {
-    capsule_log("Hooking CreateSwapChainForHwnd derped with error %d (%x)", err, err);
-  } else {
-    capsule_log("Installed CreateSwapChainForHwnd hook");
+    capsule_log("CreateDXGIFactory failed!");
   }
 
   return res;
@@ -377,7 +342,7 @@ void capsule_install_dxgi_hooks () {
   }
 
   // CreateDXGIFactory
-  if (false) {
+  {
     LPVOID CreateDXGIFactory_addr = NktHookLibHelpers::GetProcedureAddress(dxgi, "CreateDXGIFactory");
     if (!CreateDXGIFactory_addr) {
       capsule_log("Could not find CreateDXGIFactory");
@@ -398,8 +363,7 @@ void capsule_install_dxgi_hooks () {
     capsule_log("Installed CreateDXGIFactory hook");
   }
 
-  // this makes games crash
-  if (true) {
+  {
     // CreateDXGIFactory1
     LPVOID CreateDXGIFactory1_addr = NktHookLibHelpers::GetProcedureAddress(dxgi, "CreateDXGIFactory1");
     if (!CreateDXGIFactory1_addr) {
