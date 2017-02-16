@@ -1,13 +1,11 @@
 
 #include <capsule.h>
-#include "dxgi_util.h"
 
-HMODULE dxgi;
-HMODULE d3d10;
-HMODULE d3d11;
+// #include <dxgi.h>
+// #include <dxgi1_2.h>
 
-#include <dxgi.h>
-#include <dxgi1_2.h>
+#include "dxgi-vtable-helpers.h"
+#include "dxgi-util.h"
 
 IUnknown *g_device = NULL;
 IUnknown *g_device_context = NULL;
@@ -117,7 +115,7 @@ HRESULT CAPSULE_STDCALL Present_hook (
         uint8_t *pixels = (uint8_t *) mapped.pData;
 
         if (dxgi_first_frame) {
-          capsule_write_video_format(desc.Width, desc.Height, CAPSULE_VIDEO_FORMAT_RGBA, 0 /* no vflip */);
+          capsule_write_video_format(desc.Width, desc.Height, CAPSULE_PIX_FMT_RGBA, 0 /* no vflip */);
           capsule_write_video_timestamp((int64_t) 0);
           dxgi_first_frame = 0;
           dxgi_first_ts = chrono::steady_clock::now();
@@ -185,39 +183,41 @@ HRESULT CAPSULE_STDCALL CreateSwapChainForHwnd_hook (
   GetWindowText(hWnd, title_buffer, title_buffer_size);
   capsule_log("Creating swapchain for window \"%S\"", title_buffer);
 
-  wchar_t new_title_buffer[title_buffer_size];
-  new_title_buffer[0] = '\0';
-  swprintf_s(new_title_buffer, title_buffer_size, L"[capsule] %s", title_buffer);
-  SetWindowText(hWnd, new_title_buffer);
-
   HRESULT res = CreateSwapChainForHwnd_real(factory, pDevice, hWnd, pDesc, pFullscreenDesc, pRestrictToOutput, ppSwapChain);
   capsule_log("After CreateSwapChainForHwnd!");
 
-  g_device = pDevice;
-  ((ID3D11Device *) pDevice)->GetImmediateContext((ID3D11DeviceContext **) &g_device_context);
+  if (!Present_hookId) {
+    wchar_t new_title_buffer[title_buffer_size];
+    new_title_buffer[0] = '\0';
+    swprintf_s(new_title_buffer, title_buffer_size, L"[capsule] %s", title_buffer);
+    SetWindowText(hWnd, new_title_buffer);
 
-  if (FAILED(res)) {
-    capsule_log("Swap chain creation failed, bailing out");
-    return res;
-  }
+    g_device = pDevice;
+    ((ID3D11Device *) pDevice)->GetImmediateContext((ID3D11DeviceContext **) &g_device_context);
 
-  capsule_log("Swap chain creation succeeded, swapChain = %p", *ppSwapChain);
-  IDXGISwapChain *swapChain = (IDXGISwapChain *) *ppSwapChain;
+    if (FAILED(res)) {
+      capsule_log("Swap chain creation failed, bailing out");
+      return res;
+    }
 
-  // Present
-  LPVOID Present_addr = capsule_get_Present_address((void *) swapChain);
+    capsule_log("Swap chain creation succeeded, swapChain = %p", *ppSwapChain);
+    IDXGISwapChain *swapChain = (IDXGISwapChain *) *ppSwapChain;
 
-  err = cHookMgr.Hook(
-    &Present_hookId,
-    (LPVOID *) &Present_real,
-    Present_addr,
-    Present_hook,
-    0
-  );
-  if (err != ERROR_SUCCESS) {
-    capsule_log("Hooking Present derped with error %d (%x)", err, err);
-  } else {
-    capsule_log("Installed Present hook");
+    // Present
+    LPVOID Present_addr = capsule_get_Present_address((void *) swapChain);
+
+    err = cHookMgr.Hook(
+      &Present_hookId,
+      (LPVOID *) &Present_real,
+      Present_addr,
+      Present_hook,
+      0
+    );
+    if (err != ERROR_SUCCESS) {
+      capsule_log("Hooking Present derped with error %d (%x)", err, err);
+    } else {
+      capsule_log("Installed Present hook");
+    }
   }
 
   return res;
@@ -335,7 +335,7 @@ void capsule_install_dxgi_hooks () {
 
   // dxgi
 
-  dxgi = LoadLibrary(L"dxgi.dll");
+  HMODULE dxgi = LoadLibrary(L"dxgi.dll");
   if (!dxgi) {
     capsule_log("Could not load dxgi.dll, disabling D3D10/11 capture");
     return;

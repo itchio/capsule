@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <capsule/constants.h>
+
 #if defined(_WIN32)
 #define CAPSULERUN_WINDOWS
 
@@ -22,14 +24,10 @@
 
 int capsulerun_main (int argc, char **argv);
 
-// TODO: keep in sync with capsule.h or better yet, share a header file
-#define CAPSULE_VIDEO_FORMAT_RGBA 40069
-#define CAPSULE_VIDEO_FORMAT_BGRA 40070
-
 typedef struct video_format_s {
   int width;
   int height;
-  int format;
+  capsule_pix_fmt_t format;
   int vflip;
 } video_format_t;
 

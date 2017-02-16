@@ -1,6 +1,8 @@
 
 #pragma once
 
+#include <capsule/constants.h>
+
 #include <stdio.h>
 #include <stdint.h>
 
@@ -91,10 +93,6 @@ void CAPSULE_STDCALL capsule_write_video_frame (char *frameData, size_t frameDat
 // OpenGL-specific
 void CAPSULE_STDCALL capsule_capture_frame (int width, int height);
 
-// TODO: keep in sync with capsulerun.h or better yet, share a header file
-#define CAPSULE_VIDEO_FORMAT_RGBA 40069
-#define CAPSULE_VIDEO_FORMAT_BGRA 40070
-
 void* glXGetProcAddressARB (const char*);
 void glXSwapBuffers (void *a, void *b);
 int glXQueryExtension (void *a, void *b, void *c);
@@ -112,8 +110,4 @@ int glXQueryExtension (void *a, void *b, void *c);
 #include <windows.h>
 
 extern CNktHookLib cHookMgr;
-
-void* capsule_get_CreateSwapChain_address(void *);
-void* capsule_get_CreateSwapChainForHwnd_address(void *);
-void* capsule_get_Present_address(void *);
 #endif // CAPSULE_WINDOWS

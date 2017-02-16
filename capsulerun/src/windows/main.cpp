@@ -40,7 +40,7 @@ int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
     printf("Could not read format\n");
     return 1;
   }
-  vfmt->format = (int) num;
+  vfmt->format = (capsule_pix_fmt_t) num;
 
   success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
   if (!success || bytes_read < sizeof(int64_t)) {

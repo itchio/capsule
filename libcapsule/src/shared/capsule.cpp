@@ -84,9 +84,6 @@ void CAPSULE_STDCALL ensure_own_opengl() {
 #include <windows.h>
 #include <NktHookLib.h>
 
-#include "../windows/graphics-hooks-info.h"
-#include "../windows/get-graphics-offsets/get-graphics-offsets.h"
-
 typedef void (CAPSULE_STDCALL *glSwapBuffersType)(void*);
 glSwapBuffersType _glSwapBuffers;
 glSwapBuffersType fnSwapBuffers;
@@ -366,7 +363,7 @@ void CAPSULE_STDCALL capsule_capture_frame (int width, int height) {
   _realglReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, frameData);
 
   if (first_frame) {
-    capsule_write_video_format(width, height, CAPSULE_VIDEO_FORMAT_BGRA, 1 /* vflip */);
+    capsule_write_video_format(width, height, CAPSULE_PIX_FMT_BGRA, 1 /* vflip */);
     capsule_write_video_timestamp((int64_t) 0);
     first_frame = 0;
     first_ts = chrono::steady_clock::now();

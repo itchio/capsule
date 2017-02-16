@@ -7,10 +7,11 @@ endif()
 
 set(capsulerun_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(capsulerun_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
 set(capsulerun_INCLUDE_DIRS SYSTEM)
 
-include_directories(${capsulerun_INCLUDE_DIRS} ${capsulerun_INCLUDE_DIR})
+set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/include)
+
+include_directories(${capsulerun_INCLUDE_DIRS} ${capsulerun_INCLUDE_DIR} ${libcapsule_INCLUDE_DIR})
 
 set(capsulerun_SRC
 ${capsulerun_SOURCE_DIR}/shared/main.cpp)

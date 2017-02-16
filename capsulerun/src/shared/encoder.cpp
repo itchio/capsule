@@ -218,10 +218,10 @@ void encoder_run(encoder_params_t *params) {
 
   AVPixelFormat vpix_fmt;
   switch (vfmt_in.format) {
-    case CAPSULE_VIDEO_FORMAT_RGBA:
+    case CAPSULE_PIX_FMT_RGBA:
       vpix_fmt = AV_PIX_FMT_RGBA;
       break;
-    case CAPSULE_VIDEO_FORMAT_BGRA:
+    case CAPSULE_PIX_FMT_BGRA:
       vpix_fmt = AV_PIX_FMT_BGRA;
       break;
     default:
