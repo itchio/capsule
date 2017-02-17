@@ -79,7 +79,7 @@ static bool create_d3d11_stage_surface(ID3D11Texture2D **tex) {
 
   hr = data.device->CreateTexture2D(&desc, nullptr, tex);
   if (FAILED(hr)) {
-    capsule_log("create_d3d11_stage_surface: failed to create texture (%d)", hr);
+    capsule_log("create_d3d11_stage_surface: failed to create texture (%x)", hr);
     return false;
   }
 
@@ -97,13 +97,15 @@ static bool create_d3d11_tex(uint32_t cx, uint32_t cy, ID3D11Texture2D **tex) {
   desc.Height                               = cy;
   desc.MipLevels                            = 1;
   desc.ArraySize                            = 1;
+  desc.BindFlags                            = 0;
   desc.Format                               = data.format;
   desc.SampleDesc.Count                     = 1;
   desc.Usage                                = D3D11_USAGE_DEFAULT;
+  desc.MiscFlags                            = 0;
 
   hr = data.device->CreateTexture2D(&desc, nullptr, tex);
   if (FAILED(hr)) {
-    capsule_log("create_d3d11_tex: failed to create texture");
+    capsule_log("create_d3d11_tex: failed to create texture (%x)", hr);
     return false;
   }
 
@@ -131,7 +133,7 @@ static bool d3d11_shmem_init_buffers(size_t idx) {
       D3D11_MAP_READ, 0, &map);
 
     if (FAILED(hr)) {
-      capsule_log("d3d11_shmem_init_buffers: failed to get pitch (%d)", hr);
+      capsule_log("d3d11_shmem_init_buffers: failed to get pitch (%x)", hr);
       return false;
     }
 
@@ -161,13 +163,15 @@ static bool d3d11_shmem_init(HWND window) {
 }
 
 static void d3d11_init(IDXGISwapChain *swap) {
+  capsule_log("d3d11_init");
+
   bool success = true;
   HWND window;
   HRESULT hr;
 
   hr = swap->GetDevice(__uuidof(ID3D11Device), (void**)&data.device);
 	if (FAILED(hr)) {
-		capsule_log("d3d11_init: failed to get device from swap", hr);
+		capsule_log("d3d11_init: failed to get device from swap (%x)", hr);
 		return;
 	}
   data.device->Release();
