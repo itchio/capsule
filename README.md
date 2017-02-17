@@ -113,7 +113,7 @@ calls to them so that it may capture video and audio frames.
     * [ ] capsulerun relays stdout/stderr
     * [ ] capsulerun relays exit code
     * [x] Hooks various libraries via Deviare-InProc
-      * [ ] capsulerun picks correct library architecture to inject
+      * [*] capsulerun picks correct library architecture to inject
     * [x] Communicate by named pipe
     * [ ] Shared memory
   * Control
@@ -180,36 +180,48 @@ enough to do the right thing.
 
 ### Building on Windows
 
-MSVC is needed, 2015 is what we're using internally.
+Important notes:
+
+Microsoft Visual C++ (MSVC) is needed, 2015 is what we're using internally.
+
+**You probably won't get anywhere with an MSVC older than 2015.**
 
 CMake shipped with msys2 won't cut it, you need a Windows release of CMake (which
-includes the Visual Studio project generators): ,https://cmake.org/>
+includes the Visual Studio project generators): <https://cmake.org/>
 
-```bash
-mkdir build64
-cd build64
-/c/Program\ Files/CMake/bin/cmake.exe -G "Visual Studio 14 2015 Win64" ..
-```
+Two batch files are included for convenience, although they assume:
 
-Then, in `Visual C++ 2015 Native Build Tools Command Prompt`
+  * You're running 64-bit Windows
+  * CMake lives in `C:\Program Files\CMake\bin\cmake.exe`
+  * You want the Debug build
+
+If so, you can simply do, in `Visual C++ 2015 Native Build Tools Command Prompt`:
 
 ```batch
-cd C:\path\to\build64
-msbuild ALL_BUILD.vxcproj
+scripts\configure.cmd
 ```
 
-(Drop the ` Win64` to build for 32-bit)
+... once, to run CMake - this generates the `build32` and `build64` folders
 
-Note: on Windows, binaries end up in `Debug` or `Release` subfolders (pass `/p:Configuration=Release` to
-msbuild to pick one). `-DCMAKE_BUILD_TYPE` is ignored, so don't bother.
+To compile, run:
+
+```batch
+scripts\build.cmd
+```
+
+This builds both the 32 and 64-bit builds, and creates a `build` folder with
+the 64-bit `capsulerun.exe`, and both DLLs.
 
 capsulerun usage:
 
 ```
-C:\path\to\build64\capsulerun\Debug\capsulerun.exe C:\path\to\build64\libcapsule\Debug some_game.exe
+C:\path\to\capsule\build\capsulerun.exe C:\path\to\capsule\build some_game.exe
 ```
 
 Note that at the time of this writing (git blame is your friend), capsulerun doesn't yet relay arguments to the child.
+
+If the `scripts\configure.cmd` / `scripts\build.cmd` method fails for you, read them
+to figure out the proper invocations for your system.
 
 ## License
 

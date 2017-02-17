@@ -54,7 +54,12 @@ function ci_compile_windows () {
   ]
 
   $.cmd(['rmdir', '/s', '/q', 'compile-artifacts'])
+
   $.cmd(['mkdir', 'compile-artifacts'])
+  for (const spec of specs) {
+    $.cmd(['mkdir', 'compile-artifacts\\' + spec.osarch])
+  }
+
   for (const spec of specs) {
     $.cmd(['rmdir', '/s', '/q', spec.dir])
     $.cmd(['mkdir', spec.dir])
@@ -62,13 +67,12 @@ function ci_compile_windows () {
       $($.cmd(['cmake', '-G', spec.generator, '..']))
       $($.cmd(['msbuild', 'capsule.sln', '/p:Configuration=Release']))
     })
-    $.cmd(['mkdir', 'compile-artifacts\\' + spec.osarch])
 
-    $.cmd(['mkdir', 'compile-artifacts\\' + spec.osarch + '\\libcapsule'])
-    $($.cmd(['copy', '/y', spec.dir + '\\libcapsule\\Release\\capsule.dll', 'compile-artifacts\\' + spec.osarch + '\\libcapsule\\capsule.dll']))
-
-    $.cmd(['mkdir', 'compile-artifacts\\' + spec.osarch + '\\capsulerun'])
-    $($.cmd(['copy', '/y', spec.dir + '\\capsulerun\\Release\\capsulerun.exe', 'compile-artifacts\\' + spec.osarch + '\\capsulerun\\capsulerun.exe']))
+    const libname = (spec.osarch === 'windows-386' ? 'capsule32.dll' : 'capsule64.dll')
+    for (const destSpec of specs) {
+      $($.cmd(['xcopy', '/y', '/i', spec.dir + '\\libcapsule\\Release\\capsule.dll', 'compile-artifacts\\' + destSpec.osarch + '\\' + libname]))
+    }
+    $($.cmd(['xcopy', '/y', '/i', spec.dir + '\\capsulerun\\Release\\*', 'compile-artifacts\\' + spec.osarch + '\\capsulerun.exe']))
   }
 }
 

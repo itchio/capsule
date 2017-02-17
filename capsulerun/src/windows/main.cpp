@@ -81,6 +81,13 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
 }
 
 static void wait_for_child (HANDLE hProcess) {
+  LONG platform = NktHookLibHelpers::GetProcessPlatform(hProcess);
+  if (platform == NKTHOOKLIB_ProcessPlatformX86) {
+    capsule_log("Child is X86 (32-bit) !");
+  } else if (platform == NKTHOOKLIB_ProcessPlatformX64) {
+    capsule_log("Child is X64 (64-bit) !");
+  }
+
   capsule_log("Waiting on child...");
   WaitForSingleObject(hProcess, INFINITE);
   capsule_log("Done waiting on child");
@@ -101,8 +108,15 @@ int capsulerun_main (int argc, char **argv) {
   char *libcapsule_dir = argv[1];
   char *executable_path = argv[2];
 
+  // From Deviare-InProc's doc: 
+  //   If "szDllNameW" string ends with 'x86.dll', 'x64.dll', '32.dll', '64.dll', the dll name will be adjusted
+  //   in order to match the process platform. I.e.: "mydll_x86.dll" will become "mydll_x64.dll" on 64-bit processes.
+  // hence the blanket 'capsule32.dll' here
+  // N.B: even if the .exe we launch appears to be PE32, it might actually end up being a 64-bit process.
+  // Don't ask me, I don't know either.
+  const char *libcapsule_name = "capsule32.dll";
   char libcapsule_path[CAPSULE_MAX_PATH_LENGTH];
-  const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s\\capsule.dll", libcapsule_dir);
+  const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s\\%s", libcapsule_dir, libcapsule_name);
 
   if (libcapsule_path_length > CAPSULE_MAX_PATH_LENGTH) {
     capsule_log("libcapsule path too long (%d > %d)", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
