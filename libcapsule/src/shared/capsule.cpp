@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
-#include <string.h>
 
 #ifndef CAPSULE_WINDOWS
 void __attribute__((constructor)) capsule_load() {

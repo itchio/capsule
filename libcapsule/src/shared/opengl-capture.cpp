@@ -1,6 +1,9 @@
 
 #include <capsule.h>
 
+// strstr, strcmp
+#include <string.h>
+
 LIBHANDLE gl_handle;
 
 typedef void(CAPSULE_STDCALL *glReadPixelsType)(int, int, int, int, int, int, void*);
