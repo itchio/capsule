@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
 #include <sys/types.h>
