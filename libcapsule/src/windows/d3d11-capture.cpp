@@ -203,7 +203,8 @@ static inline void d3d11_shmem_capture (ID3D11Resource* backbuffer) {
   auto timestamp = capsule_frame_timestamp();
 
   d3d11_copy_texture(data.textures[data.cur_tex], backbuffer);
-  d3d11_copy_texture(data.copy_surfaces[data.cur_tex], data.textures[data.cur_tex]);
+  data.context->CopyResource(data.copy_surfaces[data.cur_tex], data.textures[data.cur_tex]);
+  // d3d11_copy_texture(data.copy_surfaces[data.cur_tex], data.textures[data.cur_tex]);
 
   D3D11_MAPPED_SUBRESOURCE map = {};
   hr = data.context->Map(data.copy_surfaces[data.cur_tex], 0, D3D11_MAP_READ, 0, &map);
