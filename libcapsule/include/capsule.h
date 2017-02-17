@@ -1,33 +1,13 @@
 
 #pragma once
 
-#include <capsule/constants.h>
+#include "capsule/platform.h"
+#include "capsule/constants.h"
+#include "capsule/logging.h"
+#include "capsule/dynlib.h"
 
 #include <stdio.h>
 #include <stdint.h>
-
-#if defined(_WIN32)
-#define DEFAULT_OPENGL "OPENGL32.DLL"
-#define CAPSULE_WINDOWS
-
-#elif defined(__APPLE__)
-#define DEFAULT_OPENGL "/System/Library/Frameworks/OpenGL.framework/Libraries/libGL.dylib"
-#define CAPSULE_OSX
-
-#elif defined(__linux__) || defined(__unix__)
-#define DEFAULT_OPENGL "libGL.so.1"
-#define CAPSULE_LINUX
-
-#else
-#error Unsupported platform
-#endif
-
-#if defined(CAPSULE_WINDOWS)
-#define CAPSULE_STDCALL __stdcall
-#define CAPSULE_STDCALL __stdcall
-#else
-#define CAPSULE_STDCALL
-#endif
 
 #if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
 #include <sys/types.h>
@@ -72,32 +52,32 @@ extern FILE *logfile;
 extern "C" {
 #endif
 
-FILE *capsule_open_log ();
+FILE *capsule_open_log();
 
 #ifdef CAPSULE_WINDOWS
-wchar_t *capsule_log_path ();
+wchar_t *capsule_log_path();
 #else
-char *capsule_log_path ();
+char *capsule_log_path();
 #endif // CAPSULE_WINDOWS
 
 #ifdef CAPSULE_WINDOWS
-CAPSULE_DLL void capsule_install_windows_hooks ();
-void capsule_install_opengl_hooks ();
-void capsule_install_dxgi_hooks ();
+CAPSULE_DLL void capsule_install_windows_hooks();
+void capsule_install_opengl_hooks();
+void capsule_install_dxgi_hooks();
 #endif // CAPSULE_WINDOWS
 
-bool CAPSULE_STDCALL capsule_capture_ready ();
-int64_t CAPSULE_STDCALL capsule_frame_timestamp ();
+bool CAPSULE_STDCALL capsule_capture_ready();
+int64_t CAPSULE_STDCALL capsule_frame_timestamp();
 
-void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int format, int vflip);
-void CAPSULE_STDCALL capsule_write_video_frame (int64_t timestamp, char *frameData, size_t frameDataSize);
+void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, int vflip, int pitch);
+void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frameData, size_t frameDataSize);
 
 // OpenGL-specific
-void CAPSULE_STDCALL capsule_capture_frame (int width, int height);
+void CAPSULE_STDCALL opengl_capture(int width, int height);
 
-void* glXGetProcAddressARB (const char*);
-void glXSwapBuffers (void *a, void *b);
-int glXQueryExtension (void *a, void *b, void *c);
+void* glXGetProcAddressARB(const char*);
+void glXSwapBuffers(void *a, void *b);
+int glXQueryExtension(void *a, void *b, void *c);
 
 #ifdef __cplusplus
 }
@@ -113,3 +93,11 @@ int glXQueryExtension (void *a, void *b, void *c);
 
 extern CNktHookLib cHookMgr;
 #endif // CAPSULE_WINDOWS
+
+static void CAPSULE_STDCALL assert(const char *msg, int cond) {
+  if (cond) {
+    return;
+  }
+  capsule_log("Assertion failed: %s", msg);
+  exit(1);
+}

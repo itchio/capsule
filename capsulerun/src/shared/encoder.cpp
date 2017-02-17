@@ -36,17 +36,19 @@ void encoder_run(encoder_params_t *params) {
   int64_t width = vfmt_in.width;
   int64_t height = vfmt_in.height;
 
-  printf("video resolution: %dx%d, format %d, vflip %d\n", (int) width, (int) height, (int) vfmt_in.format, (int) vfmt_in.vflip);
-
   int components = 4;
-  const int buffer_size = width * height * components;
+  int linesize = vfmt_in.pitch;
+
+  printf("video resolution: %dx%d, format %d, vflip %d, pitch %d (%d computed)\n",
+    (int) width, (int) height, (int) vfmt_in.format, (int) vfmt_in.vflip,
+    (int) linesize, (int) (width * components));
+
+  const int buffer_size = height * linesize;
   uint8_t *buffer = (uint8_t*) malloc(buffer_size);
   if (!buffer) {
     printf("could not allocate buffer\n");
     exit(1);
   }
-
-  int linesize = width * components;
 
   // receive audio format info
   audio_format_t afmt_in;

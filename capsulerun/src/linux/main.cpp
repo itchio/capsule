@@ -35,6 +35,7 @@ int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->height = (int) num;
   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->format = (int) num;
   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->vflip = (int) num;
+  fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->pitch = (int) num;
   return 0;
 }
 

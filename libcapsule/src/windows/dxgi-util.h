@@ -8,6 +8,7 @@
 
 #include <d3d11_1.h>
 #include <dxgi1_2.h>
+#include <dxgi1_3.h>
 #include <D3Dcompiler.h>
 #include <d3d9.h>
 #include <DirectXMath.h>
@@ -18,7 +19,7 @@
 // DEFINE_GUID(IID_IDXGIFactory,0x7b7166ec,0x21c7,0x44ae,0xb2,0x1a,0xc9,0xae,0x32,0x1a,0xe3,0x69);
 // 
 
-static std::string NameFromIID(IID id) {
+static std::string name_from_iid(IID id) {
 	// Adding every MIDL_INTERFACE from d3d11_1.h to make this reporting complete.
 	// Doesn't seem useful to do every object from d3d11.h itself.
 
@@ -147,4 +148,128 @@ static inline DXGI_FORMAT fix_dxgi_format(DXGI_FORMAT format) {
 	}
 
 	return format;
+}
+
+static std::string name_from_dxgi_format(DXGI_FORMAT format) {
+  if (format == DXGI_FORMAT_UNKNOWN                     ) return "UNKNOWN";
+  if (format == DXGI_FORMAT_R32G32B32A32_TYPELESS       ) return "R32G32B32A32_TYPELESS";
+  if (format == DXGI_FORMAT_R32G32B32A32_FLOAT          ) return "R32G32B32A32_FLOAT";
+  if (format == DXGI_FORMAT_R32G32B32A32_UINT           ) return "R32G32B32A32_UINT";
+  if (format == DXGI_FORMAT_R32G32B32A32_SINT           ) return "R32G32B32A32_SINT";
+  if (format == DXGI_FORMAT_R32G32B32_TYPELESS          ) return "R32G32B32_TYPELESS";
+  if (format == DXGI_FORMAT_R32G32B32_FLOAT             ) return "R32G32B32_FLOAT";
+  if (format == DXGI_FORMAT_R32G32B32_UINT              ) return "R32G32B32_UINT";
+  if (format == DXGI_FORMAT_R32G32B32_SINT              ) return "R32G32B32_SINT";
+  if (format == DXGI_FORMAT_R16G16B16A16_TYPELESS       ) return "R16G16B16A16_TYPELESS";
+  if (format == DXGI_FORMAT_R16G16B16A16_FLOAT          ) return "R16G16B16A16_FLOAT";
+  if (format == DXGI_FORMAT_R16G16B16A16_UNORM          ) return "R16G16B16A16_UNORM";
+  if (format == DXGI_FORMAT_R16G16B16A16_UINT           ) return "R16G16B16A16_UINT";
+  if (format == DXGI_FORMAT_R16G16B16A16_SNORM          ) return "R16G16B16A16_SNORM";
+  if (format == DXGI_FORMAT_R16G16B16A16_SINT           ) return "R16G16B16A16_SINT";
+  if (format == DXGI_FORMAT_R32G32_TYPELESS             ) return "R32G32_TYPELESS";
+  if (format == DXGI_FORMAT_R32G32_FLOAT                ) return "R32G32_FLOAT";
+  if (format == DXGI_FORMAT_R32G32_UINT                 ) return "R32G32_UINT";
+  if (format == DXGI_FORMAT_R32G32_SINT                 ) return "R32G32_SINT";
+  if (format == DXGI_FORMAT_R32G8X24_TYPELESS           ) return "R32G8X24_TYPELESS";
+  if (format == DXGI_FORMAT_D32_FLOAT_S8X24_UINT        ) return "D32_FLOAT_S8X24_UINT";
+  if (format == DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS    ) return "R32_FLOAT_X8X24_TYPELESS";
+  if (format == DXGI_FORMAT_X32_TYPELESS_G8X24_UINT     ) return "X32_TYPELESS_G8X24_UINT";
+  if (format == DXGI_FORMAT_R10G10B10A2_TYPELESS        ) return "R10G10B10A2_TYPELESS";
+  if (format == DXGI_FORMAT_R10G10B10A2_UNORM           ) return "R10G10B10A2_UNORM";
+  if (format == DXGI_FORMAT_R10G10B10A2_UINT            ) return "R10G10B10A2_UINT";
+  if (format == DXGI_FORMAT_R11G11B10_FLOAT             ) return "R11G11B10_FLOAT";
+  if (format == DXGI_FORMAT_R8G8B8A8_TYPELESS           ) return "R8G8B8A8_TYPELESS";
+  if (format == DXGI_FORMAT_R8G8B8A8_UNORM              ) return "R8G8B8A8_UNORM";
+  if (format == DXGI_FORMAT_R8G8B8A8_UNORM_SRGB         ) return "R8G8B8A8_UNORM_SRGB";
+  if (format == DXGI_FORMAT_R8G8B8A8_UINT               ) return "R8G8B8A8_UINT";
+  if (format == DXGI_FORMAT_R8G8B8A8_SNORM              ) return "R8G8B8A8_SNORM";
+  if (format == DXGI_FORMAT_R8G8B8A8_SINT               ) return "R8G8B8A8_SINT";
+  if (format == DXGI_FORMAT_R16G16_TYPELESS             ) return "R16G16_TYPELESS";
+  if (format == DXGI_FORMAT_R16G16_FLOAT                ) return "R16G16_FLOAT";
+  if (format == DXGI_FORMAT_R16G16_UNORM                ) return "R16G16_UNORM";
+  if (format == DXGI_FORMAT_R16G16_UINT                 ) return "R16G16_UINT";
+  if (format == DXGI_FORMAT_R16G16_SNORM                ) return "R16G16_SNORM";
+  if (format == DXGI_FORMAT_R16G16_SINT                 ) return "R16G16_SINT";
+  if (format == DXGI_FORMAT_R32_TYPELESS                ) return "R32_TYPELESS";
+  if (format == DXGI_FORMAT_D32_FLOAT                   ) return "D32_FLOAT";
+  if (format == DXGI_FORMAT_R32_FLOAT                   ) return "R32_FLOAT";
+  if (format == DXGI_FORMAT_R32_UINT                    ) return "R32_UINT";
+  if (format == DXGI_FORMAT_R32_SINT                    ) return "R32_SINT";
+  if (format == DXGI_FORMAT_R24G8_TYPELESS              ) return "R24G8_TYPELESS";
+  if (format == DXGI_FORMAT_D24_UNORM_S8_UINT           ) return "D24_UNORM_S8_UINT";
+  if (format == DXGI_FORMAT_R24_UNORM_X8_TYPELESS       ) return "R24_UNORM_X8_TYPELESS";
+  if (format == DXGI_FORMAT_X24_TYPELESS_G8_UINT        ) return "X24_TYPELESS_G8_UINT";
+  if (format == DXGI_FORMAT_R8G8_TYPELESS               ) return "R8G8_TYPELESS";
+  if (format == DXGI_FORMAT_R8G8_UNORM                  ) return "R8G8_UNORM";
+  if (format == DXGI_FORMAT_R8G8_UINT                   ) return "R8G8_UINT";
+  if (format == DXGI_FORMAT_R8G8_SNORM                  ) return "R8G8_SNORM";
+  if (format == DXGI_FORMAT_R8G8_SINT                   ) return "R8G8_SINT";
+  if (format == DXGI_FORMAT_R16_TYPELESS                ) return "R16_TYPELESS";
+  if (format == DXGI_FORMAT_R16_FLOAT                   ) return "R16_FLOAT";
+  if (format == DXGI_FORMAT_D16_UNORM                   ) return "D16_UNORM";
+  if (format == DXGI_FORMAT_R16_UNORM                   ) return "R16_UNORM";
+  if (format == DXGI_FORMAT_R16_UINT                    ) return "R16_UINT";
+  if (format == DXGI_FORMAT_R16_SNORM                   ) return "R16_SNORM";
+  if (format == DXGI_FORMAT_R16_SINT                    ) return "R16_SINT";
+  if (format == DXGI_FORMAT_R8_TYPELESS                 ) return "R8_TYPELESS";
+  if (format == DXGI_FORMAT_R8_UNORM                    ) return "R8_UNORM";
+  if (format == DXGI_FORMAT_R8_UINT                     ) return "R8_UINT";
+  if (format == DXGI_FORMAT_R8_SNORM                    ) return "R8_SNORM";
+  if (format == DXGI_FORMAT_R8_SINT                     ) return "R8_SINT";
+  if (format == DXGI_FORMAT_A8_UNORM                    ) return "A8_UNORM";
+  if (format == DXGI_FORMAT_R1_UNORM                    ) return "R1_UNORM";
+  if (format == DXGI_FORMAT_R9G9B9E5_SHAREDEXP          ) return "R9G9B9E5_SHAREDEXP";
+  if (format == DXGI_FORMAT_R8G8_B8G8_UNORM             ) return "R8G8_B8G8_UNORM";
+  if (format == DXGI_FORMAT_G8R8_G8B8_UNORM             ) return "G8R8_G8B8_UNORM";
+  if (format == DXGI_FORMAT_BC1_TYPELESS                ) return "BC1_TYPELESS";
+  if (format == DXGI_FORMAT_BC1_UNORM                   ) return "BC1_UNORM";
+  if (format == DXGI_FORMAT_BC1_UNORM_SRGB              ) return "BC1_UNORM_SRGB";
+  if (format == DXGI_FORMAT_BC2_TYPELESS                ) return "BC2_TYPELESS";
+  if (format == DXGI_FORMAT_BC2_UNORM                   ) return "BC2_UNORM";
+  if (format == DXGI_FORMAT_BC2_UNORM_SRGB              ) return "BC2_UNORM_SRGB";
+  if (format == DXGI_FORMAT_BC3_TYPELESS                ) return "BC3_TYPELESS";
+  if (format == DXGI_FORMAT_BC3_UNORM                   ) return "BC3_UNORM";
+  if (format == DXGI_FORMAT_BC3_UNORM_SRGB              ) return "BC3_UNORM_SRGB";
+  if (format == DXGI_FORMAT_BC4_TYPELESS                ) return "BC4_TYPELESS";
+  if (format == DXGI_FORMAT_BC4_UNORM                   ) return "BC4_UNORM";
+  if (format == DXGI_FORMAT_BC4_SNORM                   ) return "FORMAT_BC4_SNORM";
+  if (format == DXGI_FORMAT_BC5_TYPELESS                ) return "BC5_TYPELESS";
+  if (format == DXGI_FORMAT_BC5_UNORM                   ) return "BC5_UNORM";
+  if (format == DXGI_FORMAT_BC5_SNORM                   ) return "BC5_SNORM";
+  if (format == DXGI_FORMAT_B5G6R5_UNORM                ) return "B5G6R5_UNORM";
+  if (format == DXGI_FORMAT_B5G5R5A1_UNORM              ) return "B5G5R5A1_UNORM";
+  if (format == DXGI_FORMAT_B8G8R8A8_UNORM              ) return "B8G8R8A8_UNORM";
+  if (format == DXGI_FORMAT_B8G8R8X8_UNORM              ) return "B8G8R8X8_UNORM";
+  if (format == DXGI_FORMAT_R10G10B10_XR_BIAS_A2_UNORM  ) return "R10G10B10_XR_BIAS_A2_UNORM";
+  if (format == DXGI_FORMAT_B8G8R8A8_TYPELESS           ) return "B8G8R8A8_TYPELESS";
+  if (format == DXGI_FORMAT_B8G8R8A8_UNORM_SRGB         ) return "B8G8R8A8_UNORM_SRGB";
+  if (format == DXGI_FORMAT_B8G8R8X8_TYPELESS           ) return "B8G8R8X8_TYPELESS";
+  if (format == DXGI_FORMAT_B8G8R8X8_UNORM_SRGB         ) return "B8G8R8X8_UNORM_SRGB";
+  if (format == DXGI_FORMAT_BC6H_TYPELESS               ) return "BC6H_TYPELESS";
+  if (format == DXGI_FORMAT_BC6H_UF16                   ) return "BC6H_UF16";
+  if (format == DXGI_FORMAT_BC6H_SF16                   ) return "BC6H_SF16";
+  if (format == DXGI_FORMAT_BC7_TYPELESS                ) return "BC7_TYPELESS";
+  if (format == DXGI_FORMAT_BC7_UNORM                   ) return "BC7_UNORM";
+  if (format == DXGI_FORMAT_BC7_UNORM_SRGB              ) return "BC7_UNORM_SRGB";
+  if (format == DXGI_FORMAT_AYUV                        ) return "AYUV";
+  if (format == DXGI_FORMAT_Y410                        ) return "Y410";
+  if (format == DXGI_FORMAT_Y416                        ) return "Y416";
+  if (format == DXGI_FORMAT_NV12                        ) return "NV12";
+  if (format == DXGI_FORMAT_P010                        ) return "P010";
+  if (format == DXGI_FORMAT_P016                        ) return "P016";
+  if (format == DXGI_FORMAT_420_OPAQUE                  ) return "420_OPAQUE";
+  if (format == DXGI_FORMAT_YUY2                        ) return "YUY2";
+  if (format == DXGI_FORMAT_Y210                        ) return "Y210";
+  if (format == DXGI_FORMAT_Y216                        ) return "Y216";
+  if (format == DXGI_FORMAT_NV11                        ) return "NV11";
+  if (format == DXGI_FORMAT_AI44                        ) return "AI44";
+  if (format == DXGI_FORMAT_IA44                        ) return "IA44";
+  if (format == DXGI_FORMAT_P8                          ) return "P8";
+  if (format == DXGI_FORMAT_A8P8                        ) return "A8P8";
+  if (format == DXGI_FORMAT_B4G4R4A4_UNORM              ) return "B4G4R4A4_UNORM";
+  // if (format == DXGI_FORMAT_P208                        ) return "P208";
+  // if (format == DXGI_FORMAT_V208                        ) return "V208";
+  // if (format == DXGI_FORMAT_V408                        ) return "V408";
+  if (format == DXGI_FORMAT_FORCE_UINT                  ) return "FORCE_UINT";
+  return "<unrecognized format>";
 }

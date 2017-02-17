@@ -49,6 +49,13 @@ int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
   }
   vfmt->vflip = (int) num;
 
+  success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
+  if (!success || bytes_read < sizeof(int64_t)) {
+    printf("Could not read pitch\n");
+    return 1;
+  }
+  vfmt->pitch = (int) num;
+
   return 0;
 }
 
