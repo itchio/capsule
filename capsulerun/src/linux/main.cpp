@@ -33,7 +33,7 @@ int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
   int64_t num;
   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->width = (int) num;
   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->height = (int) num;
-  fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->format = (int) num;
+  fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->format = (capsule_pix_fmt_t) num;
   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->vflip = (int) num;
   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->pitch = (int) num;
   return 0;
