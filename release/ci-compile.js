@@ -70,9 +70,10 @@ function ci_compile_windows () {
 
     const libname = (spec.osarch === 'windows-386' ? 'capsule32.dll' : 'capsule64.dll')
     for (const destSpec of specs) {
-      $($.cmd(['xcopy', '/y', '/i', spec.dir + '\\libcapsule\\Release\\capsule.dll', 'compile-artifacts\\' + destSpec.osarch + '\\' + libname]))
+      $($.cmd(['copy', '/y', spec.dir + '\\libcapsule\\Release\\capsule.dll', 'compile-artifacts\\' + destSpec.osarch + '\\' + libname]))
     }
-    $($.cmd(['xcopy', '/y', '/i', spec.dir + '\\capsulerun\\Release\\*', 'compile-artifacts\\' + spec.osarch + '\\capsulerun.exe']))
+    $($.cmd(['xcopy', '/y', '/i', spec.dir + '\\capsulerun\\Release\\*.dll', 'compile-artifacts\\' + spec.osarch]))
+    $($.cmd(['xcopy', '/y', '/i', spec.dir + '\\capsulerun\\Release\\*.exe', 'compile-artifacts\\' + spec.osarch]))
   }
 }
 

@@ -13,10 +13,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <time.h>
-#else
+#else // CAPSULE_LINUX or CAPSULE_OSX
 #define getpid(a) 0
 #define pid_t int
-#endif
+#endif // not CAPSULE_LINUX nor CAPSULE_OSX
 
 #ifdef CAPSULE_LINUX
 int capsule_x11_init();
