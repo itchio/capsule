@@ -21,7 +21,10 @@ add_definitions(-DBUILD_CAPSULE_DLL)
 
 set(libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/shared/capsule.cpp
+    ${libcapsule_SOURCE_DIR}/shared/opengl-capture.cpp
+    ${libcapsule_SOURCE_DIR}/shared/io.cpp
     ${libcapsule_SOURCE_DIR}/shared/timer.cpp
+    ${libcapsule_SOURCE_DIR}/shared/logging.cpp
 )
 
 if(APPLE)
@@ -41,7 +44,7 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   list(APPEND libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/linux/x11.cpp
+    ${libcapsule_SOURCE_DIR}/linux/control-x11.cpp
   )
 endif()
 

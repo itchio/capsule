@@ -29,6 +29,7 @@ typedef struct video_format_s {
   int height;
   capsule_pix_fmt_t format;
   int vflip;
+  int pitch;
 } video_format_t;
 
 typedef int (*receive_video_format_t)(void *private_data, video_format_t *vfmt);

@@ -17,12 +17,6 @@ struct dxgi_swap_data {
 
 static struct dxgi_swap_data data = {};
 
-///////////////////////////////////////////////
-// FIXME: forgive me father this is all temporary I SWEAR
-///////////////////////////////////////////////
-
-#include <chrono>
-
 ///////////////////////////////////////////////////
 // Detect D3D version, set up capture & free.
 // follows libobs's structure
@@ -99,7 +93,7 @@ HRESULT CAPSULE_STDCALL Present_hook (
   // libobs has logic to capture *after* Present (if you want to capture
   // overlays). This isn't in capsule's scope, so we always capture before Present.
 
-  bool capture = (swap == data.swap) && !!data.capture && capsule_capture_ready();
+  bool capture = (swap == data.swap) && !!data.capture;
   if (capture) {
     IUnknown *backbuffer = get_dxgi_backbuffer(data.swap);
     if (!!backbuffer) {
@@ -216,7 +210,7 @@ void install_swapchain_hooks (IDXGIFactory *factory) {
 HRESULT CAPSULE_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
   DWORD err;
 
-  capsule_log("CreateDXGIFactory called with riid: %s", NameFromIID(riid).c_str());
+  capsule_log("CreateDXGIFactory called with riid: %s", name_from_iid(riid).c_str());
   HRESULT res = CreateDXGIFactory_real(riid, ppFactory);
 
   if (SUCCEEDED(res)) {
@@ -239,7 +233,7 @@ SIZE_T CreateDXGIFactory1_hookId;
 HRESULT CAPSULE_STDCALL CreateDXGIFactory1_hook (REFIID riid, void** ppFactory) {
   DWORD err;
 
-  capsule_log("Hooked_CreateDXGIFactory1 called with riid: %s", NameFromIID(riid).c_str());
+  capsule_log("Hooked_CreateDXGIFactory1 called with riid: %s", name_from_iid(riid).c_str());
   HRESULT res = CreateDXGIFactory1_real(riid, ppFactory);
 
   if (SUCCEEDED(res)) {
