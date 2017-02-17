@@ -67,7 +67,7 @@ void encoder_run(encoder_params_t *params);
 // #define CAPSULERUN_PROFILE
 
 #ifdef CAPSULERUN_PROFILE
-#define eprintf(...) { fprintf(stdout, "[capsule-profile] "); fprintf(stdout, __VA_ARGS__); fflush(stdout); }
+#define eprintf(...) { fprintf(stdout, "[capsule-profile] "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); fflush(stdout); }
 #else
 #define eprintf(...)
 #endif
@@ -75,7 +75,9 @@ void encoder_run(encoder_params_t *params);
 #define CAPSULERUN_DEBUG
 
 #ifdef CAPSULERUN_DEBUG
-#define dprintf(...) { fprintf(stdout, "[capsule-debug] "); fprintf(stdout, __VA_ARGS__); fflush(stdout); }
+#define dprintf(...) { fprintf(stdout, "[capsule-debug] "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); fflush(stdout); }
 #else
 #define dprintf(...)
 #endif
+
+#define capsule_log(...) { fprintf(stdout, "[capsule] "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); fflush(stdout); }

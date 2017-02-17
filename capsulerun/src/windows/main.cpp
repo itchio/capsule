@@ -23,28 +23,28 @@ int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
 
   success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
   if (!success || bytes_read < sizeof(int64_t)) {
-    printf("Could not read width\n");
+    capsule_log("Could not read width");
     return 1;
   }
   vfmt->width = (int) num;
 
   success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
   if (!success || bytes_read < sizeof(int64_t)) {
-    printf("Could not read height\n");
+    capsule_log("Could not read height");
     return 1;
   }
   vfmt->height = (int) num;
 
   success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
   if (!success || bytes_read < sizeof(int64_t)) {
-    printf("Could not read format\n");
+    capsule_log("Could not read format");
     return 1;
   }
   vfmt->format = (capsule_pix_fmt_t) num;
 
   success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
   if (!success || bytes_read < sizeof(int64_t)) {
-    printf("Could not read vflip\n");
+    capsule_log("Could not read vflip");
     return 1;
   }
   vfmt->vflip = (int) num;
@@ -59,7 +59,7 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
 
   success = ReadFile(p->pipe_handle, timestamp, sizeof(int64_t), &bytes_read, NULL);
   if (!success || bytes_read < sizeof(int64_t)) {
-    printf("Could not read timestamp\n");
+    capsule_log("Could not read timestamp");
     return 0;
   }
 
@@ -73,11 +73,21 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
   return total_bytes_read;
 }
 
+static void wait_for_child (HANDLE hProcess) {
+  capsule_log("Waiting on child...");
+  WaitForSingleObject(hProcess, INFINITE);
+  capsule_log("Done waiting on child");
+
+  DWORD exitCode;
+  GetExitCodeProcess(hProcess, &exitCode);
+  capsule_log("Exit code = %d (%x)", exitCode, exitCode);
+}
+
 int capsulerun_main (int argc, char **argv) {
-  printf("thanks for flying capsule on Windows\n");
+  capsule_log("thanks for flying capsule on Windows");
 
   if (argc < 3) {
-    printf("usage: capsulerun LIBCAPSULE_DIR EXECUTABLE\n");
+    capsule_log("usage: capsulerun LIBCAPSULE_DIR EXECUTABLE");
     exit(1);
   }
 
@@ -88,7 +98,7 @@ int capsulerun_main (int argc, char **argv) {
   const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s\\capsule.dll", libcapsule_dir);
 
   if (libcapsule_path_length > CAPSULE_MAX_PATH_LENGTH) {
-    printf("libcapsule path too long (%d > %d)\n", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
+    capsule_log("libcapsule path too long (%d > %d)", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
     exit(1);
   }
 
@@ -111,7 +121,7 @@ int capsulerun_main (int argc, char **argv) {
   toWideChar(libcapsule_path, &libcapsule_path_w);
 
   wchar_t *pipe_path = L"\\\\.\\pipe\\capsule_pipe";
-  printf("Creating named pipe %S...\n", pipe_path);
+  capsule_log("Creating named pipe %S...", pipe_path);
 
   HANDLE pipe_handle = CreateNamedPipe(
     pipe_path,
@@ -126,19 +136,19 @@ int capsulerun_main (int argc, char **argv) {
 
   if (!pipe_handle) {
     err = GetLastError();
-    printf("CreateNamedPipe failed, err = %d (%x)\n", err, err);
+    capsule_log("CreateNamedPipe failed, err = %d (%x)", err, err);
   }
 
-  printf("Created named pipe!\n");
+  capsule_log("Created named pipe!");
 
   err = SetEnvironmentVariable(L"CAPSULE_PIPE_PATH", pipe_path);
   if (err == 0) {
-    printf("Could not set pipe path environment variable\n");
+    capsule_log("Could not set pipe path environment variable");
     exit(1);
   }
 
-  printf("Launching %S\n", executable_path_w);
-  printf("Injecting %S\n", libcapsule_path_w);
+  capsule_log("Launching %S", executable_path_w);
+  capsule_log("Injecting %S", libcapsule_path_w);
 
   err = NktHookLibHelpers::CreateProcessWithDllW(
     executable_path_w, // applicationName
@@ -157,12 +167,14 @@ int capsulerun_main (int argc, char **argv) {
   );
 
   if (err == ERROR_SUCCESS) {
-    printf("Process #%lu successfully launched with dll injected!\n", pi.dwProcessId);
+    capsule_log("Process #%lu successfully launched with dll injected!", pi.dwProcessId);
 
-    printf("Connecting named pipe...\n");
+    thread child_thread(wait_for_child, pi.hProcess);
+
+    capsule_log("Connecting named pipe...");
     BOOL success = ConnectNamedPipe(pipe_handle, NULL);
     if (!success) {
-      printf("Could not connect to named pipe\n");
+      capsule_log("Could not connect to named pipe");
       exit(1);
     }
 
@@ -182,21 +194,13 @@ int capsulerun_main (int argc, char **argv) {
     encoder_params.receive_audio_format = (receive_audio_format_t) wasapi_receive_audio_format;
     encoder_params.receive_audio_frames = (receive_audio_frames_t) wasapi_receive_audio_frames;
 
-    printf("Starting encoder thread...\n");
+    capsule_log("Starting encoder thread...");
     thread encoder_thread(encoder_run, &encoder_params);
 
-    printf("Waiting on child...\n");
-    WaitForSingleObject(pi.hProcess, INFINITE);
-    printf("Done waiting on child\n");
-
-    printf("Waiting on encoder thread...\n");
+    capsule_log("Waiting on encoder thread...");
     encoder_thread.join();
-
-    DWORD exitCode;
-    GetExitCodeProcess(pi.hProcess, &exitCode);
-    printf("Exit code = %d (%x)\n", exitCode, exitCode);
   } else {
-    printf("Error %lu: Cannot launch process and inject dll.\n", err);
+    capsule_log("Error %lu: Cannot launch process and inject dll.", err);
   }
 
   return 0;
