@@ -26,6 +26,7 @@ static CGWindowID windowId = kCGNullWindowID;
     return;
   }
 
+  auto timestamp = capsule_frame_timestamp();
 
   if (!windows_found) {
     windows_found = true;
@@ -75,7 +76,7 @@ static CGWindowID windowId = kCGNullWindowID;
   CFDataRef dataRef = CGDataProviderCopyData(CGImageGetDataProvider(image));
   char *frameData = (char*) CFDataGetBytePtr(dataRef);
   size_t frameDataSize = CFDataGetLength(dataRef);
-  capsule_write_video_frame(frameData, frameDataSize);
+  capsule_write_video_frame(timestamp, frameData, frameDataSize);
 
   CFRelease(dataRef);
   CGImageRelease(image);
