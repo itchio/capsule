@@ -113,7 +113,7 @@ calls to them so that it may capture video and audio frames.
     * [ ] capsulerun relays stdout/stderr
     * [ ] capsulerun relays exit code
     * [x] Hooks various libraries via Deviare-InProc
-      * [*] capsulerun picks correct library architecture to inject
+      * [x] capsulerun picks correct library architecture to inject
     * [x] Communicate by named pipe
     * [ ] Shared memory
   * Control
@@ -123,9 +123,9 @@ calls to them so that it may capture video and audio frames.
     * [ ] Direct3D 9 capture
     * [ ] Direct3D 10 capture
     * [ ] Direct3D 11 capture
-      * [x] Hooks DXGI 1.0 factory creation
-      * [ ] Hooks DXGI 1.1 factory creation
-      * [ ] Hooks DXGI 1.3 factory creation
+      * [x] Hooks DXGI factory creation
+      * [x] Hooks CreateSwapChain
+      * [x] Hooks CreateSwapChainForHwnd
       * [x] Hooks present
       * [x] Retrieves & sends backbuffer
     * [ ] Direct3D 12 capture
