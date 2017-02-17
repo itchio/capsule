@@ -97,7 +97,8 @@ static bool create_d3d11_tex(uint32_t cx, uint32_t cy, ID3D11Texture2D **tex) {
   desc.Height                               = cy;
   desc.MipLevels                            = 1;
   desc.ArraySize                            = 1;
-  desc.BindFlags                            = 0;
+  // desc.BindFlags                            = 0;
+  desc.BindFlags                            = D3D11_BIND_SHADER_RESOURCE;
   desc.Format                               = data.format;
   desc.SampleDesc.Count                     = 1;
   desc.Usage                                = D3D11_USAGE_DEFAULT;
