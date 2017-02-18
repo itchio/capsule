@@ -13,6 +13,8 @@
 #include <d3d9.h>
 #include <DirectXMath.h>
 
+#include <capsule/constants.h>
+
 // When logging, it's not very helpful to have long sequences of hex instead of
 // the actual names of the objects in question.
 // e.g.
@@ -139,17 +141,6 @@ static std::string name_from_iid(IID id) {
 	return iidString;
 }
 
-static inline DXGI_FORMAT fix_dxgi_format(DXGI_FORMAT format) {
-	switch ((unsigned long)format) {
-		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
-			return DXGI_FORMAT_B8G8R8A8_UNORM;
-		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
-			return DXGI_FORMAT_R8G8B8A8_UNORM;
-	}
-
-	return format;
-}
-
 static std::string name_from_dxgi_format(DXGI_FORMAT format) {
   if (format == DXGI_FORMAT_UNKNOWN                     ) return "UNKNOWN";
   if (format == DXGI_FORMAT_R32G32B32A32_TYPELESS       ) return "R32G32B32A32_TYPELESS";
@@ -273,3 +264,27 @@ static std::string name_from_dxgi_format(DXGI_FORMAT format) {
   if (format == DXGI_FORMAT_FORCE_UINT                  ) return "FORCE_UINT";
   return "<unrecognized format>";
 }
+
+static inline DXGI_FORMAT fix_dxgi_format(DXGI_FORMAT format) {
+	switch ((unsigned long)format) {
+		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+			return DXGI_FORMAT_B8G8R8A8_UNORM;
+		case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+			return DXGI_FORMAT_R8G8B8A8_UNORM;
+	}
+
+	return format;
+}
+
+static inline capsule_pix_fmt_t dxgi_format_to_pix_fmt(DXGI_FORMAT format) {
+  switch (fix_dxgi_format(format)) {
+    case DXGI_FORMAT_B8G8R8A8_UNORM:
+      return CAPSULE_PIX_FMT_BGRA;
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+      return CAPSULE_PIX_FMT_RGBA;
+    default:
+      capsule_log("Unsupported DXGI format %s", name_from_dxgi_format(format).c_str());
+      return CAPSULE_PIX_FMT_UNKNOWN;
+  }
+}
+

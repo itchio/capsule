@@ -244,7 +244,14 @@ void d3d11_capture(void *swap_ptr, void *backbuffer_ptr) {
   }
 
   if (first_frame) {
-    capsule_write_video_format(data.cx, data.cy, CAPSULE_PIX_FMT_RGBA, 0 /* no vflip */, data.pitch);
+    auto pix_fmt = dxgi_format_to_pix_fmt(data.format);
+    capsule_write_video_format(
+      data.cx,
+      data.cy,
+      pix_fmt,
+      0 /* no vflip */,
+      data.pitch
+    );
     first_frame = false;
   }
 
