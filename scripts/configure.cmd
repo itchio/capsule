@@ -1,4 +1,4 @@
-SET cmake = C:\Program Files\CMake\bin\cmake.exe
+SET cmake=C:\Program Files\CMake\bin\cmake.exe
 
 mkdir build32
 pushd build32
