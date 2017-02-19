@@ -171,6 +171,8 @@ int capsulerun_main (int argc, char **argv) {
   capsule_log("Launching %S", executable_path_w);
   capsule_log("Injecting %S", libcapsule_path_w);
 
+  auto libcapsule_init_function_name = "capsule_windows_init";
+
   err = NktHookLibHelpers::CreateProcessWithDllW(
     executable_path_w, // applicationName
     NULL, // commandLine
@@ -184,7 +186,7 @@ int capsulerun_main (int argc, char **argv) {
     &pi, // processInfo
     libcapsule_path_w, // dllName
     NULL, // signalCompletedEvent
-    NULL // initFunctionName
+    libcapsule_init_function_name // initFunctionName
   );
 
   if (err == ERROR_SUCCESS) {

@@ -1,6 +1,8 @@
 
 #include <capsule.h>
 
+#include <psapi.h>
+
 CNktHookLib cHookMgr;
 static int capsule_inited = 0;
 
@@ -18,22 +20,19 @@ void capsule_install_windows_hooks () {
 }
 
 BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
-  switch (reason) {
-    case DLL_PROCESS_ATTACH:
-      capsule_log("DllMain (PROCESS_ATTACH)", reason); break;
-    case DLL_PROCESS_DETACH:
-      capsule_log("DllMain (PROCESS_DETACH)", reason); break;
-    case DLL_THREAD_ATTACH:
-      // just be quiet
-      /* capsule_log("DllMain (THREAD_ATTACH)", reason); */ break;
-    case DLL_THREAD_DETACH:
-      // just be quiet
-      /* capsule_log("DllMain (THREAD_DETACH)", reason); */ break;
-  }
-
-  if (reason == DLL_PROCESS_ATTACH) {
-    // we've just been attached to a process
-	  capsule_install_windows_hooks();
-  }
+  // don't actually do anything here, since what we can do from DllMain
+  // is limited (no LoadLibrary, etc.)
   return TRUE;
+}
+
+DWORD CAPSULE_DLL capsule_windows_init() {
+  wchar_t process_name[MAX_PATH];
+  process_name[0] = '\0';
+  GetModuleBaseName(GetCurrentProcess(), nullptr, process_name, MAX_PATH);
+  DWORD pid = GetCurrentProcessId();
+
+  capsule_log("capsule warming up for %S (pid %d)", process_name, pid);
+  capsule_install_windows_hooks();
+
+  return ERROR_SUCCESS;
 }
