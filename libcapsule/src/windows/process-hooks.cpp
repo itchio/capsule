@@ -79,18 +79,31 @@ BOOL CAPSULE_STDCALL CreateProcessW_hook (
   LPPROCESS_INFORMATION lpProcessInformation
 ) {
   capsule_log("CreateProcessW_hook called with %S %S", lpApplicationName, lpCommandLine);
-  return CreateProcessW_real(
+
+  cHookMgr.EnableHook(CreateProcessW_hookId, FALSE);
+
+  DWORD err = NktHookLibHelpers::CreateProcessWithDllW(
       lpApplicationName,
       lpCommandLine,
       lpProcessAttributes,
       lpThreadAttributes,
       bInheritHandles,
       dwCreationFlags,
-      lpEnvironment,
+      (LPCWSTR) lpEnvironment,
       lpCurrentDirectory,
       lpStartupInfo,
-      lpProcessInformation
+      lpProcessInformation,
+      // oh no.
+      L"C:\\msys64\\home\\amos\\Dev\\capsule\\build\\capsule32.dll",
+      NULL,
+      "capsule_windows_init"
   );
+
+  cHookMgr.EnableHook(CreateProcessW_hookId, TRUE);
+
+  capsule_log("CreateProcessWithDLLW succeeded? %d", SUCCEEDED(err));
+
+  return SUCCEEDED(err) ? 1 : 0;
 }
 
 void capsule_install_process_hooks () {
