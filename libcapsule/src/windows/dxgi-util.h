@@ -282,6 +282,8 @@ static inline capsule_pix_fmt_t dxgi_format_to_pix_fmt(DXGI_FORMAT format) {
       return CAPSULE_PIX_FMT_BGRA;
     case DXGI_FORMAT_R8G8B8A8_UNORM:
       return CAPSULE_PIX_FMT_RGBA;
+    case DXGI_FORMAT_R10G10B10A2_UNORM:
+      return CAPSULE_PIX_FMT_RGB10_A2;
     default:
       capsule_log("Unsupported DXGI format %s", name_from_dxgi_format(format).c_str());
       return CAPSULE_PIX_FMT_UNKNOWN;

@@ -12,7 +12,7 @@ struct d3d11_data {
   ID3D11DeviceContext       *context; // do not release
 	uint32_t                  cx; // framebuffer width
 	uint32_t                  cy; // framebuffer height
-	DXGI_FORMAT               format; // pixel format (usually R8G8B8A8_UNORM)
+	DXGI_FORMAT               format; // pixel format
   bool                      multisampled; // if true, subresource needs to be resolved on GPU before downloading
 
   ID3D11Texture2D           *copy_surfaces[NUM_BUFFERS]; // staging, CPU_READ_ACCESS

@@ -226,6 +226,9 @@ void encoder_run(encoder_params_t *params) {
     case CAPSULE_PIX_FMT_BGRA:
       vpix_fmt = AV_PIX_FMT_BGRA;
       break;
+    case CAPSULE_PIX_FMT_RGB10_A2:
+      vpix_fmt = AV_PIX_FMT_RGBA;
+      break;
     default:
       printf("Unknown video format %d, bailing out\n", vfmt_in.format);
   }
