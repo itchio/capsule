@@ -168,6 +168,12 @@ int capsulerun_main (int argc, char **argv) {
     exit(1);
   }
 
+  err = SetEnvironmentVariable(L"CAPSULE_LIBRARY_PATH", libcapsule_path_w);
+  if (err == 0) {
+    capsule_log("Could not set library path environment variable");
+    exit(1);
+  }
+
   capsule_log("Launching %S", executable_path_w);
   capsule_log("Injecting %S", libcapsule_path_w);
 

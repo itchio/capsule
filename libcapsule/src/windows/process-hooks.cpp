@@ -79,31 +79,52 @@ BOOL CAPSULE_STDCALL CreateProcessW_hook (
   LPPROCESS_INFORMATION lpProcessInformation
 ) {
   capsule_log("CreateProcessW_hook called with %S %S", lpApplicationName, lpCommandLine);
+  
+  BOOL success;
+  wchar_t libcapsule_path_w[MAX_PATH];
+  libcapsule_path_w[0] = '\0';
 
-  cHookMgr.EnableHook(CreateProcessW_hookId, FALSE);
+  DWORD envErr = GetEnvironmentVariableW(L"CAPSULE_LIBRARY_PATH", libcapsule_path_w, MAX_PATH);
+  if (envErr != 0) {
+    // Deviare uses CreateProcessW internally, so we need to temporarily disable our hook
+    cHookMgr.EnableHook(CreateProcessW_hookId, FALSE);
+    DWORD err = NktHookLibHelpers::CreateProcessWithDllW(
+        lpApplicationName,
+        lpCommandLine,
+        lpProcessAttributes,
+        lpThreadAttributes,
+        bInheritHandles,
+        dwCreationFlags,
+        (LPCWSTR) lpEnvironment,
+        lpCurrentDirectory,
+        lpStartupInfo,
+        lpProcessInformation,
+        libcapsule_path_w,     /* DLL to inject */
+        NULL,                  /* signal completed */
+        "capsule_windows_init" /* init function name */
+    );
+    cHookMgr.EnableHook(CreateProcessW_hookId, TRUE);
+    success = SUCCEEDED(err) ? 1 : 0;
+    capsule_log("CreateProcessWithDllW succeeded? %d", success);
+  } else {
+    // environment variable was missing, just do a regular process creation
+    capsule_log("Missing CAPSULE_LIBRARY_PATH, can't inject self in child process'");
+    success = CreateProcessW_real(
+        lpApplicationName,
+        lpCommandLine,
+        lpProcessAttributes,
+        lpThreadAttributes,
+        bInheritHandles,
+        dwCreationFlags,
+        lpEnvironment,
+        lpCurrentDirectory,
+        lpStartupInfo,
+        lpProcessInformation
+    );
+    capsule_log("CreateProcessW succeeded? %d", success);
+  }
 
-  DWORD err = NktHookLibHelpers::CreateProcessWithDllW(
-      lpApplicationName,
-      lpCommandLine,
-      lpProcessAttributes,
-      lpThreadAttributes,
-      bInheritHandles,
-      dwCreationFlags,
-      (LPCWSTR) lpEnvironment,
-      lpCurrentDirectory,
-      lpStartupInfo,
-      lpProcessInformation,
-      // oh no.
-      L"C:\\msys64\\home\\amos\\Dev\\capsule\\build\\capsule32.dll",
-      NULL,
-      "capsule_windows_init"
-  );
-
-  cHookMgr.EnableHook(CreateProcessW_hookId, TRUE);
-
-  capsule_log("CreateProcessWithDLLW succeeded? %d", SUCCEEDED(err));
-
-  return SUCCEEDED(err) ? 1 : 0;
+  return success;
 }
 
 void capsule_install_process_hooks () {
