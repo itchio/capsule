@@ -24,11 +24,6 @@ BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
   // don't actually do anything here, since what we can do from DllMain
   // is limited (no LoadLibrary, etc.)
 
-  if (reason == DLL_PROCESS_ATTACH) {
-    capsule_log("DllMain: process attach");
-    capsule_install_windows_hooks();
-  }
-
   return TRUE;
 }
 
@@ -39,7 +34,7 @@ DWORD CAPSULE_DLL capsule_windows_init() {
   DWORD pid = GetCurrentProcessId();
 
   capsule_log("capsule warming up for %S (pid %d)", process_name, pid);
-  // capsule_install_windows_hooks();
+  capsule_install_windows_hooks();
 
   return ERROR_SUCCESS;
 }
