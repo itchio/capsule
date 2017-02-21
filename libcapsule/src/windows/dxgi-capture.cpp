@@ -333,7 +333,7 @@ void capsule_install_dxgi_hooks () {
     // CreateDXGIFactory1
     LPVOID CreateDXGIFactory1_addr = NktHookLibHelpers::GetProcedureAddress(dxgi, "CreateDXGIFactory1");
     if (!CreateDXGIFactory1_addr) {
-      capsule_log("Could not find CreateDXGIFactory");
+      capsule_log("Could not find CreateDXGIFactory1");
       return;
     }
 

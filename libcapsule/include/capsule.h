@@ -64,6 +64,7 @@ char *capsule_log_path();
 #ifdef CAPSULE_WINDOWS
 DWORD CAPSULE_DLL capsule_windows_init();
 void capsule_install_windows_hooks();
+void capsule_install_process_hooks();
 void capsule_install_opengl_hooks();
 void capsule_install_dxgi_hooks();
 #endif // CAPSULE_WINDOWS
