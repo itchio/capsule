@@ -8,17 +8,15 @@
 
 #include <dxgi.h>
 
-// UGLY: just for testing
-
-#define SIZE_DIVIDER 2
-
 // inspired by libobs
 struct d3d11_data {
   ID3D11Device              *device; // do not release
   ID3D11DeviceContext       *context; // do not release
   uint32_t                  cx; // framebuffer width
   uint32_t                  cy; // framebuffer height
+  uint32_t                  size_divider;
   DXGI_FORMAT               format; // pixel format
+  DXGI_FORMAT               out_format; // pixel format
   bool                      multisampled; // if true, subresource needs to be resolved on GPU before downloading
 
   ID3D11Texture2D                *scale_tex; // texture & resource used for in-GPU scaling
@@ -37,7 +35,7 @@ struct d3d11_data {
 
   ID3D11Texture2D           *copy_surfaces[NUM_BUFFERS]; // staging, CPU_READ_ACCESS
   ID3D11Texture2D           *textures[NUM_BUFFERS]; // default (in-GPU), useful to resolve multisampled backbuffers
-  ID3D11RenderTargetView    *render_targets[NUM_BUFFERS]; // default (in-GPU), useful to resolve multisampled backbuffers
+  ID3D11RenderTargetView    *render_targets[NUM_BUFFERS];
   int                       cur_tex;
 
   uint32_t                  pitch; // linesize, may not be (width * components) because of alignemnt
@@ -96,15 +94,17 @@ static bool d3d11_init_format(IDXGISwapChain *swap, HWND *window) {
     return false;
   }
   data.format = fix_dxgi_format(desc.BufferDesc.Format);
+  data.out_format = DXGI_FORMAT_R8G8B8A8_UNORM;
   data.multisampled = desc.SampleDesc.Count > 1;
   *window = desc.OutputWindow;
   data.cx = desc.BufferDesc.Width;
   data.cy = desc.BufferDesc.Height;
+  data.size_divider = 2; // testing
 
   capsule_log("Backbuffer: %ux%u (%s) format = %s",
     data.cx, data.cy,
     data.multisampled ? "multisampled" : "",
-    name_from_dxgi_format(data.format).c_str()
+    name_from_dxgi_format(desc.BufferDesc.Format).c_str()
   );
 
   return true;
@@ -126,9 +126,9 @@ static bool create_d3d11_stage_surface(ID3D11Texture2D **tex) {
   HRESULT hr;
 
   D3D11_TEXTURE2D_DESC desc      = {};
-  desc.Width                     = data.cx / SIZE_DIVIDER;
-  desc.Height                    = data.cy / SIZE_DIVIDER;
-  desc.Format                    = data.format;
+  desc.Width                     = data.cx / data.size_divider;
+  desc.Height                    = data.cy / data.size_divider;
+  desc.Format                    = data.out_format;
   desc.MipLevels                 = 1;
   desc.ArraySize                 = 1;
   desc.SampleDesc.Count          = 1;
@@ -147,7 +147,7 @@ static bool create_d3d11_stage_surface(ID3D11Texture2D **tex) {
 /**
  * Create an on-GPU texture (used to resolve multisampled backbuffers)
  */
-static bool create_d3d11_tex(uint32_t cx, uint32_t cy, ID3D11Texture2D **tex) {
+static bool create_d3d11_tex(uint32_t cx, uint32_t cy, ID3D11Texture2D **tex, bool out) {
   HRESULT hr;
 
   D3D11_TEXTURE2D_DESC desc                 = {};
@@ -155,9 +155,12 @@ static bool create_d3d11_tex(uint32_t cx, uint32_t cy, ID3D11Texture2D **tex) {
   desc.Height                               = cy;
   desc.MipLevels                            = 1;
   desc.ArraySize                            = 1;
-  // desc.BindFlags                            = 0;
   desc.BindFlags                            = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
-  desc.Format                               = data.format;
+  if (out) {
+    desc.Format                               = data.out_format;
+  } else {
+    desc.Format                               = data.format;
+  }
   desc.SampleDesc.Count                     = 1;
   desc.Usage                                = D3D11_USAGE_DEFAULT;
   desc.MiscFlags                            = 0;
@@ -200,7 +203,7 @@ static bool d3d11_shmem_init_buffers(size_t idx) {
     data.context->Unmap(data.copy_surfaces[idx], 0);
   }
 
-  success = create_d3d11_tex(data.cx / SIZE_DIVIDER, data.cy / SIZE_DIVIDER, &data.textures[idx]);
+  success = create_d3d11_tex(data.cx / data.size_divider, data.cy / data.size_divider, &data.textures[idx], true);
 
   if (!success) {
     capsule_log("d3d11_shmem_init_buffers: failed to create texture");
@@ -212,7 +215,7 @@ static bool d3d11_shmem_init_buffers(size_t idx) {
     capsule_log("d3d11_shmem_init_buffers: failed to create rendertarget view (%x)", hr);
   }
 
-  success = create_d3d11_tex(data.cx, data.cy, &data.scale_tex);
+  success = create_d3d11_tex(data.cx, data.cy, &data.scale_tex, false);
 
   if (!success) {
     capsule_log("d3d11_shmem_init_buffers: failed to create scale texture");
@@ -584,8 +587,8 @@ static void d3d11_setup_pipeline(ID3D11RenderTargetView *target, ID3D11ShaderRes
   void *emptyptr = nullptr;
   UINT zero = 0;
 
-  viewport.Width = (float)data.cx / SIZE_DIVIDER;
-  viewport.Height = (float)data.cy / SIZE_DIVIDER;
+  viewport.Width = (float)data.cx / data.size_divider;
+  viewport.Height = (float)data.cy / data.size_divider;
   viewport.MaxDepth = 1.0f;
 
   data.context->GSSetShader(nullptr, nullptr, 0);
@@ -626,9 +629,9 @@ static inline void d3d11_shmem_capture (ID3D11Resource* backbuffer) {
   D3D11_MAPPED_SUBRESOURCE map = {};
   hr = data.context->Map(data.copy_surfaces[data.cur_tex], 0, D3D11_MAP_READ, 0, &map);
   if (SUCCEEDED(hr)) {
-    char *frameData = (char *) map.pData;
-    int frameDataSize = (data.cy / SIZE_DIVIDER) * data.pitch;
-    capsule_write_video_frame(timestamp, frameData, frameDataSize);
+    char *frame_data = (char *) map.pData;
+    int frame_data_size = (data.cy / data.size_divider) * data.pitch;
+    capsule_write_video_frame(timestamp, frame_data, frame_data_size);
     data.context->Unmap(data.copy_surfaces[data.cur_tex], 0);
   } else {
     capsule_log("d3d11_shmem_capture: could not map staging surface");
@@ -662,8 +665,8 @@ void d3d11_capture(void *swap_ptr, void *backbuffer_ptr) {
   if (first_frame) {
     auto pix_fmt = dxgi_format_to_pix_fmt(data.format);
     capsule_write_video_format(
-      data.cx / SIZE_DIVIDER,
-      data.cy / SIZE_DIVIDER,
+      data.cx / data.size_divider,
+      data.cy / data.size_divider,
       pix_fmt,
       0 /* no vflip */,
       data.pitch
