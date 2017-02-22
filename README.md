@@ -57,9 +57,9 @@ calls to them so that it may capture video and audio frames.
     * [x] capsulerun launches child
     * [x] capsulerun passes arguments
       * [x] quoted & with unicode handling
-    * [x] capsulerun handles child quitting unexpectedly
+    * [ ] capsulerun handles child quitting unexpectedly
     * [x] capsulerun relays stdout/stderr
-    * [x] capsulerun relays exit code
+    * [ ] capsulerun relays exit code
     * [x] Interposing via `LD_PRELOAD` dlopen/dlsym
       * [ ] capsulerun picks correct library architecture to inject
     * [x] Interposing dlopen/dlsym
@@ -86,6 +86,7 @@ calls to them so that it may capture video and audio frames.
   * System
     * [x] capsulerun launches child
     * [x] capsulerun passes arguments
+      * [x] quoted & with unicode handling
     * [ ] capsulerun preserves environment
       * (`DYLD_INSERT_LIBRARIES` is clobbered)
     * [ ] capsulerun handles child quitting unexpectedly
@@ -108,11 +109,12 @@ calls to them so that it may capture video and audio frames.
 
   * System
     * [x] capsulerun launches child
-    * [ ] capsulerun passes arguments
+    * [x] capsulerun passes arguments
+      * [x] quoted & with unicode handling
     * [x] capsulerun preserves environment
-    * [ ] capsulerun handles child quitting unexpectedly
-    * [ ] capsulerun relays stdout/stderr
-    * [ ] capsulerun relays exit code
+    * [x] capsulerun handles child quitting unexpectedly
+    * [x] capsulerun relays stdout/stderr
+    * [x] capsulerun relays exit code
     * [x] Hooks various libraries via Deviare-InProc
       * [x] capsulerun picks correct library architecture to inject
     * [x] Communicate by named pipe
