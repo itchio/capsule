@@ -105,24 +105,22 @@ HRESULT CAPSULE_STDCALL Present_hook (
 void install_present_hook (IDXGISwapChain *swap) {
   DWORD err;
 
-  if (Present_hookId) {
-    return;
-  }
-
   // Present
-  LPVOID Present_addr = capsule_get_Present_address((void *) swap);
+  if (!Present_hookId) {
+    LPVOID Present_addr = capsule_get_IDXGISwapChain_Present_address((void *) swap);
 
-  err = cHookMgr.Hook(
-    &Present_hookId,
-    (LPVOID *) &Present_real,
-    Present_addr,
-    Present_hook,
-    0
-  );
-  if (err != ERROR_SUCCESS) {
-    capsule_log("Hooking Present derped with error %d (%x)", err, err);
-  } else {
-    capsule_log("Installed Present hook");
+    err = cHookMgr.Hook(
+      &Present_hookId,
+      (LPVOID *) &Present_real,
+      Present_addr,
+      Present_hook,
+      0
+    );
+    if (err != ERROR_SUCCESS) {
+      capsule_log("Hooking Present derped with error %d (%x)", err, err);
+    } else {
+      capsule_log("Installed Present hook");
+    }
   }
 }
 
@@ -223,7 +221,7 @@ static void install_swapchain_hooks (IDXGIFactory *factory) {
 
   // CreateSwapChainForHwnd
   if (!CreateSwapChainForHwnd_hookId) {
-    LPVOID CreateSwapChainForHwnd_addr = capsule_get_CreateSwapChainForHwnd_address((void *) factory);
+    LPVOID CreateSwapChainForHwnd_addr = capsule_get_IDXGIFactory_CreateSwapChainForHwnd_address((void *) factory);
 
     err = cHookMgr.Hook(
       &CreateSwapChainForHwnd_hookId,
@@ -239,7 +237,7 @@ static void install_swapchain_hooks (IDXGIFactory *factory) {
 
   // CreateSwapChain
   if (!CreateSwapChain_hookId) {
-    LPVOID CreateSwapChain_addr = capsule_get_CreateSwapChain_address((void *) factory);
+    LPVOID CreateSwapChain_addr = capsule_get_IDXGIFactory_CreateSwapChain_address((void *) factory);
 
     err = cHookMgr.Hook(
       &CreateSwapChain_hookId,

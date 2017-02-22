@@ -7,17 +7,17 @@
 
 #include "dxgi-vtable-helpers.h"
 
-void *capsule_get_CreateSwapChain_address (void *pFactory) {
+void *capsule_get_IDXGIFactory_CreateSwapChain_address (void *pFactory) {
   IDXGIFactory *factory = (IDXGIFactory *) pFactory;
   return factory->lpVtbl->CreateSwapChain;
 }
 
-void *capsule_get_CreateSwapChainForHwnd_address (void *pFactory) {
+void *capsule_get_IDXGIFactory_CreateSwapChainForHwnd_address (void *pFactory) {
   IDXGIFactory2 *factory = (IDXGIFactory2 *) pFactory;
   return factory->lpVtbl->CreateSwapChainForHwnd;
 }
 
-void *capsule_get_Present_address (void *pSwapChain) {
+void *capsule_get_IDXGISwapChain_Present_address (void *pSwapChain) {
   IDXGISwapChain *swapChain = (IDXGISwapChain *) pSwapChain;
   return swapChain->lpVtbl->Present;
 }

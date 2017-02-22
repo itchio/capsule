@@ -55,6 +55,7 @@ if(WIN32)
     ${libcapsule_SOURCE_DIR}/windows/dxgi-hooks.cpp
     ${libcapsule_SOURCE_DIR}/windows/dxgi-vtable-helpers.cpp
     ${libcapsule_SOURCE_DIR}/windows/d3d9-hooks.cpp
+    ${libcapsule_SOURCE_DIR}/windows/d3d9-vtable-helpers.cpp
     ${libcapsule_SOURCE_DIR}/windows/d3d9-capture.cpp
     ${libcapsule_SOURCE_DIR}/windows/d3d10-capture.cpp
     ${libcapsule_SOURCE_DIR}/windows/d3d11-capture.cpp
