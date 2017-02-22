@@ -433,7 +433,7 @@ static bool d3d11_init_quad_vbo(void)
 }
 
 static void d3d11_init(IDXGISwapChain *swap) {
-  capsule_log("d3d11_init");
+  capsule_log("Initializing D3D11 capture");
 
   bool success = true;
   HWND window;

@@ -1,8 +1,41 @@
 
 #include <capsule.h>
+#include "win-capture.h"
 
 #include <d3d9.h>
 #include "d3d9-vtable-helpers.h"
+
+/* this is used just in case Present calls PresentEx or vice versa. */
+static int present_recurse = 0;
+
+static inline HRESULT get_backbuffer (IDirect3DDevice9 *device, IDirect3DSurface9 **surface) {
+  // libobs includes a workaround for The Typing of The Dead: Overkill
+  // and, to be completely honest: lol no.
+  return device->GetRenderTarget(0, surface);
+}
+
+static void present_begin (IDirect3DDevice9 *device, IDirect3DSurface9 **backbuffer) {
+  HRESULT hr;
+
+  if (!present_recurse) {
+    hr = get_backbuffer(device, backbuffer);
+    if (FAILED(hr)) {
+      capsule_log("d3d9 present_begin: failed to get backbuffer %d (%x)", hr, hr);
+    }
+
+    d3d9_capture(device, *backbuffer);
+  }
+
+  present_recurse++;
+}
+
+static void present_end (IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer) {
+  if (backbuffer) {
+    backbuffer->Release();
+  }
+
+  present_recurse--;
+}
 
 ///////////////////////////////////////////////
 // IDirect3DDevice9::Present
@@ -24,7 +57,11 @@ HRESULT CAPSULE_STDCALL Present_hook (
         HWND         hDestWindowOverride,
   const RGNDATA      *pDirtyRegion
 ) {
-  capsule_log("IDirect3DDevice9::Present called");
+  // capsule_log("IDirect3DDevice9::Present called");
+
+  IDirect3DSurface9 *backbuffer = nullptr;
+  present_begin(device, &backbuffer);
+
   HRESULT res = Present_real(
     device,
     pSourceRect,
@@ -32,6 +69,9 @@ HRESULT CAPSULE_STDCALL Present_hook (
     hDestWindowOverride,
     pDirtyRegion
   );
+
+  present_end(device, backbuffer);
+
   return res;
 }
 
@@ -57,7 +97,11 @@ HRESULT CAPSULE_STDCALL PresentEx_hook (
   const RGNDATA      *pDirtyRegion,
         DWORD        dwFlags
 ) {
-  capsule_log("IDirect3DDevice9Ex::PresentEx called");
+  // capsule_log("IDirect3DDevice9Ex::PresentEx called");
+
+  IDirect3DSurface9 *backbuffer = nullptr;
+  present_begin(device, &backbuffer);
+
   HRESULT res = PresentEx_real(
     device,
     pSourceRect,
@@ -66,6 +110,9 @@ HRESULT CAPSULE_STDCALL PresentEx_hook (
     pDirtyRegion,
     dwFlags
   );
+
+  present_end(device, backbuffer);
+
   return res;
 }
 
@@ -91,7 +138,25 @@ HRESULT CAPSULE_STDCALL PresentSwap_hook (
   const RGNDATA         *pDirtyRegion,
         DWORD           dwFlags
 ) {
-  capsule_log("IDirect3DSwapChain9::Present called");
+  // capsule_log("IDirect3DSwapChain9::Present called");
+
+  IDirect3DSurface9 *backbuffer = nullptr;
+  IDirect3DDevice9 *device = nullptr;
+  HRESULT hr;
+
+  if (!present_recurse) {
+    hr = swap->GetDevice(&device);
+    if (SUCCEEDED(hr)) {
+      device->Release();
+    }
+  }
+
+  if (device) {
+    // TODO: hook reset
+
+    present_begin(device, &backbuffer);
+  }
+
   HRESULT res = PresentSwap_real(
     swap,
     pSourceRect,
@@ -100,6 +165,11 @@ HRESULT CAPSULE_STDCALL PresentSwap_hook (
     pDirtyRegion,
     dwFlags
   );
+
+  if (device) {
+    present_end(device, backbuffer);
+  }
+
   return res;
 }
 
