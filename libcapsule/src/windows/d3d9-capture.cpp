@@ -52,6 +52,7 @@ static DXGI_FORMAT d3d9_to_dxgi_format (D3DFORMAT format) {
     case D3DFMT_A2B10G10R10: return DXGI_FORMAT_R10G10B10A2_UNORM;
     case D3DFMT_A8R8G8B8:    return DXGI_FORMAT_B8G8R8A8_UNORM;
     case D3DFMT_X8R8G8B8:    return DXGI_FORMAT_B8G8R8X8_UNORM;
+    default:                 return DXGI_FORMAT_UNKNOWN;
   }
 }
 
@@ -120,9 +121,68 @@ static bool d3d9_init_format_swapchain(HWND *window) {
   return false;
 }
 
+static bool d3d9_shmem_init_buffers(size_t buffer) {
+  HRESULT hr;
+
+  hr = data.device->CreateOffscreenPlainSurface(
+    data.cx,
+    data.cy,
+    data.format,
+    D3DPOOL_SYSTEMMEM,
+    &data.copy_surfaces[buffer],
+    nullptr
+  );
+
+  if (FAILED(hr)) {
+    capsule_log("d3d9_shmem_init_buffers: Failed to create surface %d (%x)", hr, hr);
+    return false;
+  }
+
+  if (buffer == 0) {
+    D3DLOCKED_RECT rect;
+    hr = data.copy_surfaces[buffer]->LockRect(&rect, nullptr, D3DLOCK_READONLY);
+    if (FAILED(hr)) {
+      capsule_log("d3d9_shmem_init_buffers: Failed to lock buffer %d (%x)", hr, hr);
+      return false;
+    }
+
+    data.pitch = rect.Pitch;
+    data.copy_surfaces[buffer]->UnlockRect();
+  }
+
+  hr = data.device->CreateRenderTarget(
+    data.cx,
+    data.cy,
+    data.format,
+    D3DMULTISAMPLE_NONE,
+    0,
+    false,
+    &data.render_targets[buffer],
+    nullptr
+  );
+  if (FAILED(hr)) {
+    capsule_log("d3d9_shmem_init_buffers: Failed to create render target %d (%x)", hr, hr);
+    return false;
+  }
+
+  hr = data.device->CreateQuery(D3DQUERYTYPE_EVENT, &data.queries[buffer]);
+  if (FAILED(hr)) {
+    capsule_log("d3d9_shmem_init_buffers: Failed to create query %d (%x)", hr, hr);
+    return false;
+  }
+
+  return true;
+}
+
 static bool d3d9_shmem_init() {
-  capsule_log("d3d9_shmem_init: stub");
-  return false;
+  for (size_t i = 0; i < NUM_BUFFERS; i++) {
+    if (!d3d9_shmem_init_buffers(i)) {
+      return false;
+    }
+  }
+
+  capsule_log("d3d9 memory capture successful");
+  return true;
 }
 
 static void d3d9_init(IDirect3DDevice9 *device) {
@@ -131,7 +191,6 @@ static void d3d9_init(IDirect3DDevice9 *device) {
   bool success;
 
   HWND window = nullptr;
-  HRESULT hr;
 
   data.device = device;
 
@@ -155,6 +214,45 @@ static void d3d9_init(IDirect3DDevice9 *device) {
   }
 }
 
+void d3d9_shmem_capture (IDirect3DSurface9 *backbuffer) {
+  // TODO: buffering (using queries)
+  HRESULT hr;
+
+  auto timestamp = capsule_frame_timestamp();
+
+  hr = data.device->StretchRect(
+    backbuffer,
+    nullptr,
+    data.render_targets[0],
+    nullptr,
+    D3DTEXF_NONE /* or D3DTEXF_LINEAR */
+  );
+
+  if (FAILED(hr)) {
+    capsule_log("d3d9_shmem_capture: StretchRect failed %d (%x)", hr, hr);
+    return;
+  }
+
+  hr = data.device->GetRenderTargetData(
+    data.render_targets[0],
+    data.copy_surfaces[0]
+  );
+
+  if (FAILED(hr)) {
+    capsule_log("d3d9_shmem_capture: GetRenderTargetData failed %d (%x)", hr, hr);
+  }
+
+  D3DLOCKED_RECT rect;
+
+  hr = data.copy_surfaces[0]->LockRect(&rect, nullptr, D3DLOCK_READONLY);
+  if (SUCCEEDED(hr)) {
+    char *frame_data = (char *) rect.pBits;
+    int frame_data_size = data.cy * data.pitch;
+    capsule_write_video_frame(timestamp, frame_data, frame_data_size);
+    data.copy_surfaces[0]->UnlockRect();
+  }
+}
+
 void d3d9_capture (IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer) {
   static bool first_frame = true;
 
@@ -166,5 +264,22 @@ void d3d9_capture (IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer) {
     d3d9_init(device);
   }
 
-  capsule_log("d3d9_capture: stub");
+  if (data.device != device) {
+    d3d9_free();
+    return;
+  }
+
+  if (first_frame) {
+    auto pix_fmt = dxgi_format_to_pix_fmt(d3d9_to_dxgi_format(data.format));
+    capsule_write_video_format(
+      data.cx,
+      data.cy,
+      pix_fmt,
+      0 /* no vflip */,
+      data.pitch
+    );
+    first_frame = false;
+  }
+
+  d3d9_shmem_capture(backbuffer);
 }

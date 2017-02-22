@@ -123,7 +123,11 @@ calls to them so that it may capture video and audio frames.
     * [ ] Win32 recording hotkey support
       * (but basic research done)
   * Video
-    * [ ] Direct3D 9 capture
+    * [x] Direct3D 9 capture
+      * [x] Hooks D3D initialization
+      * [x] Hooks device creation
+      * [x] Hooks all three present flavors
+      * [x] Retrieves & sends backbuffer
     * [ ] Direct3D 10 capture
     * [ ] Direct3D 11 capture
       * [x] Hooks DXGI factory creation
