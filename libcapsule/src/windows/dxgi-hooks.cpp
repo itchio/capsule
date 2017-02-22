@@ -218,15 +218,7 @@ HRESULT CAPSULE_STDCALL CreateSwapChain_hook (
   return res;
 }
 
-///////////////////////////////////////////////
-// CreateDXGIFactory (DXGI 1.0)
-///////////////////////////////////////////////
-
-typedef HRESULT (CAPSULE_STDCALL *CreateDXGIFactory_t)(REFIID, void**);
-CreateDXGIFactory_t CreateDXGIFactory_real;
-SIZE_T CreateDXGIFactory_hookId = 0;
-
-void install_swapchain_hooks (IDXGIFactory *factory) {
+static void install_swapchain_hooks (IDXGIFactory *factory) {
   DWORD err;
 
   // CreateSwapChainForHwnd
@@ -261,6 +253,16 @@ void install_swapchain_hooks (IDXGIFactory *factory) {
     }
   }
 }
+
+
+
+///////////////////////////////////////////////
+// CreateDXGIFactory (DXGI 1.0)
+///////////////////////////////////////////////
+
+typedef HRESULT (CAPSULE_STDCALL *CreateDXGIFactory_t)(REFIID, void**);
+CreateDXGIFactory_t CreateDXGIFactory_real;
+SIZE_T CreateDXGIFactory_hookId = 0;
 
 HRESULT CAPSULE_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
   capsule_log("CreateDXGIFactory called with riid: %s", name_from_iid(riid).c_str());

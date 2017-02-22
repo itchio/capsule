@@ -3,6 +3,10 @@
 
 #include <capsule/constants.h>
 
+// Change these to suit your needs
+// #define CAPSULERUN_PROFILE
+// #define CAPSULERUN_DEBUG
+
 #if defined(_WIN32)
 #define CAPSULERUN_WINDOWS
 
@@ -65,15 +69,11 @@ void encoder_run(encoder_params_t *params);
 #include "capsulerun_macos.h"
 #endif // CAPSULERUN_LINUX
 
-// #define CAPSULERUN_PROFILE
-
 #ifdef CAPSULERUN_PROFILE
 #define eprintf(...) { fprintf(stdout, "[capsule-profile] "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); fflush(stdout); }
 #else
 #define eprintf(...)
 #endif
-
-#define CAPSULERUN_DEBUG
 
 #ifdef CAPSULERUN_DEBUG
 #define dprintf(...) { fprintf(stdout, "[capsule-debug] "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); fflush(stdout); }

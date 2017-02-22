@@ -56,9 +56,10 @@ calls to them so that it may capture video and audio frames.
   * System
     * [x] capsulerun launches child
     * [x] capsulerun passes arguments
-    * [ ] capsulerun handles child quitting unexpectedly
-    * [ ] capsulerun relays stdout/stderr
-    * [ ] capsulerun relays exit code
+      * [x] quoted & with unicode handling
+    * [x] capsulerun handles child quitting unexpectedly
+    * [x] capsulerun relays stdout/stderr
+    * [x] capsulerun relays exit code
     * [x] Interposing via `LD_PRELOAD` dlopen/dlsym
       * [ ] capsulerun picks correct library architecture to inject
     * [x] Interposing dlopen/dlsym

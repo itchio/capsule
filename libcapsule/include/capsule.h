@@ -67,6 +67,7 @@ void capsule_install_windows_hooks();
 void capsule_install_process_hooks();
 void capsule_install_opengl_hooks();
 void capsule_install_dxgi_hooks();
+void capsule_install_d3d9_hooks();
 #endif // CAPSULE_WINDOWS
 
 bool CAPSULE_STDCALL capsule_capture_ready();

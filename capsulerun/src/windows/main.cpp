@@ -5,9 +5,15 @@
 // std::thread
 #include <thread>
 
+// ArgvQuote
+#include "arguments.h"
+
 #include "capsulerun.h"
 
 using namespace std;
+
+static bool connected = false;
+static DWORD exitCode = 0;
 
 void toWideChar (const char *s, wchar_t **ws) {
   int wchars_num = MultiByteToWideChar(CP_UTF8, 0, s, -1, NULL, 0);
@@ -83,18 +89,21 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
 static void wait_for_child (HANDLE hProcess) {
   LONG platform = NktHookLibHelpers::GetProcessPlatform(hProcess);
   if (platform == NKTHOOKLIB_ProcessPlatformX86) {
-    capsule_log("Child is X86 (32-bit) !");
+    dprintf("Child is 32-bit!");
   } else if (platform == NKTHOOKLIB_ProcessPlatformX64) {
-    capsule_log("Child is X64 (64-bit) !");
+    dprintf("Child is 64-bit!");
   }
 
-  capsule_log("Waiting on child...");
+  dprintf("Waiting on child...");
   WaitForSingleObject(hProcess, INFINITE);
-  capsule_log("Done waiting on child");
+  dprintf("Done waiting on child");
 
-  DWORD exitCode;
   GetExitCodeProcess(hProcess, &exitCode);
-  capsule_log("Exit code = %d (%x)", exitCode, exitCode);
+  capsule_log("Exit code: %d (%x)", exitCode, exitCode);
+
+  if (!connected) {
+    exit(exitCode);
+  }
 }
 
 int capsulerun_main (int argc, char **argv) {
@@ -133,8 +142,6 @@ int capsulerun_main (int argc, char **argv) {
 
   ZeroMemory(&pi, sizeof(pi));  
 
-  char *exeName = argv[1];
-
   wchar_t *executable_path_w;
   wchar_t *libcapsule_path_w;
 
@@ -142,7 +149,7 @@ int capsulerun_main (int argc, char **argv) {
   toWideChar(libcapsule_path, &libcapsule_path_w);
 
   wchar_t *pipe_path = L"\\\\.\\pipe\\capsule_pipe";
-  capsule_log("Creating named pipe %S...", pipe_path);
+  dprintf("Creating named pipe %S...", pipe_path);
 
   HANDLE pipe_handle = CreateNamedPipe(
     pipe_path,
@@ -160,7 +167,7 @@ int capsulerun_main (int argc, char **argv) {
     capsule_log("CreateNamedPipe failed, err = %d (%x)", err, err);
   }
 
-  capsule_log("Created named pipe!");
+  dprintf("Created named pipe!");
 
   err = SetEnvironmentVariable(L"CAPSULE_PIPE_PATH", pipe_path);
   if (err == 0) {
@@ -174,14 +181,29 @@ int capsulerun_main (int argc, char **argv) {
     exit(1);
   }
 
-  capsule_log("Launching %S", executable_path_w);
-  capsule_log("Injecting %S", libcapsule_path_w);
+  bool first_arg = true;
+  LPWSTR in_command_line = GetCommandLineW();
+  int num_args;
+  LPWSTR* argv_w = CommandLineToArgvW(in_command_line, &num_args);
 
+  wstring command_line_w;
+  for (int i = 2; i < num_args; i++) {
+    string arg = argv[i];
+    if (first_arg) {
+      first_arg = false;
+    } else {
+      command_line_w.append(L" ");
+    }
+    ArgvQuote(argv_w[i], command_line_w, false);
+  }
+
+  capsule_log("Launching %S", command_line_w.c_str());
+  capsule_log("Injecting %S", libcapsule_path_w);
   auto libcapsule_init_function_name = "capsule_windows_init";
 
   err = NktHookLibHelpers::CreateProcessWithDllW(
     executable_path_w, // applicationName
-    NULL, // commandLine
+    (LPWSTR) command_line_w.c_str(), // commandLine
     NULL, // processAttributes
     NULL, // threadAttributes
     FALSE, // inheritHandles
@@ -199,13 +221,15 @@ int capsulerun_main (int argc, char **argv) {
     capsule_log("Process #%lu successfully launched with dll injected!", pi.dwProcessId);
 
     thread child_thread(wait_for_child, pi.hProcess);
+    child_thread.detach();
 
-    capsule_log("Connecting named pipe...");
+    dprintf("Connecting named pipe...");
     BOOL success = ConnectNamedPipe(pipe_handle, NULL);
     if (!success) {
       capsule_log("Could not connect to named pipe");
       exit(1);
     }
+    connected = true;
 
     struct encoder_private_s private_data;
     ZeroMemory(&private_data, sizeof(encoder_private_s));
@@ -230,7 +254,8 @@ int capsulerun_main (int argc, char **argv) {
     encoder_thread.join();
   } else {
     capsule_log("Error %lu: Cannot launch process and inject dll.", err);
+    return 127;
   }
 
-  return 0;
+  return exitCode;
 }

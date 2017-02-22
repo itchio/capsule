@@ -52,8 +52,10 @@ if(WIN32)
   list(APPEND libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/windows/hooks.cpp
     ${libcapsule_SOURCE_DIR}/windows/process-hooks.cpp
-    ${libcapsule_SOURCE_DIR}/windows/dxgi-capture.cpp
+    ${libcapsule_SOURCE_DIR}/windows/dxgi-hooks.cpp
     ${libcapsule_SOURCE_DIR}/windows/dxgi-vtable-helpers.cpp
+    ${libcapsule_SOURCE_DIR}/windows/d3d9-hooks.cpp
+    ${libcapsule_SOURCE_DIR}/windows/d3d9-capture.cpp
     ${libcapsule_SOURCE_DIR}/windows/d3d10-capture.cpp
     ${libcapsule_SOURCE_DIR}/windows/d3d11-capture.cpp
     ${libcapsule_SOURCE_DIR}/windows/opengl-capture.cpp
