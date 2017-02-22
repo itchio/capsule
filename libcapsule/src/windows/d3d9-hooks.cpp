@@ -5,6 +5,180 @@
 #include "d3d9-vtable-helpers.h"
 
 ///////////////////////////////////////////////
+// IDirect3DDevice9::Present
+///////////////////////////////////////////////
+typedef HRESULT (CAPSULE_STDCALL *Present_t)(
+  IDirect3DDevice9   *device,
+  const RECT         *pSourceRect,
+  const RECT         *pDestRect,
+        HWND         hDestWindowOverride,
+  const RGNDATA      *pDirtyRegion
+);
+static Present_t Present_real;
+static SIZE_T Present_hookId = 0;
+
+HRESULT CAPSULE_STDCALL Present_hook (
+  IDirect3DDevice9   *device,
+  const RECT         *pSourceRect,
+  const RECT         *pDestRect,
+        HWND         hDestWindowOverride,
+  const RGNDATA      *pDirtyRegion
+) {
+  capsule_log("IDirect3DDevice9::Present called");
+  HRESULT res = Present_real(
+    device,
+    pSourceRect,
+    pDestRect,
+    hDestWindowOverride,
+    pDirtyRegion
+  );
+  return res;
+}
+
+///////////////////////////////////////////////
+// IDirect3DDevice9Ex::PresentEx
+///////////////////////////////////////////////
+typedef HRESULT (CAPSULE_STDCALL *PresentEx_t)(
+  IDirect3DDevice9Ex *device,
+  const RECT         *pSourceRect,
+  const RECT         *pDestRect,
+        HWND         hDestWindowOverride,
+  const RGNDATA      *pDirtyRegion,
+        DWORD        dwFlags
+);
+static PresentEx_t PresentEx_real;
+static SIZE_T PresentEx_hookId = 0;
+
+HRESULT CAPSULE_STDCALL PresentEx_hook (
+  IDirect3DDevice9Ex *device,
+  const RECT         *pSourceRect,
+  const RECT         *pDestRect,
+        HWND         hDestWindowOverride,
+  const RGNDATA      *pDirtyRegion,
+        DWORD        dwFlags
+) {
+  capsule_log("IDirect3DDevice9Ex::PresentEx called");
+  HRESULT res = PresentEx_real(
+    device,
+    pSourceRect,
+    pDestRect,
+    hDestWindowOverride,
+    pDirtyRegion,
+    dwFlags
+  );
+  return res;
+}
+
+///////////////////////////////////////////////
+// IDirect3DSwapChain9::Present
+///////////////////////////////////////////////
+typedef HRESULT (CAPSULE_STDCALL *PresentSwap_t)(
+  IDirect3DSwapChain9   *swap,
+  const RECT            *pSourceRect,
+  const RECT            *pDestRect,
+        HWND            hDestWindowOverride,
+  const RGNDATA         *pDirtyRegion,
+        DWORD           dwFlags
+);
+static PresentSwap_t PresentSwap_real;
+static SIZE_T PresentSwap_hookId = 0;
+
+HRESULT CAPSULE_STDCALL PresentSwap_hook (
+  IDirect3DSwapChain9   *swap,
+  const RECT            *pSourceRect,
+  const RECT            *pDestRect,
+        HWND            hDestWindowOverride,
+  const RGNDATA         *pDirtyRegion,
+        DWORD           dwFlags
+) {
+  capsule_log("IDirect3DSwapChain9::Present called");
+  HRESULT res = PresentSwap_real(
+    swap,
+    pSourceRect,
+    pDestRect,
+    hDestWindowOverride,
+    pDirtyRegion,
+    dwFlags
+  );
+  return res;
+}
+
+static void install_present_hooks (IDirect3DDevice9 *device) {
+  DWORD err;
+
+  if (!Present_hookId) {
+    LPVOID Present_addr = capsule_get_IDirect3DDevice9_Present_address((void*) device);
+    if (!Present_addr) {
+      capsule_log("Could not find IDirect3DDevice9::Present");
+      return;
+    }
+
+    err = cHookMgr.Hook(
+      &Present_hookId,
+      (LPVOID *) &Present_real,
+      Present_addr,
+      Present_hook,
+      0
+    );
+    if (err != ERROR_SUCCESS) {
+      capsule_log("Hooking IDirect3DDevice9::Present derped with error %d (%x)", err, err);
+    } else {
+      capsule_log("Installed IDirect3DDevice9::Present hook");
+    }
+  }
+
+  if (!PresentEx_hookId) {
+    IDirect3D9Ex *deviceEx;
+    HRESULT castRes = device->QueryInterface(__uuidof(IDirect3D9Ex), (void**) &deviceEx);
+    if (SUCCEEDED(castRes)) {
+      LPVOID PresentEx_addr = capsule_get_IDirect3DDevice9Ex_PresentEx_address((void*) deviceEx);
+      if (!PresentEx_addr) {
+        capsule_log("Could not find IDirect3DDevice9Ex::PresentEx");
+        return;
+      }
+
+      err = cHookMgr.Hook(
+        &PresentEx_hookId,
+        (LPVOID *) &PresentEx_real,
+        PresentEx_addr,
+        PresentEx_hook,
+        0
+      );
+      if (err != ERROR_SUCCESS) {
+        capsule_log("Hooking IDirect3DDevice9Ex::PresentEx derped with error %d (%x)", err, err);
+      } else {
+        capsule_log("Installed IDirect3DDevice9Ex::PresentEx hook");
+      }
+    }
+  }
+
+  if (!PresentSwap_hookId) {
+    IDirect3DSwapChain9 *swap;
+    HRESULT getRes = device->GetSwapChain(0, &swap);
+    if (SUCCEEDED(getRes)) {
+      LPVOID PresentSwap_addr = capsule_get_IDirect3DSwapChain9_Present_address((void*) swap);
+      if (!PresentSwap_addr) {
+        capsule_log("Could not find IDirect3DSwapChain9::Present");
+        return;
+      }
+
+      err = cHookMgr.Hook(
+        &PresentSwap_hookId,
+        (LPVOID *) &PresentSwap_real,
+        PresentSwap_addr,
+        PresentSwap_hook,
+        0
+      );
+      if (err != ERROR_SUCCESS) {
+        capsule_log("Hooking IDirect3DSwapChain9::Present derped with error %d (%x)", err, err);
+      } else {
+        capsule_log("Installed IDirect3DSwapChain9::Present hook");
+      }
+    }
+  }
+}
+
+///////////////////////////////////////////////
 // IDirect3D9::CreateDevice
 ///////////////////////////////////////////////
 typedef HRESULT (CAPSULE_STDCALL *CreateDevice_t)(
@@ -16,8 +190,8 @@ typedef HRESULT (CAPSULE_STDCALL *CreateDevice_t)(
   D3DPRESENT_PARAMETERS *pPresentationParameters,
   IDirect3DDevice9      **ppReturnedDeviceInterface
 );
-CreateDevice_t CreateDevice_real;
-SIZE_T CreateDevice_hookId = 0;
+static CreateDevice_t CreateDevice_real;
+static SIZE_T CreateDevice_hookId = 0;
 
 HRESULT CAPSULE_STDCALL CreateDevice_hook (
   IDirect3D9            *obj,
@@ -38,6 +212,11 @@ HRESULT CAPSULE_STDCALL CreateDevice_hook (
     pPresentationParameters,
     ppReturnedDeviceInterface
   );
+
+  if (SUCCEEDED(res)) {
+    install_present_hooks(*ppReturnedDeviceInterface);
+  }
+
   return res;
 }
 
@@ -70,8 +249,8 @@ static void install_device_hooks (IDirect3D9 *obj) {
 typedef IDirect3D9* (CAPSULE_STDCALL *Direct3DCreate9_t)(
   UINT SDKVersion
 );
-Direct3DCreate9_t Direct3DCreate9_real;
-SIZE_T Direct3DCreate9_hookId = 0;
+static Direct3DCreate9_t Direct3DCreate9_real;
+static SIZE_T Direct3DCreate9_hookId = 0;
 
 IDirect3D9 * CAPSULE_STDCALL Direct3DCreate9_hook (
   UINT SDKVersion

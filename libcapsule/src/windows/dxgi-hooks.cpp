@@ -75,8 +75,8 @@ typedef HRESULT (CAPSULE_STDCALL *Present_t)(
   UINT SyncInterval,
   UINT Flags
 );
-Present_t Present_real;
-SIZE_T Present_hookId = 0;
+static Present_t Present_real;
+static SIZE_T Present_hookId = 0;
 
 HRESULT CAPSULE_STDCALL Present_hook (
   IDXGISwapChain *swap,
@@ -138,8 +138,8 @@ typedef HRESULT (CAPSULE_STDCALL *CreateSwapChainForHwnd_t)(
         IDXGIOutput                     *pRestrictToOutput,
         IDXGISwapChain1                 **ppSwapChain
 );
-CreateSwapChainForHwnd_t CreateSwapChainForHwnd_real;
-SIZE_T CreateSwapChainForHwnd_hookId = 0;
+static CreateSwapChainForHwnd_t CreateSwapChainForHwnd_real;
+static SIZE_T CreateSwapChainForHwnd_hookId = 0;
 
 HRESULT CAPSULE_STDCALL CreateSwapChainForHwnd_hook (
         IDXGIFactory2                   *factory,
@@ -192,8 +192,8 @@ typedef HRESULT (CAPSULE_STDCALL *CreateSwapChain_t)(
         DXGI_SWAP_CHAIN_DESC            *pDesc,
         IDXGISwapChain                  **ppSwapChain
 );
-CreateSwapChain_t CreateSwapChain_real;
-SIZE_T CreateSwapChain_hookId = 0;
+static CreateSwapChain_t CreateSwapChain_real;
+static SIZE_T CreateSwapChain_hookId = 0;
 
 HRESULT CAPSULE_STDCALL CreateSwapChain_hook (
         IDXGIFactory2                   *factory,
@@ -259,8 +259,8 @@ static void install_swapchain_hooks (IDXGIFactory *factory) {
 ///////////////////////////////////////////////
 
 typedef HRESULT (CAPSULE_STDCALL *CreateDXGIFactory_t)(REFIID, void**);
-CreateDXGIFactory_t CreateDXGIFactory_real;
-SIZE_T CreateDXGIFactory_hookId = 0;
+static CreateDXGIFactory_t CreateDXGIFactory_real;
+static SIZE_T CreateDXGIFactory_hookId = 0;
 
 HRESULT CAPSULE_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
   capsule_log("CreateDXGIFactory called with riid: %s", name_from_iid(riid).c_str());
@@ -280,8 +280,8 @@ HRESULT CAPSULE_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
 ///////////////////////////////////////////////
 
 typedef HRESULT (CAPSULE_STDCALL *CreateDXGIFactory1_t)(REFIID, void**);
-CreateDXGIFactory1_t CreateDXGIFactory1_real;
-SIZE_T CreateDXGIFactory1_hookId;
+static CreateDXGIFactory1_t CreateDXGIFactory1_real;
+static SIZE_T CreateDXGIFactory1_hookId;
 
 HRESULT CAPSULE_STDCALL CreateDXGIFactory1_hook (REFIID riid, void** ppFactory) {
   capsule_log("Hooked_CreateDXGIFactory1 called with riid: %s", name_from_iid(riid).c_str());
