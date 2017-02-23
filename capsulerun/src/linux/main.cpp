@@ -26,6 +26,8 @@
 
 #include "capsulerun.h"
 
+#include "env.h"
+
 using namespace std;
 
 int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
@@ -48,11 +50,23 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
   return fread(buffer, 1, buffer_size, p->fifo_file);
 }
 
+void create_fifo (string fifo_path) {
+  // remove previous fifo if any  
+  unlink(fifo_path.c_str());
+
+  // create fifo
+  int fifo_ret = mkfifo(fifo_path.c_str(), 0644);
+  if (fifo_ret != 0) {
+    capsule_log("could not create fifo at %s (code %d)\n", fifo_path.c_str(), fifo_ret);
+    exit(1);
+  }
+}
+
 int capsulerun_main (int argc, char **argv) {
-  printf("thanks for flying capsule on GNU/Linux\n");
+  capsule_log("thanks for flying capsule on GNU/Linux\n");
 
   if (argc < 3) {
-    printf("usage: capsulerun LIBCAPSULE_DIR EXECUTABLE\n");
+    capsule_log("usage: capsulerun LIBCAPSULE_DIR EXECUTABLE\n");
     exit(1);
   }
 
@@ -63,7 +77,7 @@ int capsulerun_main (int argc, char **argv) {
   const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s/libcapsule.so", libcapsule_dir);
 
   if (libcapsule_path_length > CAPSULE_MAX_PATH_LENGTH) {
-    printf("libcapsule path too long (%d > %d)\n", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
+    capsule_log("libcapsule path too long (%d > %d)\n", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
     exit(1);
   }
 
@@ -71,70 +85,24 @@ int capsulerun_main (int argc, char **argv) {
   char **child_argv = &argv[2];
 
   if (setenv("LD_PRELOAD", libcapsule_path, 1 /* replace */) != 0) {
-    printf("couldn't set LD_PRELOAD'\n");
+    capsule_log("couldn't set LD_PRELOAD'\n");
     exit(1);
   }
 
-  char fifo_path[CAPSULE_MAX_PATH_LENGTH];
-  // FIXME: /tmp is dumb and bad
-  const int fifo_path_length = snprintf(fifo_path, CAPSULE_MAX_PATH_LENGTH, "/tmp/capsule.rawvideo");
+  auto fifo_r_path = string("/tmp/capsule.runr");
+  auto fifo_w_path = string("/tmp/capsule.runw");
 
-  if (fifo_path_length > CAPSULE_MAX_PATH_LENGTH) {
-    printf("fifo path too long (%d > %d)\n", fifo_path_length, CAPSULE_MAX_PATH_LENGTH);
-    exit(1);
-  }
+  create_fifo(fifo_r_path);
+  create_fifo(fifo_w_path);
 
-  // remove previous fifo if any  
-  unlink(fifo_path);
-
-  // create fifo
-  int fifo_ret = mkfifo(fifo_path, 0644);
-  if (fifo_ret != 0) {
-    printf("could not create fifo (code %d)\n", fifo_ret);
-    exit(1);
-  }
-
-  // TODO: abstract that stuff away, like seriously what even
-  char capsule_pipe_path_envvar[CAPSULE_MAX_PATH_LENGTH];
-  const int capsule_pipe_path_envvar_length = snprintf(capsule_pipe_path_envvar, CAPSULE_MAX_PATH_LENGTH, "CAPSULE_PIPE_PATH=%s", fifo_path);
-  if (capsule_pipe_path_envvar_length > CAPSULE_MAX_PATH_LENGTH) {
-    printf("capsule pipe path envvar too long (%d > %d)\n", capsule_pipe_path_envvar_length, CAPSULE_MAX_PATH_LENGTH);
-    exit(1);
-  }
-
-  int parent_environ_size = 0;
-  char **parent_environ = environ;
-  while (*parent_environ) {
-    parent_environ_size++;
-    parent_environ++;
-  }
-
-  int additional_envvars = 1;
-  int child_environ_size = parent_environ_size + additional_envvars;
-  char **child_environ = (char **) malloc(child_environ_size + 1);
-
-  int i = 0;
-  for (i = 0; i < parent_environ_size; i++) {
-    child_environ[i] = environ[i];
-  }
-  child_environ[i++] = capsule_pipe_path_envvar;
-  if (i != child_environ_size) {
-    fprintf(stderr, "Internal error: environment manipulation failed (%d != %d)\n", i, child_environ_size);
-    exit(1);
-  }
-  child_environ[child_environ_size] = NULL;
-
-  int dump_env = 0;
-  if (dump_env) {
-    char **cei = child_environ;
-    fprintf(stderr, "=======================\n");
-    fprintf(stderr, "Child environment:\n");
-    while (*cei) {
-      fprintf(stderr, "%s\n", *cei);
-      cei++;
-    }
-    fprintf(stderr, "=======================\n");
-  }
+  auto fifo_r_var = "CAPSULE_PIPE_R_PATH=" + fifo_w_path;
+  auto fifo_w_var = "CAPSULE_PIPE_W_PATH=" + fifo_r_path;
+  char *env_additions[] = {
+    (char *) fifo_r_var.c_str(),
+    (char *) fifo_w_var.c_str(),
+    NULL
+  };
+  char **child_environ = merge_envs(environ, env_additions);
 
   // spawn game
   int child_err = posix_spawn(
@@ -152,7 +120,7 @@ int capsulerun_main (int argc, char **argv) {
   printf("pid %d given to child %s\n", child_pid, executable_path);
 
   // open fifo
-  FILE *fifo_file = fopen(fifo_path, "rb");
+  FILE *fifo_file = fopen(fifo_r_path.c_str(), "rb");
   if (fifo_file == NULL) {
     printf("could not open fifo for reading: %s\n", strerror(errno));
     exit(1);

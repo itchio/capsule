@@ -5,7 +5,7 @@ static FILE *outFile;
 
 int ensure_outfile() {
   if (!outFile) {
-#ifdef CAPSULE_WINDOWS
+#if defined(CAPSULE_WINDOWS)
     const int pipe_path_len = CAPSULE_LOG_PATH_SIZE;
     wchar_t *pipe_path = (wchar_t*) malloc(sizeof(wchar_t) * pipe_path_len);
     pipe_path[0] = '\0';
@@ -17,7 +17,11 @@ int ensure_outfile() {
     outFile = _wfopen(pipe_path, L"wb");
     free(pipe_path);
 #else
+#if defined(CAPSULE_LINUX)
+    char *pipe_path = getenv("CAPSULE_PIPE_W_PATH");
+#else
     char *pipe_path = getenv("CAPSULE_PIPE_PATH");
+#endif
     capsule_log("Pipe path: %s", pipe_path);
     outFile = fopen(pipe_path, "wb");
 #endif

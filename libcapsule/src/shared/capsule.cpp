@@ -13,7 +13,8 @@ void __attribute__((constructor)) capsule_load() {
 #ifdef CAPSULE_LINUX
   capsule_log("LD_LIBRARY_PATH: %s", getenv("LD_LIBRARY_PATH"));
   capsule_log("LD_PRELOAD: %s", getenv("LD_PRELOAD"));
-  capsule_log("CAPSULE_PIPE_PATH: %s", getenv("CAPSULE_PIPE_PATH"));
+  capsule_log("CAPSULE_PIPE_R_PATH: %s", getenv("CAPSULE_PIPE_R_PATH"));
+  capsule_log("CAPSULE_PIPE_W_PATH: %s", getenv("CAPSULE_PIPE_W_PATH"));
   capsule_x11_init();
 #endif
 }
