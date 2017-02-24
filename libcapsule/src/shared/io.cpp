@@ -21,38 +21,34 @@
 using namespace std;
 using namespace Capsule::Messages;
 
-static int out_file = 0;
-static int in_file = 0;
+static FILE *out_file = 0;
+static FILE *in_file = 0;
 
 #if defined(CAPSULE_WINDOWS)
-static wchar_t *get_pipe_path () {
+static wchar_t *get_pipe_path (wchar_t *var_name) {
   const int pipe_path_len = CAPSULE_LOG_PATH_SIZE;
   wchar_t *pipe_path = (wchar_t*) calloc(pipe_path_len, sizeof(wchar_t));
   pipe_path[0] = '\0';
-  GetEnvironmentVariable(L"CAPSULE_PIPE_PATH", pipe_path, pipe_path_len);
+  GetEnvironmentVariable(var_name, pipe_path, pipe_path_len);
   capsule_assert("Got pipe path", wcslen(pipe_path) > 0);
   return pipe_path;
 }
 #endif
 
-int ensure_outfile() {
+FILE *ensure_outfile() {
   capsule_log("in ensure_outfile");
 
   if (!out_file) {
     capsule_log("ensure_outfile: out_file was nil");
 #if defined(CAPSULE_WINDOWS)
-    wchar_t *pipe_path = get_pipe_path();
+    wchar_t *pipe_path = get_pipe_path(L"CAPSULE_PIPE_W_PATH");
     capsule_log("pipe_w path: %S", pipe_path);
-    out_file = _wopen(pipe_path, _O_RDWR | _O_BINARY);
+    out_file = _wfopen(pipe_path, L"wb");
     free(pipe_path);
-
-    // capsule_log("writing something for fun");
-    // uint32_t sz = 69;
-    // write(out_file, &sz, sizeof(uint32_t));
 #else
     char *pipe_path = getenv("CAPSULE_PIPE_W_PATH");
     capsule_log("pipe_w path: %s", pipe_path);
-    out_file = open(pipe_path, O_WRONLY);
+    out_file = fopen(pipe_path, "wb");
 #endif
     capsule_assert("Opened output file", !!out_file);
   }
@@ -61,14 +57,17 @@ int ensure_outfile() {
   return out_file;
 }
 
-int ensure_infile() {
+FILE *ensure_infile() {
   if (!in_file) {
 #if defined(CAPSULE_WINDOWS)
-    in_file = out_file;
+    wchar_t *pipe_path = get_pipe_path(L"CAPSULE_PIPE_R_PATH");
+    capsule_log("pipe_r path: %S", pipe_path);
+    in_file = _wfopen(pipe_path, L"rb");
+    free(pipe_path);
 #else
     char *pipe_path = getenv("CAPSULE_PIPE_R_PATH");
     capsule_log("pipe_r path: %s", pipe_path);
-    in_file = open(pipe_path, O_RDONLY);
+    in_file = fopen(pipe_path, "rb");
 #endif
     capsule_assert("Opened input file", !!in_file);
   }
@@ -108,10 +107,10 @@ static void unlock_frame(int i) {
 }
 
 static void poll_infile() {
-    int file = ensure_infile();
+    FILE *file = ensure_infile();
 
     while (true) {
-        char *buf = capsule_read_packet(file);
+        char *buf = capsule_fread_packet(file);
         if (!buf) {
             break;
         }
@@ -225,7 +224,7 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
 
     builder.Finish(pkt);
     capsule_log("writing flatbuffer for real");
-    capsule_write_packet(builder, ensure_outfile());
+    capsule_fwrite_packet(builder, ensure_outfile());
     capsule_log("done video format");
 }
 
@@ -254,7 +253,7 @@ void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_da
     auto pkt = pkt_builder.Finish();
 
     builder.Finish(pkt);
-    capsule_write_packet(builder, ensure_outfile());
+    capsule_fwrite_packet(builder, ensure_outfile());
 
     lock_frame(next_frame_index);
     next_frame_index = (next_frame_index + 1) % NUM_BUFFERS;

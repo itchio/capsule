@@ -95,12 +95,21 @@ int capsulerun_main (int argc, char **argv) {
 
   capsule_io_t io;
 
-  string pipe_path = "\\\\.\\pipe\\capsule_pipe";
-  capsule_io_init(&io, pipe_path);
+  string pipe_r_path = "\\\\.\\pipe\\capsule.runr";
+  string pipe_w_path = "\\\\.\\pipe\\capsule.runw";
+  capsule_io_init(&io, pipe_r_path, pipe_w_path);
 
-  err = SetEnvironmentVariableA("CAPSULE_PIPE_PATH", pipe_path.c_str());
+  // swapped on purpose
+  err = SetEnvironmentVariableA("CAPSULE_PIPE_R_PATH", pipe_w_path.c_str());
   if (err == 0) {
-    capsule_log("Could not set pipe path environment variable");
+    capsule_log("Could not set pipe_r path environment variable");
+    exit(1);
+  }
+
+  // swapped on purpose
+  err = SetEnvironmentVariableA("CAPSULE_PIPE_W_PATH", pipe_r_path.c_str());
+  if (err == 0) {
+    capsule_log("Could not set pipe_w path environment variable");
     exit(1);
   }
 

@@ -12,21 +12,22 @@
 
 typedef struct capsule_io {
 #if defined(CAPSULE_WINDOWS)
-    HANDLE pipe_handle;
-    std::string *pipe_path;
+    HANDLE pipe_r;
+    HANDLE pipe_w;
 #else
     std::string *fifo_r_path;
     std::string *fifo_w_path;
-#endif
     int fifo_r;
     int fifo_w;
+#endif
     char *mapped;
 } capsule_io_t;
 
 void capsule_io_init(
     capsule_io_t *io,
 #if defined(CAPSULE_WINDOWS)
-    std::string &pipe_path
+    std::string &pipe_r_path,
+    std::string &pipe_w_path
 #else
     std::string &fifo_r_path,
     std::string &fifo_w_path

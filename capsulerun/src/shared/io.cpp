@@ -34,14 +34,14 @@ using namespace Capsule::Messages;
 
 #if defined(CAPSULE_WINDOWS)
 
-static void create_pipe(
-  capsule_io_t *io,
-  std::string &pipe_path
+static HANDLE create_pipe(
+  std::string &pipe_path,
+  DWORD pipe_mode
 ) {
   capsule_log("Created named pipe %s", pipe_path.c_str());
-  io->pipe_handle = CreateNamedPipeA(
+  HANDLE handle = CreateNamedPipeA(
     pipe_path.c_str(),
-    PIPE_ACCESS_DUPLEX, // open mode
+    pipe_mode, // open mode
     PIPE_TYPE_BYTE | PIPE_WAIT, // pipe mode
     1, // max instances
     16 * 1024 * 1024, // nOutBufferSize
@@ -50,11 +50,13 @@ static void create_pipe(
     NULL // lpSecurityAttributes
   );
 
-  if (!io->pipe_handle) {
+  if (!handle) {
     DWORD err = GetLastError();
     capsule_log("CreateNamedPipe failed, err = %d (%x)", err, err);
     exit(1);
   }
+
+  return handle;
 }
 #else
 
@@ -77,7 +79,8 @@ static void create_fifo(
 void capsule_io_init(
     capsule_io_t *io,
 #if defined(CAPSULE_WINDOWS)
-    std::string &pipe_path
+    std::string &pipe_r_path,
+    std::string &pipe_w_path
 #else
     std::string &fifo_r_path,
     std::string &fifo_w_path
@@ -85,7 +88,8 @@ void capsule_io_init(
 ) {
 
 #if defined(CAPSULE_WINDOWS)
-  create_pipe(io, pipe_path);
+  io->pipe_r = create_pipe(pipe_r_path, PIPE_ACCESS_INBOUND);
+  io->pipe_w = create_pipe(pipe_w_path, PIPE_ACCESS_OUTBOUND);
 #else
   create_fifo(fifo_r_path);
   io->fifo_r_path = &fifo_r_path;
@@ -115,22 +119,12 @@ void capsule_io_connect(
     capsule_io_t *io
 ) {
 #if defined(CAPSULE_WINDOWS)
-  BOOL success = ConnectNamedPipe(io->pipe_handle, NULL);
-  if (!success) {
-    capsule_log("Could not connect to named pipe");
-    exit(1);
-  }
-  capsule_log("Connected to named pipe");
+  BOOL success = false;
+  success = ConnectNamedPipe(io->pipe_r, NULL);
+  if (!success) { capsule_log("Could not connect to named pipe for reading"); exit(1); }
 
-  int fd = _open_osfhandle((intptr_t) io->pipe_handle, 0);
-  if (fd < 0) {
-    capsule_log("Could not re-open pipe handle");
-    exit(1);
-  }
-  capsule_log("Re-opened named pipe");
-
-  io->fifo_r = fd;
-  io->fifo_w = fd;
+  success = ConnectNamedPipe(io->pipe_w, NULL);
+  if (!success) { capsule_log("Could not connect to named pipe for writing"); exit(1); }
 #else
   io->fifo_r = open_fifo(*io->fifo_r_path, "reading", O_RDONLY);
   io->fifo_w = open_fifo(*io->fifo_w_path, "writing", O_WRONLY);
@@ -143,7 +137,11 @@ int capsule_io_receive_video_format (
     video_format_t *vfmt
 ) {
   capsule_log("receiving video format...");
+#if defined(CAPSULE_WINDOWS)
+  char *buf = capsule_hread_packet(io->pipe_r);
+#else
   char *buf = capsule_read_packet(io->fifo_r);
+#endif
   if (!buf) {
     capsule_log("receive_video_format: pipe closed");
     exit(1);
@@ -213,7 +211,12 @@ int capsule_io_receive_video_format (
 }
 
 int capsule_io_receive_video_frame (capsule_io_t *io, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
+  capsule_log("reading VideoFrameCommitted");
+#if defined(CAPSULE_WINDOWS)
+  char *buf = capsule_hread_packet(io->pipe_r);
+#else
   char *buf = capsule_read_packet(io->fifo_r);
+#endif
 
   if (!buf) {
     // pipe closed
@@ -235,7 +238,13 @@ int capsule_io_receive_video_frame (capsule_io_t *io, uint8_t *buffer, size_t bu
   auto vfp = CreateVideoFrameProcessed(builder, vfc->index()); 
   auto opkt = CreatePacket(builder, Message_VideoFrameProcessed, vfp.Union());
   builder.Finish(opkt);
+
+  capsule_log("writing VideoFrameProcessed");
+#if defined(CAPSULE_WINDOWS)
+  capsule_hwrite_packet(builder, io->pipe_w);
+#else
   capsule_write_packet(builder, io->fifo_w);
+#endif
 
   delete[] buf;
   return buffer_size;
