@@ -7,7 +7,6 @@
 #include <sys/stat.h>
 
 #include "io.h"
-#include <capsule/messages.h>
 
 #if defined(CAPSULE_LINUX)
 #include <sys/mman.h>

@@ -4,13 +4,15 @@
 #include <string>
 using namespace std;
 
-#if defined(CAPSULE_LINUX)
+#if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
 #include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
 
 #include <thread> // for making trouble double
 #include <mutex> // for trouble mitigation
+
+#include <capsule/messages.h>
 #endif // CAPSULE_LINUX
 
 static FILE *out_file;
@@ -30,7 +32,7 @@ FILE *ensure_outfile() {
     free(pipe_path);
 #else
     char *pipe_path = getenv("CAPSULE_PIPE_W_PATH");
-    capsule_log("Pipe path: %s", pipe_path);
+    capsule_log("pipe_w path: %s", pipe_path);
     out_file = fopen(pipe_path, "wb");
 #endif
     capsule_assert("Opened output file", !!out_file);
@@ -49,7 +51,7 @@ FILE *ensure_infile() {
     capsule_assert("ensure_infile on windows: stub", false);
 #else
     pipe_path = getenv("CAPSULE_PIPE_R_PATH");
-    capsule_log("Pipe path: %s", pipe_path);
+    capsule_log("pipe_r path: %s", pipe_path);
     in_file = fopen(pipe_path, "rb");
 #endif
     capsule_assert("Opened input file", !!in_file);
@@ -68,7 +70,7 @@ void CAPSULE_STDCALL capsule_io_init () {
     capsule_log("infile ensured!");
 }
 
-#if defined(CAPSULE_LINUX)
+#if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
 
 bool frame_locked[NUM_BUFFERS];
 mutex frame_locked_mutex;
@@ -118,6 +120,7 @@ static void poll_infile() {
 }
 
 void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, int vflip, int pitch) {
+    capsule_log("writing video format");
     thread poll_thread(poll_infile);
     poll_thread.detach();
 
@@ -133,6 +136,12 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     capsule_log("Should allocate %d bytes of shmem area", shmem_size);
 
     string shmem_path = "/capsule.shm";
+
+    // shm segments persist across runs, and macOS will refuse
+    // to ftruncate an existing shm segment, so to be on the safe
+    // side, we unlink it beforehand.
+    shm_unlink(shmem_path.c_str());
+
     shmem_handle = shm_open(shmem_path.c_str(), O_CREAT|O_RDWR, 0755);
     capsule_assert("Opened shmem area", shmem_handle > 0);
 
@@ -172,6 +181,7 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
 
     builder.Finish(pkt);
     capsule_write_packet(builder, ensure_outfile());
+    capsule_log("done video format");
 }
 #else
 void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, int vflip, int pitch) {
@@ -191,11 +201,12 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
   num = (int64_t) pitch;
   fwrite(&num, sizeof(int64_t), 1, out_file);
 }
-#endif // CAPSULE_LINUX
+#endif // CAPSULE_LINUX || CAPSULE_OSX
 
-#if defined(CAPSULE_LINUX)
+#if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
 
 void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_data, size_t frame_data_size) {
+    capsule_log("writing video frame");
     if (is_frame_locked(next_frame_index)) {
         capsule_log("frame buffer overrun! skipping.");
         return;
@@ -203,7 +214,9 @@ void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_da
 
     flatbuffers::FlatBufferBuilder builder(1024);
 
-    char *target = mapped + (frame_data_size * next_frame_index);
+    size_t offset = (frame_data_size * next_frame_index);
+    capsule_log("write_video_frame offset: %p. mapped = %p", offset, mapped);
+    char *target = mapped + offset;
     memcpy(target, frame_data, frame_data_size);
 
     VideoFrameCommittedBuilder vfc_builder(builder);
@@ -228,4 +241,4 @@ void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_da
   fwrite(&timestamp, 1, sizeof(int64_t), out_file);
   fwrite(frame_data, 1, frame_data_size, out_file);
 }
-#endif
+#endif // CAPSULE_LINUX || CAPSULE_OSX

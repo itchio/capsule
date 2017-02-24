@@ -54,7 +54,7 @@ bool CAPSULE_STDCALL capsule_capture_ready () {
   static int num_frame = 0;
 
   num_frame++;
-#if !defined(CAPSULE_LINUX)
+#if defined(CAPSULE_WINDOWS)
   if (num_frame < 120) {
     return false;
   }
