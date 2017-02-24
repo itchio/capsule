@@ -14,12 +14,20 @@
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
 #elif defined(CAPSULE_OSX)
-// TODO: missing includes for shm_open, mmap etc.
+#include <sys/mman.h>
+#include <sys/stat.h> // for mode constants
+#include <fcntl.h>    // for O_* constants
+#include <errno.h>    // for errno
+#include <unistd.h>   // unlink
+#else
+#error "shared/io is only for Linux & macOS"
 #endif
 
 using namespace std;
 
-void create_fifo (string fifo_path) {
+static FILE * create_fifo(
+    string fifo_path
+) {
   // remove previous fifo if any  
   unlink(fifo_path.c_str());
 
@@ -31,9 +39,47 @@ void create_fifo (string fifo_path) {
   }
 }
 
-int capsule_receive_video_format (FILE *file, video_format_t *vfmt, char **mapped) {
+void capsule_io_init(
+    capsule_io_t *io,
+    std::string fifo_r_path,
+    std::string fifo_w_path
+) {
+
+  memset(io, 0, sizeof(capsule_io_t));
+
+  create_fifo(fifo_r_path);
+  io->fifo_r_path = fifo_r_path;
+
+  create_fifo(fifo_w_path);
+  io->fifo_w_path = fifo_w_path;
+}
+
+static FILE *open_fifo (std::string path, std::string purpose, const char *mode) {
+  capsule_log("opening %s fifo...", purpose.c_str());
+
+  FILE *file = fopen(path.c_str(), mode);
+  if (!file) {
+    capsule_log("could not open fifo for %s: %s", purpose.c_str(), strerror(errno));
+    exit(1);
+  }
+
+  return file;
+}
+
+void capsule_io_connect(
+    capsule_io_t *io
+) {
+  io->fifo_r = open_fifo(io->fifo_r_path, "reading", "rb");
+  io->fifo_w = open_fifo(io->fifo_w_path, "writing", "wb");
+  capsule_log("communication established!");
+}
+
+int capsule_io_receive_video_format (
+    capsule_io_t *io,
+    video_format_t *vfmt
+) {
   capsule_log("receiving video format...");
-  char *buf = capsule_read_packet(file);
+  char *buf = capsule_read_packet(io->fifo_r);
   if (!buf) {
     capsule_log("receive_video_format: pipe closed");
     exit(1);
@@ -63,7 +109,7 @@ int capsule_receive_video_format (FILE *file, video_format_t *vfmt, char **mappe
     exit(1);
   }
 
-  *mapped = (char *) mmap(
+  io->mapped = (char *) mmap(
       nullptr, // addr
       shmem->size(), // length
       PROT_READ, // prot
@@ -72,7 +118,7 @@ int capsule_receive_video_format (FILE *file, video_format_t *vfmt, char **mappe
       0 // offset
   );
 
-  if (!*mapped) {
+  if (!io->mapped) {
     capsule_log("Could not map shmem area");
     exit(1);
   }
@@ -81,8 +127,8 @@ int capsule_receive_video_format (FILE *file, video_format_t *vfmt, char **mappe
   return 0;
 }
 
-int capsule_receive_video_frame (FILE *file, uint8_t *buffer, size_t buffer_size, int64_t *timestamp, char *mapped) {
-  char *buf = capsule_read_packet(file);
+int capsule_io_receive_video_frame (capsule_io_t *io, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
+  char *buf = capsule_read_packet(io->fifo_r);
 
   if (!buf) {
     // pipe closed
@@ -97,15 +143,16 @@ int capsule_receive_video_frame (FILE *file, uint8_t *buffer, size_t buffer_size
 
   auto vfc = static_cast<const VideoFrameCommitted*>(pkt->message());
   *timestamp = vfc->timestamp();
-  void *source = mapped + (buffer_size * vfc->index());
+  void *source = io->mapped + (buffer_size * vfc->index());
   memcpy(buffer, source, buffer_size);
 
   flatbuffers::FlatBufferBuilder builder(1024);
   auto vfp = CreateVideoFrameProcessed(builder, vfc->index()); 
   auto opkt = CreatePacket(builder, Message_VideoFrameProcessed, vfp.Union());
   builder.Finish(opkt);
-  capsule_write_packet(builder, p->fifo_w_file);
+  capsule_write_packet(builder, io->fifo_w);
 
   delete[] buf;
   return buffer_size;
 }
+

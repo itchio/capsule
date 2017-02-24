@@ -5,17 +5,24 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#ifndef CAPSULE_WINDOWS
+#if !defined(CAPSULE_WINDOWS)
 void __attribute__((constructor)) capsule_load() {
   pid_t pid = getpid();
   capsule_log("Initializing (pid %d)...", pid);
 
-#ifdef CAPSULE_LINUX
+#if defined(CAPSULE_LINUX)
   capsule_log("LD_LIBRARY_PATH: %s", getenv("LD_LIBRARY_PATH"));
   capsule_log("LD_PRELOAD: %s", getenv("LD_PRELOAD"));
+#elif defined(CAPSULE_OSX)
+  capsule_log("DYLD_INSERT_LIBRARIES: %s", getenv("DYLD_INSERT_LIBRARIES"));
+  capsule_log("LD_PRELOAD: %s", getenv("LD_PRELOAD"));
+#endif
+
   capsule_log("CAPSULE_PIPE_R_PATH: %s", getenv("CAPSULE_PIPE_R_PATH"));
   capsule_log("CAPSULE_PIPE_W_PATH: %s", getenv("CAPSULE_PIPE_W_PATH"));
   capsule_io_init();
+
+#ifdef CAPSULE_LINUX
   capsule_x11_init();
 #endif
 }

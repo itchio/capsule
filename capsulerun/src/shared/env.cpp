@@ -1,6 +1,8 @@
 
 #include "env.h"
 
+#include <stdlib.h>
+
 char **merge_envs (char **a, char **b) {
     size_t total_size = 0;
     char **p = a;

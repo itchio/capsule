@@ -20,15 +20,19 @@
 
 using namespace std;
 
-static char *mapped;
+typedef struct encoder_private_s {
+  capsule_io_t *io;
+} encoder_private_t;
 
 int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
-  return capsule_receive_video_format(p->fifo_r_file, vfmt, &mapped);
+  return capsule_io_receive_video_format(p->io, vfmt);
 }
 
 int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  return capsule_receive_video_frame(p->fifo_r_file, buffer, buffer_size, timestamp, mapped);
+  return capsule_io_receive_video_frame(p->io, buffer, buffer_size, timestamp);
 }
+
+extern char **environ;
 
 int capsulerun_main (int argc, char **argv) {
   capsule_log("thanks for flying capsule on macOS");
@@ -41,35 +45,31 @@ int capsulerun_main (int argc, char **argv) {
   char *libcapsule_dir = argv[1];
   char *executable_path = argv[2];
 
-  string libcapsule_path = string(libcapsule_dir) + "/libcapsule.dylib"
+  auto libcapsule_path = string(libcapsule_dir) + "/libcapsule.dylib";
 
   // TODO: respect outside DYLD_INSERT_LIBRARIES ?
   auto dyld_insert_var = "DYLD_INSERT_LIBRARIES=" + libcapsule_path;
 
+  string fifo_r_path = "/tmp/capsule.runr";
+  string fifo_w_path = "/tmp/capsule.runw";
+
   // swapped on purpose
-  auto fifo_r_var = "CAPSULE_PIPE_R_PATH=" + string(fifo_w_path);
-  auto fifo_w_var = "CAPSULE_PIPE_W_PATH=" + string(fifo_r_path);
+  auto fifo_r_var = "CAPSULE_PIPE_R_PATH=" + fifo_w_path;
+  auto fifo_w_var = "CAPSULE_PIPE_W_PATH=" + fifo_r_path;
   char *env_additions[] = {
     (char *) fifo_r_var.c_str(),
     (char *) fifo_w_var.c_str(),
     (char *) dyld_insert_var.c_str(),
     NULL
-  }
+  };
 
   char **child_environ = merge_envs(environ, env_additions);
 
   pid_t child_pid;
   char **child_argv = &argv[2];
 
-  // remove previous fifo if any  
-  unlink(fifo_path);
-
-  // create fifo
-  int fifo_ret = mkfifo(fifo_path, 0644);
-  if (fifo_ret != 0) {
-    capsule_log("could not create fifo (code %d)", fifo_ret);
-    exit(1);
-  }
+  capsule_io_t io;
+  capsule_io_init(&io, fifo_r_path, fifo_w_path);
 
   int err = posix_spawn(
     &child_pid,
@@ -77,7 +77,7 @@ int capsulerun_main (int argc, char **argv) {
     NULL, // file_actions
     NULL, // spawn_attrs
     child_argv,
-    env
+    child_environ
   );
   if (err != 0) {
     capsule_log("spawn error %d: %s", err, strerror(err));
@@ -85,24 +85,11 @@ int capsulerun_main (int argc, char **argv) {
 
   capsule_log("pid %d given to child %s", child_pid, executable_path);
 
-  FILE *fifo_r_file = fopen(fifo_r_path.c_str(), "rb");
-  if (fifo_r_file == NULL) {
-    capsule_log("could not open fifo for reading: %s", strerror(errno));
-    exit(1);
-  }
-  capsule_log("opened fifo for reading");
-
-  FILE *fifo_w_file = fopen(fifo_w_path.c_str(), "wb");
-  if (fifo_file == NULL) {
-    capsule_log("could not open fifo for writing: %s", strerror(errno));
-    exit(1);
-  }
-  capsule_log("opened fifo for writing");
+  capsule_io_connect(&io);
 
   struct encoder_private_s private_data;
   memset(&private_data, 0, sizeof(private_data));
-  private_data.fifo_r_file = fifo_r_file;
-  private_data.fifo_w_file = fifo_w_file;
+  private_data.io = &io;
 
   struct encoder_params_s encoder_params;
   memset(&encoder_params, 0, sizeof(encoder_params));

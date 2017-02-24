@@ -29,9 +29,7 @@ FILE *ensure_outfile() {
     out_file = _wfopen(pipe_path, L"wb");
     free(pipe_path);
 #else
-#if defined(CAPSULE_LINUX)
     char *pipe_path = getenv("CAPSULE_PIPE_W_PATH");
-#endif
     capsule_log("Pipe path: %s", pipe_path);
     out_file = fopen(pipe_path, "wb");
 #endif
@@ -50,11 +48,7 @@ FILE *ensure_infile() {
 #if defined(CAPSULE_WINDOWS)
     capsule_assert("ensure_infile on windows: stub", false);
 #else
-#if defined(CAPSULE_LINUX)
     pipe_path = getenv("CAPSULE_PIPE_R_PATH");
-#else
-    capsule_assert("ensure_infile on mac: stub", false);
-#endif
     capsule_log("Pipe path: %s", pipe_path);
     in_file = fopen(pipe_path, "rb");
 #endif
