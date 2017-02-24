@@ -1,58 +1,74 @@
 
+#include <capsule/messages.h>
 #include <capsule.h>
 
 #include <string>
-using namespace std;
 
 #if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
 #include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
 
+#include <unistd.h>
+#else // CAPSULE_LINUX || CAPSULE_OSX
+#include <io.h>
+#include <fcntl.h>
+#endif // !(CAPSULE_LINUX || CAPSULE_OSX)
+
 #include <thread> // for making trouble double
 #include <mutex> // for trouble mitigation
 
-#include <capsule/messages.h>
-#endif // CAPSULE_LINUX
+using namespace std;
+using namespace Capsule::Messages;
 
-static FILE *out_file;
+static int out_file = 0;
+static int in_file = 0;
 
-FILE *ensure_outfile() {
-  if (!out_file) {
 #if defined(CAPSULE_WINDOWS)
-    const int pipe_path_len = CAPSULE_LOG_PATH_SIZE;
-    wchar_t *pipe_path = (wchar_t*) malloc(sizeof(wchar_t) * pipe_path_len);
-    pipe_path[0] = '\0';
-    GetEnvironmentVariable(L"CAPSULE_PIPE_PATH", pipe_path, pipe_path_len);
-    capsule_assert("Got pipe path", wcslen(pipe_path) > 0);
+static wchar_t *get_pipe_path () {
+  const int pipe_path_len = CAPSULE_LOG_PATH_SIZE;
+  wchar_t *pipe_path = (wchar_t*) calloc(pipe_path_len, sizeof(wchar_t));
+  pipe_path[0] = '\0';
+  GetEnvironmentVariable(L"CAPSULE_PIPE_PATH", pipe_path, pipe_path_len);
+  capsule_assert("Got pipe path", wcslen(pipe_path) > 0);
+  return pipe_path;
+}
+#endif
 
-    capsule_log("Pipe path: %S", pipe_path);
+int ensure_outfile() {
+  capsule_log("in ensure_outfile");
 
-    out_file = _wfopen(pipe_path, L"wb");
+  if (!out_file) {
+    capsule_log("ensure_outfile: out_file was nil");
+#if defined(CAPSULE_WINDOWS)
+    wchar_t *pipe_path = get_pipe_path();
+    capsule_log("pipe_w path: %S", pipe_path);
+    out_file = _wopen(pipe_path, _O_RDWR | _O_BINARY);
     free(pipe_path);
+
+    // capsule_log("writing something for fun");
+    // uint32_t sz = 69;
+    // write(out_file, &sz, sizeof(uint32_t));
 #else
     char *pipe_path = getenv("CAPSULE_PIPE_W_PATH");
     capsule_log("pipe_w path: %s", pipe_path);
-    out_file = fopen(pipe_path, "wb");
+    out_file = open(pipe_path, O_WRONLY);
 #endif
     capsule_assert("Opened output file", !!out_file);
   }
 
+  capsule_log("ensure_outfile: returning %d", out_file);
   return out_file;
 }
 
-static FILE *in_file;
-
-FILE *ensure_infile() {
-  char *pipe_path;
-
+int ensure_infile() {
   if (!in_file) {
 #if defined(CAPSULE_WINDOWS)
-    capsule_assert("ensure_infile on windows: stub", false);
+    in_file = out_file;
 #else
-    pipe_path = getenv("CAPSULE_PIPE_R_PATH");
+    char *pipe_path = getenv("CAPSULE_PIPE_R_PATH");
     capsule_log("pipe_r path: %s", pipe_path);
-    in_file = fopen(pipe_path, "rb");
+    in_file = open(pipe_path, O_RDONLY);
 #endif
     capsule_assert("Opened input file", !!in_file);
   }
@@ -70,13 +86,10 @@ void CAPSULE_STDCALL capsule_io_init () {
     capsule_log("infile ensured!");
 }
 
-#if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
-
 bool frame_locked[NUM_BUFFERS];
 mutex frame_locked_mutex;
 int next_frame_index = 0;
 
-static int shmem_handle;
 static char *mapped;
 
 static bool is_frame_locked(int i) {
@@ -95,7 +108,7 @@ static void unlock_frame(int i) {
 }
 
 static void poll_infile() {
-    FILE *file = ensure_infile();
+    int file = ensure_infile();
 
     while (true) {
         char *buf = capsule_read_packet(file);
@@ -135,6 +148,33 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     size_t shmem_size = frame_size * NUM_BUFFERS;
     capsule_log("Should allocate %d bytes of shmem area", shmem_size);
 
+#if defined(CAPSULE_WINDOWS)
+    string shmem_path = "capsule.shm";
+
+    capsule_log("Creating file mapping");
+    HANDLE hMapFile = CreateFileMappingA(
+        INVALID_HANDLE_VALUE, // use paging file
+        NULL,                 // default security
+        PAGE_READWRITE,       // read/write access
+        0,                    // maximum object size (high-order DWORD)
+        shmem_size,           // maximum object size (low-order DWORD)
+        shmem_path.c_str()    // name of mapping object
+    );
+    if (hMapFile == NULL) {
+        capsule_log("File mapping didn't work");
+        DWORD err = GetLastError();
+        capsule_log("Could not create shmem area: %d (%x)", err, err);
+    }
+
+    capsule_log("Mapping view of file");
+    mapped = (char *) MapViewOfFile(
+        hMapFile,
+        FILE_MAP_ALL_ACCESS,
+        0,
+        0,
+        shmem_size
+    );
+#else
     string shmem_path = "/capsule.shm";
 
     // shm segments persist across runs, and macOS will refuse
@@ -142,8 +182,8 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     // side, we unlink it beforehand.
     shm_unlink(shmem_path.c_str());
 
-    shmem_handle = shm_open(shmem_path.c_str(), O_CREAT|O_RDWR, 0755);
-    capsule_assert("Opened shmem area", shmem_handle > 0);
+    int shmem_handle = shm_open(shmem_path.c_str(), O_CREAT|O_RDWR, 0755);
+    capsule_assert("Created shmem area", shmem_handle > 0);
 
     int ret = ftruncate(shmem_handle, shmem_size);
     capsule_assert("Truncated shmem area", ret == 0);
@@ -156,8 +196,12 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
         shmem_handle, // fd
         0 // offset
     );
+#endif // CAPSULE_WINDOWS
+
+    capsule_log("Checking if mapping worked");
     capsule_assert("Mapped shmem area", !!mapped);
 
+    capsule_log("Creating flatbuffer");
     auto shmem_path_fbs = builder.CreateString(shmem_path);
 
     ShmemBuilder shmem_builder(builder);
@@ -180,30 +224,10 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     auto pkt = pkt_builder.Finish();
 
     builder.Finish(pkt);
+    capsule_log("writing flatbuffer for real");
     capsule_write_packet(builder, ensure_outfile());
     capsule_log("done video format");
 }
-#else
-void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, int vflip, int pitch) {
-  ensure_outfile();
-  int64_t num = (int64_t) width;
-  fwrite(&num, sizeof(int64_t), 1, out_file);
-
-  num = (int64_t) height;
-  fwrite(&num, sizeof(int64_t), 1, out_file);
-
-  num = (int64_t) format;
-  fwrite(&num, sizeof(int64_t), 1, out_file);
-
-  num = (int64_t) vflip;
-  fwrite(&num, sizeof(int64_t), 1, out_file);
-
-  num = (int64_t) pitch;
-  fwrite(&num, sizeof(int64_t), 1, out_file);
-}
-#endif // CAPSULE_LINUX || CAPSULE_OSX
-
-#if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
 
 void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_data, size_t frame_data_size) {
     capsule_log("writing video frame");
@@ -235,10 +259,3 @@ void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_da
     lock_frame(next_frame_index);
     next_frame_index = (next_frame_index + 1) % NUM_BUFFERS;
 }
-#else
-void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_data, size_t frame_data_size) {
-  ensure_outfile();
-  fwrite(&timestamp, 1, sizeof(int64_t), out_file);
-  fwrite(frame_data, 1, frame_data_size, out_file);
-}
-#endif // CAPSULE_LINUX || CAPSULE_OSX

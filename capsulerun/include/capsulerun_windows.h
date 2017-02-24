@@ -18,8 +18,10 @@
 // </WASAPI>
 //////////////////////
 
+#include "../src/shared/io.h"
+
 typedef struct encoder_private_s {
-  HANDLE pipe_handle;
+  capsule_io_t *io;
 
   IAudioClient *pAudioClient;
   IAudioCaptureClient *pCaptureClient;

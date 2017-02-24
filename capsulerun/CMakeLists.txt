@@ -19,6 +19,7 @@ ${capsulerun_SOURCE_DIR}/shared/main.cpp)
 if(WIN32)
   list(APPEND capsulerun_SRC
     ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
+    ${capsulerun_SOURCE_DIR}/shared/io.cpp
     ${capsulerun_SOURCE_DIR}/windows/wasapi.cpp
     ${capsulerun_SOURCE_DIR}/windows/arguments.cpp
     ${capsulerun_SOURCE_DIR}/windows/main.cpp

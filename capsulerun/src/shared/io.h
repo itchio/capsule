@@ -4,18 +4,33 @@
 #include <capsule/constants.h>
 #include <capsulerun_types.h>
 
+#if defined(CAPSULE_WINDOWS)
+#define LEAN_AND_MEAN
+#include <windows.h>
+#undef LEAN_AND_MEAN
+#endif
+
 typedef struct capsule_io {
+#if defined(CAPSULE_WINDOWS)
+    HANDLE pipe_handle;
+    std::string *pipe_path;
+#else
     std::string *fifo_r_path;
     std::string *fifo_w_path;
-    FILE *fifo_r;
-    FILE *fifo_w;
+#endif
+    int fifo_r;
+    int fifo_w;
     char *mapped;
 } capsule_io_t;
 
 void capsule_io_init(
     capsule_io_t *io,
+#if defined(CAPSULE_WINDOWS)
+    std::string &pipe_path
+#else
     std::string &fifo_r_path,
     std::string &fifo_w_path
+#endif
 );
 
 void capsule_io_connect (

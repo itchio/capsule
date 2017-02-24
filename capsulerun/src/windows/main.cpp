@@ -10,6 +10,8 @@
 
 #include "capsulerun.h"
 
+#include "../shared/io.h"
+
 using namespace std;
 
 static bool connected = false;
@@ -22,68 +24,11 @@ void toWideChar (const char *s, wchar_t **ws) {
 }
 
 int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
-  DWORD bytes_read;
-  BOOL success = FALSE;
-
-  int64_t num;
-
-  success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
-  if (!success || bytes_read < sizeof(int64_t)) {
-    capsule_log("Could not read width");
-    return 1;
-  }
-  vfmt->width = (int) num;
-
-  success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
-  if (!success || bytes_read < sizeof(int64_t)) {
-    capsule_log("Could not read height");
-    return 1;
-  }
-  vfmt->height = (int) num;
-
-  success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
-  if (!success || bytes_read < sizeof(int64_t)) {
-    capsule_log("Could not read format");
-    return 1;
-  }
-  vfmt->format = (capsule_pix_fmt_t) num;
-
-  success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
-  if (!success || bytes_read < sizeof(int64_t)) {
-    capsule_log("Could not read vflip");
-    return 1;
-  }
-  vfmt->vflip = (int) num;
-
-  success = ReadFile(p->pipe_handle, &num, sizeof(int64_t), &bytes_read, NULL);
-  if (!success || bytes_read < sizeof(int64_t)) {
-    printf("Could not read pitch\n");
-    return 1;
-  }
-  vfmt->pitch = (int) num;
-
-  return 0;
+  return capsule_io_receive_video_format(p->io, vfmt);
 }
 
 int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  DWORD bytes_read = 0;
-  DWORD total_bytes_read = 0;
-  BOOL success = TRUE;
-
-  success = ReadFile(p->pipe_handle, timestamp, sizeof(int64_t), &bytes_read, NULL);
-  if (!success || bytes_read < sizeof(int64_t)) {
-    capsule_log("Could not read timestamp");
-    return 0;
-  }
-
-  bytes_read = 0;
-
-  while (success && total_bytes_read < buffer_size) {
-    success = ReadFile(p->pipe_handle, buffer + bytes_read, buffer_size - bytes_read, &bytes_read, NULL);
-    total_bytes_read += bytes_read;
-  }
-
-  return total_bytes_read;
+  return capsule_io_receive_video_frame(p->io, buffer, buffer_size, timestamp);
 }
 
 static void wait_for_child (HANDLE hProcess) {
@@ -143,39 +88,23 @@ int capsulerun_main (int argc, char **argv) {
   ZeroMemory(&pi, sizeof(pi));  
 
   wchar_t *executable_path_w;
-  wchar_t *libcapsule_path_w;
-
   toWideChar(executable_path, &executable_path_w);
+
+  wchar_t *libcapsule_path_w;
   toWideChar(libcapsule_path, &libcapsule_path_w);
 
-  wchar_t *pipe_path = L"\\\\.\\pipe\\capsule_pipe";
-  cdprintf("Creating named pipe %S...", pipe_path);
+  capsule_io_t io;
 
-  HANDLE pipe_handle = CreateNamedPipe(
-    pipe_path,
-    PIPE_ACCESS_INBOUND, // open mode
-    PIPE_TYPE_BYTE | PIPE_WAIT, // pipe mode
-    1, // max instances
-    16 * 1024 * 1024, // nOutBufferSize
-    16 * 1024 * 1024, // nInBufferSize
-    0, // nDefaultTimeout
-    NULL // lpSecurityAttributes
-  );
+  string pipe_path = "\\\\.\\pipe\\capsule_pipe";
+  capsule_io_init(&io, pipe_path);
 
-  if (!pipe_handle) {
-    err = GetLastError();
-    capsule_log("CreateNamedPipe failed, err = %d (%x)", err, err);
-  }
-
-  cdprintf("Created named pipe!");
-
-  err = SetEnvironmentVariable(L"CAPSULE_PIPE_PATH", pipe_path);
+  err = SetEnvironmentVariableA("CAPSULE_PIPE_PATH", pipe_path.c_str());
   if (err == 0) {
     capsule_log("Could not set pipe path environment variable");
     exit(1);
   }
 
-  err = SetEnvironmentVariable(L"CAPSULE_LIBRARY_PATH", libcapsule_path_w);
+  err = SetEnvironmentVariableA("CAPSULE_LIBRARY_PATH", libcapsule_path);
   if (err == 0) {
     capsule_log("Could not set library path environment variable");
     exit(1);
@@ -223,17 +152,12 @@ int capsulerun_main (int argc, char **argv) {
     thread child_thread(wait_for_child, pi.hProcess);
     child_thread.detach();
 
-    cdprintf("Connecting named pipe...");
-    BOOL success = ConnectNamedPipe(pipe_handle, NULL);
-    if (!success) {
-      capsule_log("Could not connect to named pipe");
-      exit(1);
-    }
+    capsule_io_connect(&io);
     connected = true;
 
     struct encoder_private_s private_data;
     ZeroMemory(&private_data, sizeof(encoder_private_s));
-    private_data.pipe_handle = pipe_handle;
+    private_data.io = &io;
 
     wasapi_start(&private_data);
 

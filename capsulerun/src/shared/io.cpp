@@ -22,10 +22,41 @@
 #include <errno.h>    // for errno
 #include <unistd.h>   // unlink
 #else
-#error "shared/io is only for Linux & macOS"
+#define LEAN_AND_MEAN
+#include <windows.h>
+#undef LEAN_AND_MEAN
+
+#include <io.h>
 #endif
 
 using namespace std;
+using namespace Capsule::Messages;
+
+#if defined(CAPSULE_WINDOWS)
+
+static void create_pipe(
+  capsule_io_t *io,
+  std::string &pipe_path
+) {
+  capsule_log("Created named pipe %s", pipe_path.c_str());
+  io->pipe_handle = CreateNamedPipeA(
+    pipe_path.c_str(),
+    PIPE_ACCESS_DUPLEX, // open mode
+    PIPE_TYPE_BYTE | PIPE_WAIT, // pipe mode
+    1, // max instances
+    16 * 1024 * 1024, // nOutBufferSize
+    16 * 1024 * 1024, // nInBufferSize
+    0, // nDefaultTimeout
+    NULL // lpSecurityAttributes
+  );
+
+  if (!io->pipe_handle) {
+    DWORD err = GetLastError();
+    capsule_log("CreateNamedPipe failed, err = %d (%x)", err, err);
+    exit(1);
+  }
+}
+#else
 
 static void create_fifo(
     std::string &fifo_path
@@ -41,35 +72,69 @@ static void create_fifo(
   }
 }
 
+#endif // CAPSULE_WINDOWS
+
 void capsule_io_init(
     capsule_io_t *io,
+#if defined(CAPSULE_WINDOWS)
+    std::string &pipe_path
+#else
     std::string &fifo_r_path,
     std::string &fifo_w_path
+#endif // CAPSULE_WINDOWS
 ) {
+
+#if defined(CAPSULE_WINDOWS)
+  create_pipe(io, pipe_path);
+#else
   create_fifo(fifo_r_path);
   io->fifo_r_path = &fifo_r_path;
 
   create_fifo(fifo_w_path);
   io->fifo_w_path = &fifo_w_path;
+#endif // CAPSULE_WINDOWS
 }
 
-static FILE *open_fifo (std::string &path, std::string purpose, const char *mode) {
-  capsule_log("opening %s fifo... (%s)", purpose.c_str(), path.c_str());
+static int open_fifo (
+  std::string &path,
+  std::string purpose,
+  int flags
+) {
+  capsule_log("opening %s fifo...", purpose.c_str());
 
-  FILE *file = fopen(path.c_str(), mode);
-  if (!file) {
+  int fd = open(path.c_str(), flags);
+  if (!fd) {
     capsule_log("could not open fifo for %s: %s", purpose.c_str(), strerror(errno));
     exit(1);
   }
 
-  return file;
+  return fd;
 }
 
 void capsule_io_connect(
     capsule_io_t *io
 ) {
-  io->fifo_r = open_fifo(*io->fifo_r_path, "reading", "rb");
-  io->fifo_w = open_fifo(*io->fifo_w_path, "writing", "wb");
+#if defined(CAPSULE_WINDOWS)
+  BOOL success = ConnectNamedPipe(io->pipe_handle, NULL);
+  if (!success) {
+    capsule_log("Could not connect to named pipe");
+    exit(1);
+  }
+  capsule_log("Connected to named pipe");
+
+  int fd = _open_osfhandle((intptr_t) io->pipe_handle, 0);
+  if (fd < 0) {
+    capsule_log("Could not re-open pipe handle");
+    exit(1);
+  }
+  capsule_log("Re-opened named pipe");
+
+  io->fifo_r = fd;
+  io->fifo_w = fd;
+#else
+  io->fifo_r = open_fifo(*io->fifo_r_path, "reading", O_RDONLY);
+  io->fifo_w = open_fifo(*io->fifo_w_path, "writing", O_WRONLY);
+#endif
   capsule_log("communication established!");
 }
 
@@ -102,6 +167,26 @@ int capsule_io_receive_video_format (
   capsule_log("shm path: %s", shmem->path()->str().c_str());
   capsule_log("shm size: %d", shmem->size());
 
+#if defined(CAPSULE_WINDOWS)
+  HANDLE hMapFile = OpenFileMappingA(
+    FILE_MAP_READ, // read access
+    FALSE, // do not inherit the name
+    shmem->path()->str().c_str() // name of mapping object
+  );
+
+  if (!hMapFile) {
+    capsule_log("Could not open shmem area");
+    exit(1);
+  }
+
+  io->mapped = (char*) MapViewOfFile(
+    hMapFile,
+    FILE_MAP_READ, // read access
+    0,
+    0,
+    shmem->size()
+  );
+#else
   int shmem_handle = shm_open(shmem->path()->str().c_str(), O_RDONLY, 0755);
   if (!(shmem_handle > 0)) {
     capsule_log("Could not open shmem area");
@@ -116,6 +201,7 @@ int capsule_io_receive_video_format (
       shmem_handle, // fd
       0 // offset
   );
+#endif
 
   if (!io->mapped) {
     capsule_log("Could not map shmem area");

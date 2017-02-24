@@ -3,9 +3,13 @@
 
 #include "messages_generated.h"
 
-// this contaminates files where this header is 
-// included, but that might be a good thing.
-using namespace Capsule::Messages;
+#include <capsule/constants.h>
+
+#if defined(CAPSULE_WINDOWS)
+#include <io.h>
+#else
+#include <unistd.h>
+#endif // CAPSULE_WINDOWS
 
 /**
  * Read a packet-full of bytes from *file.
@@ -13,16 +17,22 @@ using namespace Capsule::Messages;
  *
  * Blocks, returns null on closed pipe
  */
-static char *capsule_read_packet (FILE *file) {
+static char *capsule_read_packet (int fd) {
+    fprintf(stdout, "reading packet\n");
+    fflush(stdout);
+
     uint32_t pkt_size = 0;
-    int read_bytes = fread(&pkt_size, sizeof(pkt_size), 1, file);
+    int read_bytes = read(fd, &pkt_size, sizeof(pkt_size));
     if (read_bytes == 0) {
         // closed pipe
         return nullptr;
     }
 
+    fprintf(stdout, "reading packet, size = %d\n", pkt_size);
+    fflush(stdout);
+
     char *buffer = new char[pkt_size];
-    fread(buffer, pkt_size, 1, file);
+    read(fd, buffer, pkt_size);
     return buffer;
 }
 
@@ -30,10 +40,11 @@ static char *capsule_read_packet (FILE *file) {
  * Writes a packet (built with builder) to file.
  * builder.Finish(x) must have been called beforehand.
  */
-void capsule_write_packet(const flatbuffers::FlatBufferBuilder &builder, FILE *file) {
-    // capsule_log("writing packet, size: %d bytes", builder.GetSize());
+void capsule_write_packet(const flatbuffers::FlatBufferBuilder &builder, int fd) {
+    fprintf(stdout, "writing packet, size: %d bytes\n", builder.GetSize());
+    fflush(stdout);
+
     uint32_t pkt_size = builder.GetSize();
-    fwrite(&pkt_size, sizeof(pkt_size), 1, file);
-    fwrite(builder.GetBufferPointer(), builder.GetSize(), 1, file);
-    fflush(file);
+    write(fd, &pkt_size, sizeof(pkt_size));
+    write(fd, builder.GetBufferPointer(), builder.GetSize());
 }

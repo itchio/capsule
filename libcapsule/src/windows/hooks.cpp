@@ -35,6 +35,7 @@ DWORD CAPSULE_DLL capsule_windows_init() {
   DWORD pid = GetCurrentProcessId();
 
   capsule_log("capsule warming up for %S (pid %d)", process_name, pid);
+  capsule_io_init();
   capsule_install_windows_hooks();
 
   return ERROR_SUCCESS;
