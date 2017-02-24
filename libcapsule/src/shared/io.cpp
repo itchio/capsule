@@ -2,8 +2,7 @@
 #include <capsule.h>
 
 #if defined(CAPSULE_LINUX)
-#include <capsule/messages_generated.h>
-using namespace Capsule::Messages;
+#include <capsule/messages.h>
 
 #include <string>
 using namespace std;
@@ -15,7 +14,7 @@ using namespace std;
 
 static FILE *out_file;
 
-int ensure_outfile() {
+FILE *ensure_outfile() {
   if (!out_file) {
 #if defined(CAPSULE_WINDOWS)
     const int pipe_path_len = CAPSULE_LOG_PATH_SIZE;
@@ -38,15 +37,14 @@ int ensure_outfile() {
     out_file = fopen(pipe_path, "wb");
 #endif
     capsule_assert("Opened output file", !!out_file);
-    return 1;
   }
 
-  return 0;
+  return out_file;
 }
 
 static FILE *in_file;
 
-int ensure_infile() {
+FILE *ensure_infile() {
   char *pipe_path;
 
   if (!in_file) {
@@ -59,28 +57,18 @@ int ensure_infile() {
     capsule_assert("ensure_infile on mac: stub", false);
 #endif
     capsule_log("Pipe path: %s", pipe_path);
-    out_file = fopen(pipe_path, "wb");
+    out_file = fopen(pipe_path, "rb");
 #endif
     capsule_assert("Opened output file", !!out_file);
-    return 1;
   }
 
-  return 0;
+  return in_file;
 }
 
 #if defined(CAPSULE_LINUX)
 
 static int shmem_handle;
 static char *mapped;
-
-void CAPSULE_STDCALL capsule_write_packet (const flatbuffers::FlatBufferBuilder &builder) {
-    ensure_outfile();
-
-    // capsule_log("writing packet, size: %d bytes", builder.GetSize());
-    uint32_t pkt_size = builder.GetSize();
-    fwrite(&pkt_size, sizeof(pkt_size), 1, out_file);
-    fwrite(builder.GetBufferPointer(), builder.GetSize(), 1, out_file);
-}
 
 void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int format, int vflip, int pitch) {
     flatbuffers::FlatBufferBuilder builder(1024);
@@ -107,11 +95,6 @@ void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int form
     );
     capsule_assert("Mapped shmem area", !!mapped);
 
-    mapped[0] = 'f';
-    mapped[1] = 'o';
-    mapped[2] = 'x';
-    mapped[3] = '\0';
-
     auto shmem_path_fbs = builder.CreateString(shmem_path);
 
     ShmemBuilder shmem_builder(builder);
@@ -134,7 +117,7 @@ void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int form
     auto pkt = pkt_builder.Finish();
 
     builder.Finish(pkt);
-    capsule_write_packet(builder);
+    capsule_write_packet(builder, ensure_outfile());
 }
 #else
 void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int format, int vflip, int pitch) {
@@ -173,7 +156,7 @@ void CAPSULE_STDCALL capsule_write_video_frame (int64_t timestamp, char *frame_d
     auto pkt = pkt_builder.Finish();
 
     builder.Finish(pkt);
-    capsule_write_packet(builder);
+    capsule_write_packet(builder, ensure_outfile());
 }
 #else
 void CAPSULE_STDCALL capsule_write_video_frame (int64_t timestamp, char *frame_data, size_t frame_data_size) {

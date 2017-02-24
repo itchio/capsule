@@ -34,25 +34,9 @@ using namespace std;
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
 
-#include <capsule/messages_generated.h>
-
-using namespace Capsule::Messages;
+#include <capsule/messages.h>
 
 static char *mapped;
-
-char *capsule_read_packet (FILE *file) {
-    uint32_t pkt_size = 0;
-    int read_bytes = fread(&pkt_size, sizeof(pkt_size), 1, file);
-    if (read_bytes == 0) {
-      capsule_log("read_bytes = %d, pkt_size = %u", read_bytes, pkt_size);
-      return nullptr;
-    }
-
-    char *buffer = new char[pkt_size];
-    capsule_log("reading packet, size: %d bytes", pkt_size);
-    fread(buffer, pkt_size, 1, file);
-    return buffer;
-}
 
 int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
   char *buf = capsule_read_packet(p->fifo_file);
@@ -98,7 +82,6 @@ int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
     capsule_log("Could not map shmem area");
     exit(1);
   }
-  capsule_log("shm contents: %s\n", mapped);
 
   delete[] buf;
   return 0;
