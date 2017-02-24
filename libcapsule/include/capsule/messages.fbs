@@ -1,0 +1,49 @@
+
+namespace Capsule.Messages;
+
+enum PixFmt:int {
+    UNKNOWN     = 0,
+    RGBA        = 40069, // R8,  G8,  B8,  A8
+    BGRA        = 40070, // B8,  G8,  R8,  A8
+    RGB10_A2    = 40071, // R10, G10, B10, A2
+}
+
+union Message {
+    CaptureStart,
+    CaptureStop,
+    VideoSetup,
+    VideoFrameCommitted,
+    VideoFrameProcessed,
+}
+
+table Packet {
+    message: Message;
+}
+
+table CaptureStart {}
+table CaptureStop {}
+
+table VideoSetup {
+    width: uint;
+    height: uint;
+    pix_fmt: PixFmt;
+    vflip: bool;
+    pitch: uint;
+    shmem: Shmem;
+}
+
+table Shmem {
+    path: string;
+    size: ulong;
+}
+
+table VideoFrameCommitted {
+    timestamp: ulong;
+    index: uint;
+}
+
+table VideoFrameProcessed {
+    index: uint;
+}
+
+root_type Packet;

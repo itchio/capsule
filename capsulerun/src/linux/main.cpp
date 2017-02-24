@@ -30,16 +30,55 @@
 
 using namespace std;
 
+#include <capsule/messages_generated.h>
+
+using namespace Capsule::Messages;
+
+char *capsule_read_packet (FILE *file) {
+    uint32_t pkt_size = 0;
+    fread(&pkt_size, sizeof(pkt_size), 1, file);
+    char *buffer = new char[pkt_size];
+
+    capsule_log("reading packet, size: %d bytes", pkt_size);
+    fread(buffer, pkt_size, 1, file);
+    return buffer;
+}
+
 int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
-  // FIXME: error checking
-  int64_t num;
-  fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->width = (int) num;
-  fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->height = (int) num;
-  fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->format = (capsule_pix_fmt_t) num;
-  fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->vflip = (int) num;
-  fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->pitch = (int) num;
+  char *buf = capsule_read_packet(p->fifo_file);
+
+  auto pkt = GetPacket(buf);
+  if (pkt->message_type() != Message_VideoSetup) {
+    capsule_log("expected VideoSetup message, got %s", EnumNameMessage(pkt->message_type()));
+    exit(1);
+  }
+
+  auto vs = static_cast<const VideoSetup*>(pkt->message());
+
+  vfmt->width = vs->width();
+  vfmt->height = vs->height();
+  vfmt->format = (capsule_pix_fmt_t) vs->pix_fmt();
+  vfmt->vflip = vs->vflip();
+  vfmt->pitch = vs->pitch();
+
+  auto shmem = vs->shmem();
+  capsule_log("shm path: %s", shmem->path()->str().c_str());
+  capsule_log("shm size: %d", shmem->size());
+
+  delete[] buf;
   return 0;
 }
+
+// int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
+//   // FIXME: error checking
+//   int64_t num;
+//   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->width = (int) num;
+//   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->height = (int) num;
+//   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->format = (capsule_pix_fmt_t) num;
+//   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->vflip = (int) num;
+//   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->pitch = (int) num;
+//   return 0;
+// }
 
 int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
   int read_bytes = fread(timestamp, 1, sizeof(int64_t), p->fifo_file);

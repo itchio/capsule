@@ -24,13 +24,13 @@ void CAPSULE_STDCALL ensure_own_opengl() {
 	if (!_realglGetIntegerv) {
 		ensure_opengl();
 		_realglGetIntegerv = (glGetIntegervType)dlsym(gl_handle, "glGetIntegerv");
-		assert("Got glGetIntegerv address", !!_realglGetIntegerv);
+		capsule_assert("Got glGetIntegerv address", !!_realglGetIntegerv);
 	}
 
 	if (!_realglReadPixels) {
 		ensure_opengl();
 		_realglReadPixels = (glReadPixelsType)dlsym(gl_handle, "glReadPixels");
-		assert("Got glReadPixels address", !!_realglReadPixels);
+		capsule_assert("Got glReadPixels address", !!_realglReadPixels);
 	}
 }
 
@@ -69,23 +69,23 @@ void CAPSULE_STDCALL load_opengl (const char *openglPath) {
 #else
   gl_handle = dlopen(openglPath, (RTLD_NOW|RTLD_LOCAL));
 #endif
-  assert("Loaded real OpenGL lib", !!gl_handle);
+  capsule_assert("Loaded real OpenGL lib", !!gl_handle);
   capsule_log("Loaded opengl!");
 
 #ifdef CAPSULE_LINUX
   capsule_log("Getting glXQueryExtension adress");
   _realglXQueryExtension = (glXQueryExtensionType)dlsym(gl_handle, "glXQueryExtension");
-  assert("Got glXQueryExtension", !!_realglXQueryExtension);
+  capsule_assert("Got glXQueryExtension", !!_realglXQueryExtension);
   capsule_log("Got glXQueryExtension adress: %p", _realglXQueryExtension);
 
   capsule_log("Getting glXSwapBuffers adress");
   _realglXSwapBuffers = (glXSwapBuffersType)dlsym(gl_handle, "glXSwapBuffers");
-  assert("Got glXSwapBuffers", !!_realglXSwapBuffers);
+  capsule_assert("Got glXSwapBuffers", !!_realglXSwapBuffers);
   capsule_log("Got glXSwapBuffers adress: %p", _realglXSwapBuffers);
 
   capsule_log("Getting glXGetProcAddressARB address");
   _realglXGetProcAddressARB = (glXGetProcAddressARBType)dlsym(gl_handle, "glXGetProcAddressARB");
-  assert("Got glXGetProcAddressARB", !!_realglXGetProcAddressARB);
+  capsule_assert("Got glXGetProcAddressARB", !!_realglXGetProcAddressARB);
   capsule_log("Got glXGetProcAddressARB adress: %p", _realglXGetProcAddressARB);
 #endif
 }

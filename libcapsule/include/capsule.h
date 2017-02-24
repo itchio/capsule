@@ -98,7 +98,7 @@ int glXQueryExtension(void *a, void *b, void *c);
 extern CNktHookLib cHookMgr;
 #endif // CAPSULE_WINDOWS
 
-static void CAPSULE_STDCALL assert(const char *msg, int cond) {
+static void CAPSULE_STDCALL capsule_assert(const char *msg, int cond) {
   if (cond) {
     return;
   }

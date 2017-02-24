@@ -1,9 +1,6 @@
 
 #pragma once
 
-// numbers of buffers used for async GPU download
-#define NUM_BUFFERS 3
-
 #include <d3d9.h>
 
 void d3d9_capture(IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer);

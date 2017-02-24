@@ -81,4 +81,5 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 
   # needed on old Debian for reasons? (probably because of libpulse-simple?)
   target_link_libraries(capsulerun -lpthread)
+  target_link_libraries(capsulerun -lrt)
 endif()

@@ -90,5 +90,5 @@ if(APPLE)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-  target_link_libraries(capsule -ldl -lX11 -lpthread)
+  target_link_libraries(capsule -ldl -lX11 -lpthread -lrt)
 endif()
