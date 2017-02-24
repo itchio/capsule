@@ -28,6 +28,8 @@ endif()
 if(APPLE)
   list(APPEND capsulerun_SRC
     ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
+    ${capsulerun_SOURCE_DIR}/shared/env.cpp
+    ${capsulerun_SOURCE_DIR}/shared/io.cpp
     ${capsulerun_SOURCE_DIR}/macos/main.cpp
   )
 endif()
@@ -35,8 +37,9 @@ endif()
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   list(APPEND capsulerun_SRC
     ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
+    ${capsulerun_SOURCE_DIR}/shared/env.cpp
+    ${capsulerun_SOURCE_DIR}/shared/io.cpp
     ${capsulerun_SOURCE_DIR}/linux/pulse.cpp
-    ${capsulerun_SOURCE_DIR}/linux/env.cpp
     ${capsulerun_SOURCE_DIR}/linux/main.cpp
   )
   add_definitions(-D__STDC_CONSTANT_MACROS)

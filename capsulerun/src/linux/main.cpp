@@ -1,4 +1,9 @@
 
+#include "capsulerun.h"
+
+#include "../shared/env.h" // merge_envs
+#include "../shared/io.h" // create_fifo, receive stuff
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -12,9 +17,6 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-// mkfifo
-#include <sys/stat.h>
-
 // strerror
 #include <string.h>
 
@@ -24,109 +26,16 @@
 // thread
 #include <thread>
 
-#include "capsulerun.h"
-
-#include "env.h"
-
 using namespace std;
-
-#include <sys/mman.h>
-#include <sys/stat.h> // for mode constants
-#include <fcntl.h>    // for O_* constants
-
-#include <capsule/messages.h>
 
 static char *mapped;
 
 int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
-  capsule_log("receiving video format...");
-  char *buf = capsule_read_packet(p->fifo_r_file);
-  if (!buf) {
-    capsule_log("receive_video_format: pipe closed");
-    exit(1);
-  }
-
-  auto pkt = GetPacket(buf);
-  if (pkt->message_type() != Message_VideoSetup) {
-    capsule_log("receive_video_format: expected VideoSetup message, got %s", EnumNameMessage(pkt->message_type()));
-    exit(1);
-  }
-
-  auto vs = static_cast<const VideoSetup*>(pkt->message());
-
-  vfmt->width = vs->width();
-  vfmt->height = vs->height();
-  vfmt->format = (capsule_pix_fmt_t) vs->pix_fmt();
-  vfmt->vflip = vs->vflip();
-  vfmt->pitch = vs->pitch();
-
-  auto shmem = vs->shmem();
-  capsule_log("shm path: %s", shmem->path()->str().c_str());
-  capsule_log("shm size: %d", shmem->size());
-
-  int shmem_handle = shm_open(shmem->path()->str().c_str(), O_RDONLY, 0755);
-  if (!(shmem_handle > 0)) {
-    capsule_log("Could not open shmem area");
-    exit(1);
-  }
-
-  mapped = (char *) mmap(
-      nullptr, // addr
-      shmem->size(), // length
-      PROT_READ, // prot
-      MAP_SHARED, // flags
-      shmem_handle, // fd
-      0 // offset
-  );
-
-  if (!mapped) {
-    capsule_log("Could not map shmem area");
-    exit(1);
-  }
-
-  delete[] buf;
-  return 0;
+  return capsule_receive_video_format(p->fifo_r_file, vfmt, &mapped);
 }
 
 int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  char *buf = capsule_read_packet(p->fifo_r_file);
-
-  if (!buf) {
-    // pipe closed
-    return 0;
-  }
-
-  auto pkt = GetPacket(buf);
-  if (pkt->message_type() != Message_VideoFrameCommitted) {
-    capsule_log("receive_video_frame: expected VideoFrameCommitted, got %s", EnumNameMessage(pkt->message_type()));
-    exit(1);
-  }
-
-  auto vfc = static_cast<const VideoFrameCommitted*>(pkt->message());
-  *timestamp = vfc->timestamp();
-  void *source = mapped + (buffer_size * vfc->index());
-  memcpy(buffer, source, buffer_size);
-
-  flatbuffers::FlatBufferBuilder builder(1024);
-  auto vfp = CreateVideoFrameProcessed(builder, vfc->index()); 
-  auto opkt = CreatePacket(builder, Message_VideoFrameProcessed, vfp.Union());
-  builder.Finish(opkt);
-  capsule_write_packet(builder, p->fifo_w_file);
-
-  delete[] buf;
-  return buffer_size;
-}
-
-void create_fifo (string fifo_path) {
-  // remove previous fifo if any  
-  unlink(fifo_path.c_str());
-
-  // create fifo
-  int fifo_ret = mkfifo(fifo_path.c_str(), 0644);
-  if (fifo_ret != 0) {
-    capsule_log("could not create fifo at %s (code %d)", fifo_path.c_str(), fifo_ret);
-    exit(1);
-  }
+  return capsule_receive_video_frame(p->fifo_r_file, buffer, buffer_size, timestamp, mapped);
 }
 
 int capsulerun_main (int argc, char **argv) {
@@ -159,9 +68,10 @@ int capsulerun_main (int argc, char **argv) {
   auto fifo_r_path = string("/tmp/capsule.runr");
   auto fifo_w_path = string("/tmp/capsule.runw");
 
-  create_fifo(fifo_r_path);
-  create_fifo(fifo_w_path);
+  capsule_create_fifo(fifo_r_path);
+  capsule_create_fifo(fifo_w_path);
 
+  // swapped on purpose
   auto fifo_r_var = "CAPSULE_PIPE_R_PATH=" + fifo_w_path;
   auto fifo_w_var = "CAPSULE_PIPE_W_PATH=" + fifo_r_path;
   char *env_additions[] = {

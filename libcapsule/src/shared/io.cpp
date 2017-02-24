@@ -1,12 +1,10 @@
 
 #include <capsule.h>
 
-#if defined(CAPSULE_LINUX)
-#include <capsule/messages.h>
-
 #include <string>
 using namespace std;
 
+#if defined(CAPSULE_LINUX)
 #include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
@@ -33,8 +31,6 @@ FILE *ensure_outfile() {
 #else
 #if defined(CAPSULE_LINUX)
     char *pipe_path = getenv("CAPSULE_PIPE_W_PATH");
-#else
-    char *pipe_path = getenv("CAPSULE_PIPE_PATH");
 #endif
     capsule_log("Pipe path: %s", pipe_path);
     out_file = fopen(pipe_path, "wb");
