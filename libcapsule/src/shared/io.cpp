@@ -12,6 +12,7 @@ using namespace std;
 #include <fcntl.h>    // for O_* constants
 
 #include <thread> // for making trouble double
+#include <mutex> // for trouble mitigation
 #endif // CAPSULE_LINUX
 
 static FILE *out_file;
@@ -79,10 +80,29 @@ void CAPSULE_STDCALL capsule_io_init () {
 
 #if defined(CAPSULE_LINUX)
 
+bool frame_locked[NUM_BUFFERS];
+mutex frame_locked_mutex;
+int next_frame_index = 0;
+
 static int shmem_handle;
 static char *mapped;
 
-void poll_infile () {
+static bool is_frame_locked(int i) {
+    lock_guard<mutex> lock(frame_locked_mutex);
+    return frame_locked[i];
+}
+
+static void lock_frame(int i) {
+    lock_guard<mutex> lock(frame_locked_mutex);
+    frame_locked[i] = true;
+}
+
+static void unlock_frame(int i) {
+    lock_guard<mutex> lock(frame_locked_mutex);
+    frame_locked[i] = false;
+}
+
+static void poll_infile() {
     FILE *file = ensure_infile();
 
     while (true) {
@@ -96,6 +116,7 @@ void poll_infile () {
             case Message_VideoFrameProcessed: {
                 auto vfp = static_cast<const VideoFrameProcessed *>(pkt->message());
                 capsule_log("poll_infile: encoder processed frame %d", vfp->index());
+                unlock_frame(vfp->index());
                 break;
             }
             default:
@@ -106,9 +127,13 @@ void poll_infile () {
     }
 }
 
-void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int format, int vflip, int pitch) {
+void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, int vflip, int pitch) {
     thread poll_thread(poll_infile);
     poll_thread.detach();
+
+    for (int i = 0; i < NUM_BUFFERS; i++) {
+        frame_locked[i] = false;
+    }
 
     flatbuffers::FlatBufferBuilder builder(1024);
 
@@ -159,7 +184,7 @@ void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int form
     capsule_write_packet(builder, ensure_outfile());
 }
 #else
-void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int format, int vflip, int pitch) {
+void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, int vflip, int pitch) {
   ensure_outfile();
   int64_t num = (int64_t) width;
   fwrite(&num, sizeof(int64_t), 1, out_file);
@@ -179,14 +204,21 @@ void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int form
 #endif // CAPSULE_LINUX
 
 #if defined(CAPSULE_LINUX)
-void CAPSULE_STDCALL capsule_write_video_frame (int64_t timestamp, char *frame_data, size_t frame_data_size) {
+
+void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_data, size_t frame_data_size) {
+    if (is_frame_locked(next_frame_index)) {
+        capsule_log("frame buffer overrun! skipping.");
+        return;
+    }
+
     flatbuffers::FlatBufferBuilder builder(1024);
 
-    memcpy(mapped, frame_data, frame_data_size);
+    char *target = mapped + (frame_data_size * next_frame_index);
+    memcpy(target, frame_data, frame_data_size);
 
     VideoFrameCommittedBuilder vfc_builder(builder);
     vfc_builder.add_timestamp(timestamp);
-    vfc_builder.add_index(0);
+    vfc_builder.add_index(next_frame_index);
     auto vfc = vfc_builder.Finish();
 
     PacketBuilder pkt_builder(builder);
@@ -196,9 +228,12 @@ void CAPSULE_STDCALL capsule_write_video_frame (int64_t timestamp, char *frame_d
 
     builder.Finish(pkt);
     capsule_write_packet(builder, ensure_outfile());
+
+    lock_frame(next_frame_index);
+    next_frame_index = (next_frame_index + 1) % NUM_BUFFERS;
 }
 #else
-void CAPSULE_STDCALL capsule_write_video_frame (int64_t timestamp, char *frame_data, size_t frame_data_size) {
+void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_data, size_t frame_data_size) {
   ensure_outfile();
   fwrite(&timestamp, 1, sizeof(int64_t), out_file);
   fwrite(frame_data, 1, frame_data_size, out_file);

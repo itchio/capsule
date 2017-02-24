@@ -104,7 +104,8 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
 
   auto vfc = static_cast<const VideoFrameCommitted*>(pkt->message());
   *timestamp = vfc->timestamp();
-  memcpy(buffer, mapped, buffer_size);
+  void *source = mapped + (buffer_size * vfc->index());
+  memcpy(buffer, source, buffer_size);
 
   flatbuffers::FlatBufferBuilder builder(1024);
   auto vfp = CreateVideoFrameProcessed(builder, vfc->index()); 
