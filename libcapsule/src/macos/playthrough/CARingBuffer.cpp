@@ -259,6 +259,9 @@ CARingBufferError	CARingBuffer::ClipTimeBounds(SampleTime& startRead, SampleTime
 	return kCARingBufferError_OK;	// success
 }
 
+#include <stdio.h>
+static FILE *raw_audio = nullptr;
+
 CARingBufferError	CARingBuffer::Fetch(AudioBufferList *abl, UInt32 nFrames, SampleTime startRead)
 {
 	if (nFrames == 0)
@@ -314,6 +317,13 @@ CARingBufferError	CARingBuffer::Fetch(AudioBufferList *abl, UInt32 nFrames, Samp
 		dest->mDataByteSize = nbytes;
 		dest++;
 	}
+
+        // if (!raw_audio) {
+        //   fprintf(stdout, "num channels = %d\n", abl->mNumberBuffers);
+        //   raw_audio = fopen("capsule.rawaudio", "wb");
+        // }
+        // fwrite(abl->mBuffers->mData, nbytes, 1, raw_audio);
+        // fflush(raw_audio);
 
 	return noErr;
 }
