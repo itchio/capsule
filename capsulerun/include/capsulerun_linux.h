@@ -13,9 +13,10 @@
 #include <pulse/error.h>
 #include <pulse/gccmacro.h>
 
+#include "../src/shared/io.h" // oh no.
+
 typedef struct encoder_private_s {
-  FILE *fifo_r_file;
-  FILE *fifo_w_file;
+  capsule_io_t *io;
   uint8_t *audio_buffer;
   size_t audio_buffer_size;
   pa_simple *pactx;

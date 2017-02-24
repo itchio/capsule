@@ -2,6 +2,8 @@
 #include <capsule/constants.h>
 #include <capsule/messages.h>
 
+#include <capsulerun_macros.h>
+
 // mkfifo
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -12,6 +14,7 @@
 #include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
+#include <unistd.h>   // unlink
 #elif defined(CAPSULE_OSX)
 #include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
@@ -24,8 +27,8 @@
 
 using namespace std;
 
-static FILE * create_fifo(
-    string fifo_path
+static void create_fifo(
+    std::string &fifo_path
 ) {
   // remove previous fifo if any  
   unlink(fifo_path.c_str());
@@ -40,21 +43,18 @@ static FILE * create_fifo(
 
 void capsule_io_init(
     capsule_io_t *io,
-    std::string fifo_r_path,
-    std::string fifo_w_path
+    std::string &fifo_r_path,
+    std::string &fifo_w_path
 ) {
-
-  memset(io, 0, sizeof(capsule_io_t));
-
   create_fifo(fifo_r_path);
-  io->fifo_r_path = fifo_r_path;
+  io->fifo_r_path = &fifo_r_path;
 
   create_fifo(fifo_w_path);
-  io->fifo_w_path = fifo_w_path;
+  io->fifo_w_path = &fifo_w_path;
 }
 
-static FILE *open_fifo (std::string path, std::string purpose, const char *mode) {
-  capsule_log("opening %s fifo...", purpose.c_str());
+static FILE *open_fifo (std::string &path, std::string purpose, const char *mode) {
+  capsule_log("opening %s fifo... (%s)", purpose.c_str(), path.c_str());
 
   FILE *file = fopen(path.c_str(), mode);
   if (!file) {
@@ -68,8 +68,8 @@ static FILE *open_fifo (std::string path, std::string purpose, const char *mode)
 void capsule_io_connect(
     capsule_io_t *io
 ) {
-  io->fifo_r = open_fifo(io->fifo_r_path, "reading", "rb");
-  io->fifo_w = open_fifo(io->fifo_w_path, "writing", "wb");
+  io->fifo_r = open_fifo(*io->fifo_r_path, "reading", "rb");
+  io->fifo_w = open_fifo(*io->fifo_w_path, "writing", "wb");
   capsule_log("communication established!");
 }
 

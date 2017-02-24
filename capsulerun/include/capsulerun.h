@@ -2,10 +2,8 @@
 #pragma once
 
 #include <capsule/constants.h>
-
-// Change these to suit your needs
-// #define CAPSULERUN_PROFILE
-// #define CAPSULERUN_DEBUG
+#include "capsulerun_types.h"
+#include "capsulerun_macros.h"
 
 #if defined(_WIN32)
 #define CAPSULERUN_WINDOWS
@@ -28,22 +26,8 @@
 
 int capsulerun_main (int argc, char **argv);
 
-typedef struct video_format_s {
-  int width;
-  int height;
-  capsule_pix_fmt_t format;
-  int vflip;
-  int pitch;
-} video_format_t;
-
 typedef int (*receive_video_format_t)(void *private_data, video_format_t *vfmt);
 typedef int (*receive_video_frame_t)(void *private_data, uint8_t *buffer, size_t buffer_size, int64_t *timestamp);
-
-typedef struct audio_format_s {
-  int channels;
-  int samplerate;
-  int samplewidth;
-} audio_format_t;
 
 typedef int (*receive_audio_format_t)(void *private_data, audio_format_t *afmt);
 typedef void* (*receive_audio_frames_t)(void *private_data, int *num_frames);
@@ -68,17 +52,3 @@ void encoder_run(encoder_params_t *params);
 #elif defined(CAPSULERUN_OSX)
 #include "capsulerun_macos.h"
 #endif // CAPSULERUN_LINUX
-
-#ifdef CAPSULERUN_PROFILE
-#define eprintf(...) { fprintf(stdout, "[capsulerun-profile] "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); fflush(stdout); }
-#else
-#define eprintf(...)
-#endif
-
-#ifdef CAPSULERUN_DEBUG
-#define dprintf(...) { fprintf(stdout, "[capsulerun-debug] "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); fflush(stdout); }
-#else
-#define dprintf(...)
-#endif
-
-#define capsule_log(...) { fprintf(stdout, "[capsulerun] "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); fflush(stdout); }

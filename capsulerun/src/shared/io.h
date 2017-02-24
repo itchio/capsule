@@ -2,11 +2,11 @@
 
 #include <string>
 #include <capsule/constants.h>
-#include <capsulerun.h>
+#include <capsulerun_types.h>
 
 typedef struct capsule_io {
-    std::string fifo_r_path;
-    std::string fifo_w_path;
+    std::string *fifo_r_path;
+    std::string *fifo_w_path;
     FILE *fifo_r;
     FILE *fifo_w;
     char *mapped;
@@ -14,8 +14,8 @@ typedef struct capsule_io {
 
 void capsule_io_init(
     capsule_io_t *io,
-    std::string fifo_r_path,
-    std::string fifo_w_path
+    std::string &fifo_r_path,
+    std::string &fifo_w_path
 );
 
 void capsule_io_connect (

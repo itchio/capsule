@@ -89,14 +89,14 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
 static void wait_for_child (HANDLE hProcess) {
   LONG platform = NktHookLibHelpers::GetProcessPlatform(hProcess);
   if (platform == NKTHOOKLIB_ProcessPlatformX86) {
-    dprintf("Child is 32-bit!");
+    cdprintf("Child is 32-bit!");
   } else if (platform == NKTHOOKLIB_ProcessPlatformX64) {
-    dprintf("Child is 64-bit!");
+    cdprintf("Child is 64-bit!");
   }
 
-  dprintf("Waiting on child...");
+  cdprintf("Waiting on child...");
   WaitForSingleObject(hProcess, INFINITE);
-  dprintf("Done waiting on child");
+  cdprintf("Done waiting on child");
 
   GetExitCodeProcess(hProcess, &exitCode);
   capsule_log("Exit code: %d (%x)", exitCode, exitCode);
@@ -149,7 +149,7 @@ int capsulerun_main (int argc, char **argv) {
   toWideChar(libcapsule_path, &libcapsule_path_w);
 
   wchar_t *pipe_path = L"\\\\.\\pipe\\capsule_pipe";
-  dprintf("Creating named pipe %S...", pipe_path);
+  cdprintf("Creating named pipe %S...", pipe_path);
 
   HANDLE pipe_handle = CreateNamedPipe(
     pipe_path,
@@ -167,7 +167,7 @@ int capsulerun_main (int argc, char **argv) {
     capsule_log("CreateNamedPipe failed, err = %d (%x)", err, err);
   }
 
-  dprintf("Created named pipe!");
+  cdprintf("Created named pipe!");
 
   err = SetEnvironmentVariable(L"CAPSULE_PIPE_PATH", pipe_path);
   if (err == 0) {
@@ -223,7 +223,7 @@ int capsulerun_main (int argc, char **argv) {
     thread child_thread(wait_for_child, pi.hProcess);
     child_thread.detach();
 
-    dprintf("Connecting named pipe...");
+    cdprintf("Connecting named pipe...");
     BOOL success = ConnectNamedPipe(pipe_handle, NULL);
     if (!success) {
       capsule_log("Could not connect to named pipe");

@@ -357,7 +357,7 @@ void encoder_run(encoder_params_t *params) {
     size_t read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
     auto tt2 = chrono::steady_clock::now();
     eprintf("receive_frame took %.3f ms\n", (double) (chrono::duration_cast<chrono::microseconds>(tt2 - tt1).count()) / 1000.0);
-    dprintf(">> video timestamp                 = %d, approx %.4f seconds\n", (int) timestamp, ((double) timestamp) / 1000000.0);
+    cdprintf(">> video timestamp                 = %d, approx %.4f seconds\n", (int) timestamp, ((double) timestamp) / 1000000.0);
     total_read += read;
 
     int delta = (timestamp - last_timestamp);

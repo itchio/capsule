@@ -71,7 +71,7 @@ int capsulerun_main (int argc, char **argv) {
   capsule_io_t io;
   capsule_io_init(&io, fifo_r_path, fifo_w_path);
 
-  int err = posix_spawn(
+  int child_err = posix_spawn(
     &child_pid,
     executable_path,
     NULL, // file_actions
@@ -79,8 +79,8 @@ int capsulerun_main (int argc, char **argv) {
     child_argv,
     child_environ
   );
-  if (err != 0) {
-    capsule_log("spawn error %d: %s", err, strerror(err));
+  if (child_err != 0) {
+    capsule_log("spawn error %d: %s", child_err, strerror(child_err));
   }
 
   capsule_log("pid %d given to child %s", child_pid, executable_path);

@@ -28,14 +28,12 @@
 
 using namespace std;
 
-static char *mapped;
-
 int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
-  return capsule_receive_video_format(p->fifo_r_file, vfmt, &mapped);
+  return capsule_io_receive_video_format(p->io, vfmt);
 }
 
 int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  return capsule_receive_video_frame(p->fifo_r_file, buffer, buffer_size, timestamp, mapped);
+  return capsule_io_receive_video_frame(p->io, buffer, buffer_size, timestamp);
 }
 
 int capsulerun_main (int argc, char **argv) {
@@ -68,9 +66,6 @@ int capsulerun_main (int argc, char **argv) {
   auto fifo_r_path = string("/tmp/capsule.runr");
   auto fifo_w_path = string("/tmp/capsule.runw");
 
-  capsule_create_fifo(fifo_r_path);
-  capsule_create_fifo(fifo_w_path);
-
   // swapped on purpose
   auto fifo_r_var = "CAPSULE_PIPE_R_PATH=" + fifo_w_path;
   auto fifo_w_var = "CAPSULE_PIPE_W_PATH=" + fifo_r_path;
@@ -80,6 +75,9 @@ int capsulerun_main (int argc, char **argv) {
     NULL
   };
   char **child_environ = merge_envs(environ, env_additions);
+
+  capsule_io_t io = {};
+  capsule_io_init(&io, fifo_r_path, fifo_w_path);
 
   // spawn game
   int child_err = posix_spawn(
@@ -96,25 +94,11 @@ int capsulerun_main (int argc, char **argv) {
 
   capsule_log("pid %d given to child %s", child_pid, executable_path);
 
-  // open fifo
-  FILE *fifo_r_file = fopen(fifo_r_path.c_str(), "rb");
-  if (fifo_r_file == NULL) {
-    capsule_log("could not open fifo for reading: %s", strerror(errno));
-    exit(1);
-  }
-  capsule_log("opened fifo for reading");
-
-  FILE *fifo_w_file = fopen(fifo_w_path.c_str(), "wb");
-  if (fifo_w_file == NULL) {
-    capsule_log("could not open fifo for writing: %s", strerror(errno));
-    exit(1);
-  }
-  capsule_log("opened fifo for writing");
+  capsule_io_connect(&io);
 
   struct encoder_private_s private_data;
   memset(&private_data, 0, sizeof(private_data));
-  private_data.fifo_r_file = fifo_r_file;
-  private_data.fifo_w_file = fifo_w_file;
+  private_data.io = &io;
 
   struct encoder_params_s encoder_params;
   memset(&encoder_params, 0, sizeof(encoder_params));
