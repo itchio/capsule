@@ -99,7 +99,8 @@ static bool d3d11_init_format(IDXGISwapChain *swap, HWND *window) {
   *window = desc.OutputWindow;
   data.cx = desc.BufferDesc.Width;
   data.cy = desc.BufferDesc.Height;
-  data.size_divider = 2; // testing
+  // data.size_divider = 2; // testing
+  data.size_divider = 1;
 
   capsule_log("Backbuffer: %ux%u (%s) format = %s",
     data.cx, data.cy,

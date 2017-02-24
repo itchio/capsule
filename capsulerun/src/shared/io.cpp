@@ -211,7 +211,6 @@ int capsule_io_receive_video_format (
 }
 
 int capsule_io_receive_video_frame (capsule_io_t *io, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  capsule_log("reading VideoFrameCommitted");
 #if defined(CAPSULE_WINDOWS)
   char *buf = capsule_hread_packet(io->pipe_r);
 #else
@@ -239,7 +238,6 @@ int capsule_io_receive_video_frame (capsule_io_t *io, uint8_t *buffer, size_t bu
   auto opkt = CreatePacket(builder, Message_VideoFrameProcessed, vfp.Union());
   builder.Finish(opkt);
 
-  capsule_log("writing VideoFrameProcessed");
 #if defined(CAPSULE_WINDOWS)
   capsule_hwrite_packet(builder, io->pipe_w);
 #else

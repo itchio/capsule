@@ -36,8 +36,6 @@ static wchar_t *get_pipe_path (wchar_t *var_name) {
 #endif
 
 FILE *ensure_outfile() {
-  capsule_log("in ensure_outfile");
-
   if (!out_file) {
     capsule_log("ensure_outfile: out_file was nil");
 #if defined(CAPSULE_WINDOWS)
@@ -107,10 +105,8 @@ static void unlock_frame(int i) {
 }
 
 static void poll_infile() {
-    FILE *file = ensure_infile();
-
     while (true) {
-        char *buf = capsule_fread_packet(file);
+        char *buf = capsule_fread_packet(in_file);
         if (!buf) {
             break;
         }
@@ -119,7 +115,7 @@ static void poll_infile() {
         switch (pkt->message_type()) {
             case Message_VideoFrameProcessed: {
                 auto vfp = static_cast<const VideoFrameProcessed *>(pkt->message());
-                capsule_log("poll_infile: encoder processed frame %d", vfp->index());
+                // capsule_log("poll_infile: encoder processed frame %d", vfp->index());
                 unlock_frame(vfp->index());
                 break;
             }
@@ -224,12 +220,11 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
 
     builder.Finish(pkt);
     capsule_log("writing flatbuffer for real");
-    capsule_fwrite_packet(builder, ensure_outfile());
+    capsule_fwrite_packet(builder, out_file);
     capsule_log("done video format");
 }
 
 void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_data, size_t frame_data_size) {
-    capsule_log("writing video frame");
     if (is_frame_locked(next_frame_index)) {
         capsule_log("frame buffer overrun! skipping.");
         return;
@@ -238,7 +233,6 @@ void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_da
     flatbuffers::FlatBufferBuilder builder(1024);
 
     size_t offset = (frame_data_size * next_frame_index);
-    capsule_log("write_video_frame offset: %p. mapped = %p", offset, mapped);
     char *target = mapped + offset;
     memcpy(target, frame_data, frame_data_size);
 
@@ -253,7 +247,7 @@ void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_da
     auto pkt = pkt_builder.Finish();
 
     builder.Finish(pkt);
-    capsule_fwrite_packet(builder, ensure_outfile());
+    capsule_fwrite_packet(builder, out_file);
 
     lock_frame(next_frame_index);
     next_frame_index = (next_frame_index + 1) % NUM_BUFFERS;
