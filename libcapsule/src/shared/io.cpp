@@ -96,6 +96,21 @@ void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int form
     int ret = ftruncate(shmem_handle, shmem_size);
     capsule_assert("Truncated shmem area", ret == 0);
 
+    char *mapped = (char *) mmap(
+        nullptr, // addr
+        shmem_size, // length
+        PROT_READ | PROT_WRITE, // prot
+        MAP_SHARED, // flags
+        shmem_handle, // fd
+        0 // offset
+    );
+    capsule_assert("Mapped shmem area", !!mapped);
+
+    mapped[0] = 'f';
+    mapped[1] = 'o';
+    mapped[2] = 'x';
+    mapped[3] = '\0';
+
     auto shmem_path_fbs = builder.CreateString(shmem_path);
 
     ShmemBuilder shmem_builder(builder);

@@ -30,6 +30,10 @@
 
 using namespace std;
 
+#include <sys/mman.h>
+#include <sys/stat.h> // for mode constants
+#include <fcntl.h>    // for O_* constants
+
 #include <capsule/messages_generated.h>
 
 using namespace Capsule::Messages;
@@ -65,20 +69,30 @@ int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
   capsule_log("shm path: %s", shmem->path()->str().c_str());
   capsule_log("shm size: %d", shmem->size());
 
+  int shmem_handle = shm_open(shmem->path()->str().c_str(), O_RDONLY, 0755);
+  if (!(shmem_handle > 0)) {
+    capsule_log("Could not open shmem area");
+    exit(1);
+  }
+
+  char *mapped = (char *) mmap(
+      nullptr, // addr
+      shmem->size(), // length
+      PROT_READ, // prot
+      MAP_SHARED, // flags
+      shmem_handle, // fd
+      0 // offset
+  );
+
+  if (!mapped) {
+    capsule_log("Could not map shmem area");
+    exit(1);
+  }
+  capsule_log("shm contents: %s\n", mapped);
+
   delete[] buf;
   return 0;
 }
-
-// int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
-//   // FIXME: error checking
-//   int64_t num;
-//   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->width = (int) num;
-//   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->height = (int) num;
-//   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->format = (capsule_pix_fmt_t) num;
-//   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->vflip = (int) num;
-//   fread(&num, sizeof(int64_t), 1, p->fifo_file); vfmt->pitch = (int) num;
-//   return 0;
-// }
 
 int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
   int read_bytes = fread(timestamp, 1, sizeof(int64_t), p->fifo_file);
