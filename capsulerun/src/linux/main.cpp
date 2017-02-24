@@ -106,6 +106,12 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
   *timestamp = vfc->timestamp();
   memcpy(buffer, mapped, buffer_size);
 
+  flatbuffers::FlatBufferBuilder builder(1024);
+  auto vfp = CreateVideoFrameProcessed(builder, vfc->index()); 
+  auto opkt = CreatePacket(builder, Message_VideoFrameProcessed, vfp.Union());
+  builder.Finish(opkt);
+  capsule_write_packet(builder, p->fifo_w_file);
+
   delete[] buf;
   return buffer_size;
 }

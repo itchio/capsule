@@ -10,6 +10,8 @@ using namespace std;
 #include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
+
+#include <thread> // for making trouble double
 #endif // CAPSULE_LINUX
 
 static FILE *out_file;
@@ -80,7 +82,34 @@ void CAPSULE_STDCALL capsule_io_init () {
 static int shmem_handle;
 static char *mapped;
 
+void poll_infile () {
+    FILE *file = ensure_infile();
+
+    while (true) {
+        char *buf = capsule_read_packet(file);
+        if (!buf) {
+            break;
+        }
+
+        auto pkt = GetPacket(buf);
+        switch (pkt->message_type()) {
+            case Message_VideoFrameProcessed: {
+                auto vfp = static_cast<const VideoFrameProcessed *>(pkt->message());
+                capsule_log("poll_infile: encoder processed frame %d", vfp->index());
+                break;
+            }
+            default:
+                capsule_log("poll_infile: unknown message type %s", EnumNameMessage(pkt->message_type()));
+        }
+
+        delete[] buf;
+    }
+}
+
 void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int format, int vflip, int pitch) {
+    thread poll_thread(poll_infile);
+    poll_thread.detach();
+
     flatbuffers::FlatBufferBuilder builder(1024);
 
     size_t frame_size = height * pitch;

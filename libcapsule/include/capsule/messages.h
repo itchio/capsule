@@ -35,4 +35,5 @@ void capsule_write_packet(const flatbuffers::FlatBufferBuilder &builder, FILE *f
     uint32_t pkt_size = builder.GetSize();
     fwrite(&pkt_size, sizeof(pkt_size), 1, file);
     fwrite(builder.GetBufferPointer(), builder.GetSize(), 1, file);
+    fflush(file);
 }
