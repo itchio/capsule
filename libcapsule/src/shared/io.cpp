@@ -71,11 +71,12 @@ int ensure_infile() {
 #if defined(CAPSULE_LINUX)
 
 static int shmem_handle;
+static char *mapped;
 
 void CAPSULE_STDCALL capsule_write_packet (const flatbuffers::FlatBufferBuilder &builder) {
     ensure_outfile();
 
-    capsule_log("writing packet, size: %d bytes", builder.GetSize());
+    // capsule_log("writing packet, size: %d bytes", builder.GetSize());
     uint32_t pkt_size = builder.GetSize();
     fwrite(&pkt_size, sizeof(pkt_size), 1, out_file);
     fwrite(builder.GetBufferPointer(), builder.GetSize(), 1, out_file);
@@ -96,7 +97,7 @@ void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int form
     int ret = ftruncate(shmem_handle, shmem_size);
     capsule_assert("Truncated shmem area", ret == 0);
 
-    char *mapped = (char *) mmap(
+    mapped = (char *) mmap(
         nullptr, // addr
         shmem_size, // length
         PROT_READ | PROT_WRITE, // prot
@@ -153,10 +154,31 @@ void CAPSULE_STDCALL capsule_write_video_format (int width, int height, int form
   num = (int64_t) pitch;
   fwrite(&num, sizeof(int64_t), 1, out_file);
 }
-#endif
+#endif // CAPSULE_LINUX
 
-void CAPSULE_STDCALL capsule_write_video_frame (int64_t timestamp, char *frameData, size_t frameDataSize) {
+#if defined(CAPSULE_LINUX)
+void CAPSULE_STDCALL capsule_write_video_frame (int64_t timestamp, char *frame_data, size_t frame_data_size) {
+    flatbuffers::FlatBufferBuilder builder(1024);
+
+    memcpy(mapped, frame_data, frame_data_size);
+
+    VideoFrameCommittedBuilder vfc_builder(builder);
+    vfc_builder.add_timestamp(timestamp);
+    vfc_builder.add_index(0);
+    auto vfc = vfc_builder.Finish();
+
+    PacketBuilder pkt_builder(builder);
+    pkt_builder.add_message_type(Message_VideoFrameCommitted);
+    pkt_builder.add_message(vfc.Union());
+    auto pkt = pkt_builder.Finish();
+
+    builder.Finish(pkt);
+    capsule_write_packet(builder);
+}
+#else
+void CAPSULE_STDCALL capsule_write_video_frame (int64_t timestamp, char *frame_data, size_t frame_data_size) {
   ensure_outfile();
   fwrite(&timestamp, 1, sizeof(int64_t), out_file);
-  fwrite(frameData, 1, frameDataSize, out_file);
+  fwrite(frame_data, 1, frame_data_size, out_file);
 }
+#endif

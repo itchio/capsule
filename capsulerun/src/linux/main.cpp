@@ -38,11 +38,17 @@ using namespace std;
 
 using namespace Capsule::Messages;
 
+static char *mapped;
+
 char *capsule_read_packet (FILE *file) {
     uint32_t pkt_size = 0;
-    fread(&pkt_size, sizeof(pkt_size), 1, file);
-    char *buffer = new char[pkt_size];
+    int read_bytes = fread(&pkt_size, sizeof(pkt_size), 1, file);
+    if (read_bytes == 0) {
+      capsule_log("read_bytes = %d, pkt_size = %u", read_bytes, pkt_size);
+      return nullptr;
+    }
 
+    char *buffer = new char[pkt_size];
     capsule_log("reading packet, size: %d bytes", pkt_size);
     fread(buffer, pkt_size, 1, file);
     return buffer;
@@ -50,10 +56,14 @@ char *capsule_read_packet (FILE *file) {
 
 int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
   char *buf = capsule_read_packet(p->fifo_file);
+  if (!buf) {
+    capsule_log("receive_video_format: pipe closed");
+    exit(1);
+  }
 
   auto pkt = GetPacket(buf);
   if (pkt->message_type() != Message_VideoSetup) {
-    capsule_log("expected VideoSetup message, got %s", EnumNameMessage(pkt->message_type()));
+    capsule_log("receive_video_format: expected VideoSetup message, got %s", EnumNameMessage(pkt->message_type()));
     exit(1);
   }
 
@@ -75,7 +85,7 @@ int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
     exit(1);
   }
 
-  char *mapped = (char *) mmap(
+  mapped = (char *) mmap(
       nullptr, // addr
       shmem->size(), // length
       PROT_READ, // prot
@@ -95,13 +105,35 @@ int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
 }
 
 int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  int read_bytes = fread(timestamp, 1, sizeof(int64_t), p->fifo_file);
-  if (read_bytes == 0) {
+  char *buf = capsule_read_packet(p->fifo_file);
+
+  if (!buf) {
+    // pipe closed
     return 0;
   }
 
-  return fread(buffer, 1, buffer_size, p->fifo_file);
+  auto pkt = GetPacket(buf);
+  if (pkt->message_type() != Message_VideoFrameCommitted) {
+    capsule_log("receive_video_frame: expected VideoFrameCommitted, got %s", EnumNameMessage(pkt->message_type()));
+    exit(1);
+  }
+
+  auto vfc = static_cast<const VideoFrameCommitted*>(pkt->message());
+  *timestamp = vfc->timestamp();
+  memcpy(buffer, mapped, buffer_size);
+
+  delete[] buf;
+  return buffer_size;
 }
+
+// int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
+//   int read_bytes = fread(timestamp, 1, sizeof(int64_t), p->fifo_file);
+//   if (read_bytes == 0) {
+//     return 0;
+//   }
+
+//   return fread(buffer, 1, buffer_size, p->fifo_file);
+// }
 
 void create_fifo (string fifo_path) {
   // remove previous fifo if any  
