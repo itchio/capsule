@@ -17,7 +17,7 @@ char **merge_envs (char **a, char **b) {
         p++;
     }
 
-    char **res = (char **) malloc(total_size + 1);
+    char **res = (char **) calloc(total_size + 1, sizeof(char *));
     size_t i = 0;
 
     p = a;
