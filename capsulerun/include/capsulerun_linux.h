@@ -14,7 +14,8 @@
 #include <pulse/gccmacro.h>
 
 typedef struct encoder_private_s {
-  FILE *fifo_file;
+  FILE *fifo_r_file;
+  FILE *fifo_w_file;
   uint8_t *audio_buffer;
   size_t audio_buffer_size;
   pa_simple *pactx;

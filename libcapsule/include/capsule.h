@@ -73,6 +73,7 @@ void capsule_install_d3d9_hooks();
 bool CAPSULE_STDCALL capsule_capture_ready();
 int64_t CAPSULE_STDCALL capsule_frame_timestamp();
 
+void CAPSULE_STDCALL capsule_io_init();
 void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, int vflip, int pitch);
 void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frameData, size_t frameDataSize);
 

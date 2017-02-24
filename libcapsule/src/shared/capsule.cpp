@@ -15,6 +15,7 @@ void __attribute__((constructor)) capsule_load() {
   capsule_log("LD_PRELOAD: %s", getenv("LD_PRELOAD"));
   capsule_log("CAPSULE_PIPE_R_PATH: %s", getenv("CAPSULE_PIPE_R_PATH"));
   capsule_log("CAPSULE_PIPE_W_PATH: %s", getenv("CAPSULE_PIPE_W_PATH"));
+  capsule_io_init();
   capsule_x11_init();
 #endif
 }

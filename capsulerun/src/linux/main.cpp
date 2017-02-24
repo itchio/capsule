@@ -39,7 +39,8 @@ using namespace std;
 static char *mapped;
 
 int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
-  char *buf = capsule_read_packet(p->fifo_file);
+  capsule_log("receiving video format...");
+  char *buf = capsule_read_packet(p->fifo_r_file);
   if (!buf) {
     capsule_log("receive_video_format: pipe closed");
     exit(1);
@@ -88,7 +89,7 @@ int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
 }
 
 int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  char *buf = capsule_read_packet(p->fifo_file);
+  char *buf = capsule_read_packet(p->fifo_r_file);
 
   if (!buf) {
     // pipe closed
@@ -109,15 +110,6 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
   return buffer_size;
 }
 
-// int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-//   int read_bytes = fread(timestamp, 1, sizeof(int64_t), p->fifo_file);
-//   if (read_bytes == 0) {
-//     return 0;
-//   }
-
-//   return fread(buffer, 1, buffer_size, p->fifo_file);
-// }
-
 void create_fifo (string fifo_path) {
   // remove previous fifo if any  
   unlink(fifo_path.c_str());
@@ -125,16 +117,16 @@ void create_fifo (string fifo_path) {
   // create fifo
   int fifo_ret = mkfifo(fifo_path.c_str(), 0644);
   if (fifo_ret != 0) {
-    capsule_log("could not create fifo at %s (code %d)\n", fifo_path.c_str(), fifo_ret);
+    capsule_log("could not create fifo at %s (code %d)", fifo_path.c_str(), fifo_ret);
     exit(1);
   }
 }
 
 int capsulerun_main (int argc, char **argv) {
-  capsule_log("thanks for flying capsule on GNU/Linux\n");
+  capsule_log("thanks for flying capsule on GNU/Linux");
 
   if (argc < 3) {
-    capsule_log("usage: capsulerun LIBCAPSULE_DIR EXECUTABLE\n");
+    capsule_log("usage: capsulerun LIBCAPSULE_DIR EXECUTABLE");
     exit(1);
   }
 
@@ -145,7 +137,7 @@ int capsulerun_main (int argc, char **argv) {
   const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s/libcapsule.so", libcapsule_dir);
 
   if (libcapsule_path_length > CAPSULE_MAX_PATH_LENGTH) {
-    capsule_log("libcapsule path too long (%d > %d)\n", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
+    capsule_log("libcapsule path too long (%d > %d)", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
     exit(1);
   }
 
@@ -153,7 +145,7 @@ int capsulerun_main (int argc, char **argv) {
   char **child_argv = &argv[2];
 
   if (setenv("LD_PRELOAD", libcapsule_path, 1 /* replace */) != 0) {
-    capsule_log("couldn't set LD_PRELOAD'\n");
+    capsule_log("couldn't set LD_PRELOAD'");
     exit(1);
   }
 
@@ -182,23 +174,30 @@ int capsulerun_main (int argc, char **argv) {
     child_environ // environment
   );
   if (child_err != 0) {
-    printf("child spawn error %d: %s\n", child_err, strerror(child_err));
+    capsule_log("child spawn error %d: %s", child_err, strerror(child_err));
   }
 
-  printf("pid %d given to child %s\n", child_pid, executable_path);
+  capsule_log("pid %d given to child %s", child_pid, executable_path);
 
   // open fifo
-  FILE *fifo_file = fopen(fifo_r_path.c_str(), "rb");
-  if (fifo_file == NULL) {
-    printf("could not open fifo for reading: %s\n", strerror(errno));
+  FILE *fifo_r_file = fopen(fifo_r_path.c_str(), "rb");
+  if (fifo_r_file == NULL) {
+    capsule_log("could not open fifo for reading: %s", strerror(errno));
     exit(1);
   }
+  capsule_log("opened fifo for reading");
 
-  printf("opened fifo\n");
+  FILE *fifo_w_file = fopen(fifo_w_path.c_str(), "wb");
+  if (fifo_w_file == NULL) {
+    capsule_log("could not open fifo for writing: %s", strerror(errno));
+    exit(1);
+  }
+  capsule_log("opened fifo for writing");
 
   struct encoder_private_s private_data;
   memset(&private_data, 0, sizeof(private_data));
-  private_data.fifo_file = fifo_file;
+  private_data.fifo_r_file = fifo_r_file;
+  private_data.fifo_w_file = fifo_w_file;
 
   struct encoder_params_s encoder_params;
   memset(&encoder_params, 0, sizeof(encoder_params));
@@ -210,6 +209,7 @@ int capsulerun_main (int argc, char **argv) {
   encoder_params.receive_audio_format = (receive_audio_format_t) receive_audio_format;
   encoder_params.receive_audio_frames = (receive_audio_frames_t) receive_audio_frames;
 
+  capsule_log("starting encoder thread...");
   thread encoder_thread(encoder_run, &encoder_params);
 
   int child_status;
@@ -218,22 +218,22 @@ int capsulerun_main (int argc, char **argv) {
   do {
     wait_result = waitpid(child_pid, &child_status, 0);
     if (wait_result == -1) {
-      printf("could not wait on child (error %d): %s\n", wait_result, strerror(wait_result));
+      capsule_log("could not wait on child (error %d): %s", wait_result, strerror(wait_result));
       exit(1);
     }
 
     if (WIFEXITED(child_status)) {
-      printf("exited, status=%d\n", WEXITSTATUS(child_status));
+      capsule_log("exited, status=%d", WEXITSTATUS(child_status));
     } else if (WIFSIGNALED(child_status)) {
-      printf("killed by signal %d\n", WTERMSIG(child_status));
+      capsule_log("killed by signal %d", WTERMSIG(child_status));
     } else if (WIFSTOPPED(child_status)) {
-      printf("stopped by signal %d\n", WSTOPSIG(child_status));
+      capsule_log("stopped by signal %d", WSTOPSIG(child_status));
     } else if (WIFCONTINUED(child_status)) {
-      printf("continued\n");
+      capsule_log("continued");
     }
   } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
 
-  printf("waiting for encoder thread...\n");
+  capsule_log("waiting for encoder thread...");
   encoder_thread.join();
 
   return 0;

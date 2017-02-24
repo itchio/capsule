@@ -57,12 +57,22 @@ FILE *ensure_infile() {
     capsule_assert("ensure_infile on mac: stub", false);
 #endif
     capsule_log("Pipe path: %s", pipe_path);
-    out_file = fopen(pipe_path, "rb");
+    in_file = fopen(pipe_path, "rb");
 #endif
-    capsule_assert("Opened output file", !!out_file);
+    capsule_assert("Opened input file", !!in_file);
   }
 
   return in_file;
+}
+
+void CAPSULE_STDCALL capsule_io_init () {
+    capsule_log("Ensuring outfile..");
+    ensure_outfile();
+    capsule_log("outfile ensured!");
+
+    capsule_log("Ensuring infile..");
+    ensure_infile();
+    capsule_log("infile ensured!");
 }
 
 #if defined(CAPSULE_LINUX)
