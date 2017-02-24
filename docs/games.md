@@ -3,10 +3,11 @@
 
 ## Linux
 
-| Name                        | Engine        | Graphics API          | Notes                          | Interesting because..   |
-|-----------------------------|---------------|-----------------------|--------------------------------|-------------------------|
-| [Overland][]                | Unity         | OpenGL                |                                | 3D OpenGL game, 32/64   |
-| [90 Second Portraits][]     | love 0.10     | OpenGL                |                                | love game               |
+| Name                         | Engine        | Graphics API          | Interesting because..                        |
+|------------------------------|---------------|-----------------------|----------------------------------------------|
+| [Overland][]                 | Unity         | OpenGL                | 3D OpenGL game, 32/64                        |
+| [90 Second Portraits][]      | love 0.10     | OpenGL                | love game                                    |
+| [Hyper Ultra Astronautics][] | Ogre3D        | OpenGL                | loads game module dynamically                |
 
 Wanted:
 
@@ -46,6 +47,7 @@ Random findings:
 [Dr Langeskov]: https://crowscrowscrows.itch.io/dr-langeskov-the-tiger-and-the-terribly-cursed-emerald-a-whirlwind-heist
 [Longest Night]: https://finji.itch.io/longest-night
 [Super Ball Brawlers]: https://redpoint.itch.io/super-ball-brawlers
+[Hyper Ultra Astronautics]: https://fractilegames.itch.io/hyper-ultra-astronautics
 
 [Teeworlds]: https://www.teeworlds.com/
 [Sauerbraten]: http://sauerbraten.org/
