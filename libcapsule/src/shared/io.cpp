@@ -107,6 +107,7 @@ static void capsule_capture_start () {
             return;
         }
     }
+    capdata.active = true;
     capsule_log("capsule_capture_start: success!");
 }
 #else // CAPSULE_WINDOWS

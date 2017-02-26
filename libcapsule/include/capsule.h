@@ -80,6 +80,7 @@ struct capture_data {
   bool saw_dxgi;
   bool saw_d3d9;
 #endif // CAPSULE_WINDOWS
+  bool active;
 };
 extern struct capture_data capdata;
 

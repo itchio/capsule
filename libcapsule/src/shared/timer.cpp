@@ -11,8 +11,7 @@ static int frame_count = 0;
 static std::chrono::time_point<std::chrono::steady_clock> first_ts;
 
 bool capsule_capture_active () {
-  // FIXME: obviously stub
-  return true;
+  return capdata.active;
 }
 
 static inline bool capsule_frame_ready () {
