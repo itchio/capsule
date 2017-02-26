@@ -51,6 +51,117 @@ static void wait_for_child (HANDLE hProcess) {
   }
 }
 
+static HWND g_hwnd = NULL;
+
+static BOOL CALLBACK EnumWindowsProcMy(HWND hwnd, LPARAM lParam) {
+  DWORD lpdwProcessId;
+  GetWindowThreadProcessId(hwnd, &lpdwProcessId);
+  if (lpdwProcessId == lParam) {
+    g_hwnd = hwnd;
+    return FALSE;
+  }
+  return TRUE;
+}
+
+static void find_hwnd(DWORD pid) {
+  if (g_hwnd) {
+    return;
+  }
+
+  capsule_log("Looking for hwnd");
+  EnumWindows(EnumWindowsProcMy, pid);
+}
+
+static void capture_hwnd(HWND hwnd) {
+  const int MAX_TITLE_LENGTH = 16384;
+  wchar_t *window_title = new wchar_t[MAX_TITLE_LENGTH];
+  window_title[0] = '\0';
+  GetWindowText(hwnd, window_title, MAX_TITLE_LENGTH);
+
+  capsule_log("Capture hwnd %S: stub!", window_title);
+  delete[] window_title;
+
+  HDC hdc_target = GetDC(hwnd);
+
+  RECT rect;
+  GetClientRect(hwnd, &rect);
+
+  int width = rect.right;
+  int height = rect.bottom;
+
+  capsule_log("Window size: %dx%d", width, height);
+
+  HDC hdc = CreateCompatibleDC(NULL);
+  BITMAPINFO bi = {0};
+  BITMAPINFOHEADER *bih = &bi.bmiHeader;
+  bih->biSize = sizeof(BITMAPINFOHEADER);
+  bih->biBitCount = 32;
+  bih->biWidth = width;
+  bih->biHeight = height;
+  bih->biPlanes = 1;
+
+  char *bits;
+
+  HBITMAP bmp = CreateDIBSection(
+    hdc,
+    &bi,
+    DIB_RGB_COLORS,
+    (void**) &bits,
+    NULL,
+    0
+  );
+  SelectObject(hdc, bmp);
+
+  BitBlt(
+    hdc,
+    0,
+    0,
+    width,
+    height,
+    hdc_target,
+    0,
+    0,
+    SRCCOPY
+  );
+
+  int components = 4;
+  int frame_data_size = width * height * components;
+  capsule_log("Writing %d bytes to disk", frame_data_size);
+  FILE *f = fopen("capsule.rawimg", "wb");
+  fwrite(bits, frame_data_size, 1, f);
+  fclose(f);
+
+  ReleaseDC(NULL, hdc_target);
+  DeleteDC(hdc);
+  DeleteObject(bmp);
+}
+
+static void poll_hotkey (DWORD pid) {
+  BOOL success = RegisterHotKey(
+    NULL,
+    1,
+    MOD_NOREPEAT,
+    VK_F9
+  );
+
+  if (!success) {
+    DWORD err = GetLastError();
+    capsule_log("Could not register hotkey: %d (%x)", err, err);
+    return;
+  }
+
+  MSG msg = {0};
+  while (GetMessage(&msg, NULL, 0, 0) != 0) {
+    if (msg.message = WM_HOTKEY) {
+      capsule_log("Hotkey received!");
+      find_hwnd(pid);
+      if (g_hwnd) {
+        capture_hwnd(g_hwnd);
+      }
+    }
+  }
+}
+
 int capsulerun_main (int argc, char **argv) {
   capsule_log("thanks for flying capsule on Windows");
 
@@ -160,6 +271,9 @@ int capsulerun_main (int argc, char **argv) {
 
     thread child_thread(wait_for_child, pi.hProcess);
     child_thread.detach();
+
+    thread hotkey_thread(poll_hotkey, pi.dwProcessId);
+    hotkey_thread.detach();
 
     capsule_io_connect(&io);
     connected = true;
