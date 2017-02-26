@@ -10,6 +10,11 @@ void *capsule_get_IDirect3D9_CreateDevice_address (void *pObj) {
   return obj->lpVtbl->CreateDevice;
 }
 
+void *capsule_get_IDirect3D9Ex_CreateDeviceEx_address (void *pObj) {
+  IDirect3D9Ex *obj = (IDirect3D9Ex *) pObj;
+  return obj->lpVtbl->CreateDeviceEx;
+}
+
 void* capsule_get_IDirect3DDevice9_Present_address(void *pDevice) {
   IDirect3DDevice9 *device = (IDirect3DDevice9 *) pDevice;
   return device->lpVtbl->Present;

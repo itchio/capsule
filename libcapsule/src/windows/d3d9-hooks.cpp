@@ -8,13 +8,13 @@
 /* this is used just in case Present calls PresentEx or vice versa. */
 static int present_recurse = 0;
 
-static inline HRESULT get_backbuffer (IDirect3DDevice9 *device, IDirect3DSurface9 **surface) {
+static inline HRESULT get_backbuffer(IDirect3DDevice9 *device, IDirect3DSurface9 **surface) {
   // libobs includes a workaround for The Typing of The Dead: Overkill
   // and, to be completely honest: lol no.
   return device->GetRenderTarget(0, surface);
 }
 
-static void present_begin (IDirect3DDevice9 *device, IDirect3DSurface9 **backbuffer) {
+static void present_begin(IDirect3DDevice9 *device, IDirect3DSurface9 **backbuffer) {
   HRESULT hr;
 
   if (!present_recurse) {
@@ -29,7 +29,7 @@ static void present_begin (IDirect3DDevice9 *device, IDirect3DSurface9 **backbuf
   present_recurse++;
 }
 
-static void present_end (IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer) {
+static void present_end(IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer) {
   if (backbuffer) {
     backbuffer->Release();
   }
@@ -90,7 +90,7 @@ typedef HRESULT (CAPSULE_STDCALL *PresentEx_t)(
 static PresentEx_t PresentEx_real;
 static SIZE_T PresentEx_hookId = 0;
 
-HRESULT CAPSULE_STDCALL PresentEx_hook (
+HRESULT CAPSULE_STDCALL PresentEx_hook(
   IDirect3DDevice9Ex *device,
   const RECT         *pSourceRect,
   const RECT         *pDestRect,
@@ -132,7 +132,7 @@ typedef HRESULT (CAPSULE_STDCALL *PresentSwap_t)(
 static PresentSwap_t PresentSwap_real;
 static SIZE_T PresentSwap_hookId = 0;
 
-HRESULT CAPSULE_STDCALL PresentSwap_hook (
+HRESULT CAPSULE_STDCALL PresentSwap_hook(
   IDirect3DSwapChain9   *swap,
   const RECT            *pSourceRect,
   const RECT            *pDestRect,
@@ -176,7 +176,7 @@ HRESULT CAPSULE_STDCALL PresentSwap_hook (
   return res;
 }
 
-static void install_present_hooks (IDirect3DDevice9 *device) {
+static void install_present_hooks(IDirect3DDevice9 *device) {
   DWORD err;
 
   if (!Present_hookId) {
@@ -201,6 +201,7 @@ static void install_present_hooks (IDirect3DDevice9 *device) {
   }
 
   if (!PresentEx_hookId) {
+    // FIXME: that's wrong - we're mixing up IDirect3D9 and IDirect3DDevice9
     IDirect3D9Ex *deviceEx;
     HRESULT castRes = device->QueryInterface(__uuidof(IDirect3D9Ex), (void**) &deviceEx);
     if (SUCCEEDED(castRes)) {
@@ -266,7 +267,7 @@ typedef HRESULT (CAPSULE_STDCALL *CreateDevice_t)(
 static CreateDevice_t CreateDevice_real;
 static SIZE_T CreateDevice_hookId = 0;
 
-HRESULT CAPSULE_STDCALL CreateDevice_hook (
+HRESULT CAPSULE_STDCALL CreateDevice_hook(
   IDirect3D9            *obj,
   UINT                  Adapter,
   D3DDEVTYPE            DeviceType,
@@ -293,7 +294,7 @@ HRESULT CAPSULE_STDCALL CreateDevice_hook (
   return res;
 }
 
-static void install_device_hooks (IDirect3D9 *obj) {
+static void install_device_hooks(IDirect3D9 *obj) {
   DWORD err;
 
   // CreateDevice
@@ -316,6 +317,77 @@ static void install_device_hooks (IDirect3D9 *obj) {
 }
 
 ///////////////////////////////////////////////
+// IDirect3D9Ex::CreateDeviceEx
+///////////////////////////////////////////////
+typedef HRESULT (CAPSULE_STDCALL *CreateDeviceEx_t)(
+  IDirect3D9Ex          *obj,
+  UINT                  Adapter,
+  D3DDEVTYPE            DeviceType,
+  HWND                  hFocusWindow,
+  DWORD                 BehaviorFlags,
+  D3DPRESENT_PARAMETERS *pPresentationParameters,
+  D3DDISPLAYMODEEX      *pFullscreenDisplayMode,
+  IDirect3DDevice9      **ppReturnedDeviceInterface
+);
+static CreateDeviceEx_t CreateDeviceEx_real;
+static SIZE_T CreateDeviceEx_hookId = 0;
+
+HRESULT CAPSULE_STDCALL CreateDeviceEx_hook (
+  IDirect3D9Ex          *obj,
+  UINT                  Adapter,
+  D3DDEVTYPE            DeviceType,
+  HWND                  hFocusWindow,
+  DWORD                 BehaviorFlags,
+  D3DPRESENT_PARAMETERS *pPresentationParameters,
+  D3DDISPLAYMODEEX      *pFullscreenDisplayMode,
+  IDirect3DDevice9      **ppReturnedDeviceInterface
+) {
+  capsule_log("IDirect3D9Ex::CreateDeviceEx called with adapter %u", (unsigned int) Adapter);
+  HRESULT res = CreateDeviceEx_real(
+    obj,
+    Adapter,
+    DeviceType,
+    hFocusWindow,
+    BehaviorFlags,
+    pPresentationParameters,
+    pFullscreenDisplayMode,
+    ppReturnedDeviceInterface
+  );
+
+  if (SUCCEEDED(res)) {
+    install_present_hooks(*ppReturnedDeviceInterface);
+  }
+
+  return res;
+}
+
+static void install_device_ex_hooks (IDirect3D9Ex *obj) {
+  DWORD err;
+
+  install_device_hooks((IDirect3D9 *) obj);
+
+  // CreateDeviceEx
+  if (!CreateDeviceEx_hookId) {
+    LPVOID CreateDeviceEx_addr = capsule_get_IDirect3D9Ex_CreateDeviceEx_address((void *) obj);
+
+    capsule_log("Address of CreateDeviceEx: %p", CreateDeviceEx_addr);
+
+    err = cHookMgr.Hook(
+      &CreateDeviceEx_hookId,
+      (LPVOID *) &CreateDeviceEx_real,
+      CreateDeviceEx_addr,
+      CreateDeviceEx_hook,
+      0
+    );
+    if (err != ERROR_SUCCESS) {
+      capsule_log("Hooking CreateDeviceEx derped with error %d (%x)", err, err);
+    } else {
+      capsule_log("Installed CreateDeviceEx hook");
+    }
+  }
+}
+
+///////////////////////////////////////////////
 // Direct3DCreate9
 ///////////////////////////////////////////////
 
@@ -325,7 +397,7 @@ typedef IDirect3D9* (CAPSULE_STDCALL *Direct3DCreate9_t)(
 static Direct3DCreate9_t Direct3DCreate9_real;
 static SIZE_T Direct3DCreate9_hookId = 0;
 
-IDirect3D9 * CAPSULE_STDCALL Direct3DCreate9_hook (
+IDirect3D9 * CAPSULE_STDCALL Direct3DCreate9_hook(
   UINT SDKVersion
 ) {
   capsule_log("Direct3DCreate9 called with SDKVersion %u", (unsigned int) SDKVersion);
@@ -346,20 +418,27 @@ IDirect3D9 * CAPSULE_STDCALL Direct3DCreate9_hook (
 
 typedef HRESULT (CAPSULE_STDCALL *Direct3DCreate9Ex_t)(
   UINT SDKVersion,
-  IDirect3D9Ex *ppD3D
+  IDirect3D9Ex **ppD3D
 );
 static Direct3DCreate9Ex_t Direct3DCreate9Ex_real;
 static SIZE_T Direct3DCreate9Ex_hookId = 0;
 
-HRESULT CAPSULE_STDCALL Direct3DCreate9Ex_hook (
+HRESULT CAPSULE_STDCALL Direct3DCreate9Ex_hook(
   UINT SDKVersion,
-  IDirect3D9Ex *ppD3D
+  IDirect3D9Ex **ppD3D
 ) {
   capsule_log("Direct3DCreate9Ex called with SDKVersion %u", (unsigned int) SDKVersion);
   HRESULT res = Direct3DCreate9Ex_real(SDKVersion, ppD3D);
   if (SUCCEEDED(res)) {
-    capsule_log("d3d9ex device created!");
-    install_device_hooks(ppD3D);
+    capsule_log("d3d9ex device created!, address = %p", *ppD3D);
+    void *d3d9ex;
+    HRESULT hr = (*ppD3D)->QueryInterface(__uuidof(IDirect3D9Ex), (void**) &d3d9ex);
+    if (SUCCEEDED(hr)) {
+      capsule_log("found IDirect3D9Ex interface");
+    } else {
+      capsule_log("could not find IDirect3D9Ex interface");
+    }
+    install_device_ex_hooks(*ppD3D);
   } else {
     capsule_log("d3d9ex device could not be created.");
   }
