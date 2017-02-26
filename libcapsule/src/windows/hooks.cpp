@@ -19,6 +19,7 @@ void capsule_install_windows_hooks () {
   capsule_install_opengl_hooks();
   capsule_install_dxgi_hooks();
   capsule_install_d3d9_hooks();
+  capsule_install_ddraw_hooks();
 }
 
 BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
