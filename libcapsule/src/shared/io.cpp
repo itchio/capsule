@@ -94,7 +94,7 @@ static void unlock_frame(int i) {
     frame_locked[i] = false;
 }
 
-#if defined(CAPSULE_WINDOWS) {
+#if defined(CAPSULE_WINDOWS)
 static void capsule_capture_start () {
     capsule_log("capsule_capture_start: enumerating our options");
     if (capdata.saw_dxgi || capdata.saw_d3d9 || capdata.saw_opengl) {
