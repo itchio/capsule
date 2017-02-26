@@ -37,7 +37,6 @@ static wchar_t *get_pipe_path (wchar_t *var_name) {
 
 FILE *ensure_outfile() {
   if (!out_file) {
-    capsule_log("ensure_outfile: out_file was nil");
 #if defined(CAPSULE_WINDOWS)
     wchar_t *pipe_path = get_pipe_path(L"CAPSULE_PIPE_W_PATH");
     capsule_log("pipe_w path: %S", pipe_path);
@@ -51,7 +50,6 @@ FILE *ensure_outfile() {
     capsule_assert("Opened output file", !!out_file);
   }
 
-  capsule_log("ensure_outfile: returning %d", out_file);
   return out_file;
 }
 

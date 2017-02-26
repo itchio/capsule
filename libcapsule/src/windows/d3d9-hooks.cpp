@@ -201,9 +201,8 @@ static void install_present_hooks(IDirect3DDevice9 *device) {
   }
 
   if (!PresentEx_hookId) {
-    // FIXME: that's wrong - we're mixing up IDirect3D9 and IDirect3DDevice9
-    IDirect3D9Ex *deviceEx;
-    HRESULT castRes = device->QueryInterface(__uuidof(IDirect3D9Ex), (void**) &deviceEx);
+    IDirect3DDevice9Ex *deviceEx;
+    HRESULT castRes = device->QueryInterface(__uuidof(IDirect3DDevice9Ex), (void**) &deviceEx);
     if (SUCCEEDED(castRes)) {
       LPVOID PresentEx_addr = capsule_get_IDirect3DDevice9Ex_PresentEx_address((void*) deviceEx);
       if (!PresentEx_addr) {
@@ -403,10 +402,10 @@ IDirect3D9 * CAPSULE_STDCALL Direct3DCreate9_hook(
   capsule_log("Direct3DCreate9 called with SDKVersion %u", (unsigned int) SDKVersion);
   IDirect3D9 * res = Direct3DCreate9_real(SDKVersion);
   if (res) {
-    capsule_log("d3d9 device created!");
+    capsule_log("d3d9 created!");
     install_device_hooks(res);
   } else {
-    capsule_log("d3d9 device could not be created.");
+    capsule_log("d3d9 could not be created.");
   }
 
   return res;
@@ -430,7 +429,7 @@ HRESULT CAPSULE_STDCALL Direct3DCreate9Ex_hook(
   capsule_log("Direct3DCreate9Ex called with SDKVersion %u", (unsigned int) SDKVersion);
   HRESULT res = Direct3DCreate9Ex_real(SDKVersion, ppD3D);
   if (SUCCEEDED(res)) {
-    capsule_log("d3d9ex device created!, address = %p", *ppD3D);
+    capsule_log("d3d9ex created!, address = %p", *ppD3D);
     void *d3d9ex;
     HRESULT hr = (*ppD3D)->QueryInterface(__uuidof(IDirect3D9Ex), (void**) &d3d9ex);
     if (SUCCEEDED(hr)) {
@@ -440,7 +439,7 @@ HRESULT CAPSULE_STDCALL Direct3DCreate9Ex_hook(
     }
     install_device_ex_hooks(*ppD3D);
   } else {
-    capsule_log("d3d9ex device could not be created.");
+    capsule_log("d3d9ex could not be created.");
   }
 
   return res;
