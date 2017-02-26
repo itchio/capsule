@@ -58,6 +58,7 @@ HRESULT CAPSULE_STDCALL Present_hook (
   const RGNDATA      *pDirtyRegion
 ) {
   // capsule_log("IDirect3DDevice9::Present called");
+  capdata.saw_d3d9 = true;
 
   IDirect3DSurface9 *backbuffer = nullptr;
   present_begin(device, &backbuffer);
@@ -98,6 +99,7 @@ HRESULT CAPSULE_STDCALL PresentEx_hook (
         DWORD        dwFlags
 ) {
   // capsule_log("IDirect3DDevice9Ex::PresentEx called");
+  capdata.saw_d3d9 = true;
 
   IDirect3DSurface9 *backbuffer = nullptr;
   present_begin(device, &backbuffer);
@@ -139,6 +141,7 @@ HRESULT CAPSULE_STDCALL PresentSwap_hook (
         DWORD           dwFlags
 ) {
   // capsule_log("IDirect3DSwapChain9::Present called");
+  capdata.saw_d3d9 = true;
 
   IDirect3DSurface9 *backbuffer = nullptr;
   IDirect3DDevice9 *device = nullptr;
@@ -337,6 +340,33 @@ IDirect3D9 * CAPSULE_STDCALL Direct3DCreate9_hook (
   return res;
 }
 
+///////////////////////////////////////////////
+// Direct3DCreate9Ex
+///////////////////////////////////////////////
+
+typedef HRESULT (CAPSULE_STDCALL *Direct3DCreate9Ex_t)(
+  UINT SDKVersion,
+  IDirect3D9Ex *ppD3D
+);
+static Direct3DCreate9Ex_t Direct3DCreate9Ex_real;
+static SIZE_T Direct3DCreate9Ex_hookId = 0;
+
+HRESULT CAPSULE_STDCALL Direct3DCreate9Ex_hook (
+  UINT SDKVersion,
+  IDirect3D9Ex *ppD3D
+) {
+  capsule_log("Direct3DCreate9Ex called with SDKVersion %u", (unsigned int) SDKVersion);
+  HRESULT res = Direct3DCreate9Ex_real(SDKVersion, ppD3D);
+  if (SUCCEEDED(res)) {
+    capsule_log("d3d9ex device created!");
+    install_device_hooks(ppD3D);
+  } else {
+    capsule_log("d3d9ex device could not be created.");
+  }
+
+  return res;
+}
+
 void capsule_install_d3d9_hooks () {
   DWORD err;
 
@@ -366,5 +396,27 @@ void capsule_install_d3d9_hooks () {
       return;
     }
     capsule_log("Installed Direct3DCreate9 hook");
+  }
+
+  // Direct3DCreate9Ex
+  if (!Direct3DCreate9Ex_hookId) {
+    LPVOID Direct3DCreate9Ex_addr = NktHookLibHelpers::GetProcedureAddress(d3d9, "Direct3DCreate9Ex");
+    if (!Direct3DCreate9Ex_addr) {
+      capsule_log("Could not find Direct3DCreate9Ex");
+      return;
+    }
+
+    err = cHookMgr.Hook(
+      &Direct3DCreate9Ex_hookId,
+      (LPVOID *) &Direct3DCreate9Ex_real,
+      Direct3DCreate9Ex_addr,
+      Direct3DCreate9Ex_hook,
+      0
+    );
+    if (err != ERROR_SUCCESS) {
+      capsule_log("Hooking Direct3DCreate9Ex derped with error %d (%x)", err, err);
+      return;
+    }
+    capsule_log("Installed Direct3DCreate9Ex hook");
   }
 }

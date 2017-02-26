@@ -83,6 +83,8 @@ HRESULT CAPSULE_STDCALL Present_hook (
   UINT SyncInterval,
   UINT Flags
 ) {
+  capdata.saw_dxgi = true;
+
   if (!data.swap) {
     setup_dxgi(swap);
   }
