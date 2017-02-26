@@ -9,5 +9,7 @@
       "**/.hg": true,
       "**/.DS_Store": true,
       "build*": true
-    }
+    },
+    "C_Cpp.clang_format_style": "LLVM",
+    "editor.tabSize": 2
   }

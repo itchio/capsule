@@ -50,3 +50,7 @@ int capsule_io_receive_video_frame (
     int64_t *timestamp
 );
 
+void capsule_io_capture_start(
+    capsule_io_t *io
+);
+

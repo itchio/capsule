@@ -62,6 +62,7 @@ if(WIN32)
     ${libcapsule_SOURCE_DIR}/windows/opengl-capture.cpp
     ${libcapsule_SOURCE_DIR}/windows/ddraw-hooks.cpp
     ${libcapsule_SOURCE_DIR}/windows/ddraw-capture.cpp
+    ${libcapsule_SOURCE_DIR}/windows/dc-capture.cpp
   )
 endif()
 

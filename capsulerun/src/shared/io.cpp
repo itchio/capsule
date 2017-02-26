@@ -33,6 +33,15 @@ using namespace std;
 using namespace Capsule::Messages;
 
 #if defined(CAPSULE_WINDOWS)
+#define READPKT(io)           capsule_hread_packet((io)->pipe_r)
+#define WRITEPKT(builder, io) capsule_hwrite_packet((builder), (io)->pipe_w)
+#else // CAPSULE_WINDOWS
+#define READPKT(io)           capsule_read_packet((io)->fifo_r)
+#define WRITEPKT(builder, io) capsule_write_packet((builder), (io)->fifo_w)
+#endif // !CAPSULE_WINDOWS
+
+
+#if defined(CAPSULE_WINDOWS)
 
 static HANDLE create_pipe(
   std::string &pipe_path,
@@ -137,11 +146,7 @@ int capsule_io_receive_video_format (
     video_format_t *vfmt
 ) {
   capsule_log("receiving video format...");
-#if defined(CAPSULE_WINDOWS)
-  char *buf = capsule_hread_packet(io->pipe_r);
-#else
-  char *buf = capsule_read_packet(io->fifo_r);
-#endif
+  char *buf = READPKT(io);
   if (!buf) {
     capsule_log("receive_video_format: pipe closed");
     exit(1);
@@ -211,12 +216,7 @@ int capsule_io_receive_video_format (
 }
 
 int capsule_io_receive_video_frame (capsule_io_t *io, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-#if defined(CAPSULE_WINDOWS)
-  char *buf = capsule_hread_packet(io->pipe_r);
-#else
-  char *buf = capsule_read_packet(io->fifo_r);
-#endif
-
+  char *buf = READPKT(io);
   if (!buf) {
     // pipe closed
     return 0;
@@ -237,14 +237,17 @@ int capsule_io_receive_video_frame (capsule_io_t *io, uint8_t *buffer, size_t bu
   auto vfp = CreateVideoFrameProcessed(builder, vfc->index()); 
   auto opkt = CreatePacket(builder, Message_VideoFrameProcessed, vfp.Union());
   builder.Finish(opkt);
-
-#if defined(CAPSULE_WINDOWS)
-  capsule_hwrite_packet(builder, io->pipe_w);
-#else
-  capsule_write_packet(builder, io->fifo_w);
-#endif
+  WRITEPKT(builder, io);
 
   delete[] buf;
   return buffer_size;
 }
 
+void capsule_io_capture_start (capsule_io_t *io) {
+  flatbuffers::FlatBufferBuilder builder(1024);
+  auto cps = CreateCaptureStart(builder);
+  auto opkt = CreatePacket(builder, Message_CaptureStart, cps.Union());
+  builder.Finish(opkt);
+
+  WRITEPKT(builder, io);
+}

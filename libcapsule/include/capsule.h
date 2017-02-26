@@ -69,14 +69,26 @@ void capsule_install_opengl_hooks();
 void capsule_install_dxgi_hooks();
 void capsule_install_d3d9_hooks();
 void capsule_install_ddraw_hooks();
+
+bool dc_capture_init();
+
 #endif // CAPSULE_WINDOWS
+
+struct capture_data {
+  bool saw_opengl;
+#if defined(CAPSULE_WINDOWS)
+  bool saw_dxgi;
+  bool saw_d3d9;
+#endif // CAPSULE_WINDOWS
+};
+extern struct capture_data capdata;
 
 bool CAPSULE_STDCALL capsule_capture_ready();
 int64_t CAPSULE_STDCALL capsule_frame_timestamp();
 
 void CAPSULE_STDCALL capsule_io_init();
 void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, int vflip, int pitch);
-void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frameData, size_t frameDataSize);
+void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_data, size_t frame_data_size);
 
 // OpenGL-specific
 void CAPSULE_STDCALL opengl_capture(int width, int height);

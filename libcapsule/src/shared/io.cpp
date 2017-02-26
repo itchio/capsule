@@ -73,16 +73,6 @@ FILE *ensure_infile() {
   return in_file;
 }
 
-void CAPSULE_STDCALL capsule_io_init () {
-    capsule_log("Ensuring outfile..");
-    ensure_outfile();
-    capsule_log("outfile ensured!");
-
-    capsule_log("Ensuring infile..");
-    ensure_infile();
-    capsule_log("infile ensured!");
-}
-
 bool frame_locked[NUM_BUFFERS];
 mutex frame_locked_mutex;
 int next_frame_index = 0;
@@ -104,6 +94,27 @@ static void unlock_frame(int i) {
     frame_locked[i] = false;
 }
 
+#if defined(CAPSULE_WINDOWS) {
+static void capsule_capture_start () {
+    capsule_log("capsule_capture_start: enumerating our options");
+    if (capdata.saw_dxgi || capdata.saw_d3d9 || capdata.saw_opengl) {
+        // cool, these will initialize on next present/swapbuffers
+    } else {
+        // try dc capture then
+        bool success = dc_capture_init();
+        if (!success) {
+            capsule_log("Cannot start capture: no capture method available")
+            return;
+        }
+    }
+    capsule_log("capsule_capture_start: success!");
+}
+#else // CAPSULE_WINDOWS
+static void capsule_capture_start () {
+    capsule_log("non-windows capsule capture: stub!");
+}
+#endif // !CAPSULE_WINDOWS
+
 static void poll_infile() {
     while (true) {
         char *buf = capsule_fread_packet(in_file);
@@ -113,6 +124,16 @@ static void poll_infile() {
 
         auto pkt = GetPacket(buf);
         switch (pkt->message_type()) {
+            case Message_CaptureStart: {
+                capsule_log("capture start!");
+                capsule_capture_start();
+                capsule_log("capture started, moving on!");
+                break;
+            }
+            case Message_CaptureStop: {
+                capsule_log("capture stop!");
+                break;
+            }
             case Message_VideoFrameProcessed: {
                 auto vfp = static_cast<const VideoFrameProcessed *>(pkt->message());
                 // capsule_log("poll_infile: encoder processed frame %d", vfp->index());
@@ -129,9 +150,6 @@ static void poll_infile() {
 
 void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, int vflip, int pitch) {
     capsule_log("writing video format");
-    thread poll_thread(poll_infile);
-    poll_thread.detach();
-
     for (int i = 0; i < NUM_BUFFERS; i++) {
         frame_locked[i] = false;
     }
@@ -224,11 +242,17 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     capsule_log("done video format");
 }
 
+int is_skipping;
+
 void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_data, size_t frame_data_size) {
     if (is_frame_locked(next_frame_index)) {
-        capsule_log("frame buffer overrun! skipping.");
+        if (!is_skipping) {
+            capsule_log("frame buffer overrun (at %d)! skipping until further notice", next_frame_index);
+            is_skipping = true;
+        }
         return;
     }
+    is_skipping = false;
 
     flatbuffers::FlatBufferBuilder builder(1024);
 
@@ -247,8 +271,23 @@ void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_da
     auto pkt = pkt_builder.Finish();
 
     builder.Finish(pkt);
-    capsule_fwrite_packet(builder, out_file);
 
     lock_frame(next_frame_index);
+    capsule_fwrite_packet(builder, out_file);
+
     next_frame_index = (next_frame_index + 1) % NUM_BUFFERS;
+}
+
+void CAPSULE_STDCALL capsule_io_init () {
+    capsule_log("Ensuring outfile..");
+    ensure_outfile();
+    capsule_log("outfile ensured!");
+
+    capsule_log("Ensuring infile..");
+    ensure_infile();
+    capsule_log("infile ensured!");
+
+    thread poll_thread(poll_infile);
+    poll_thread.detach();
+    capsule_log("started infile poll thread");
 }

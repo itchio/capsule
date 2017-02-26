@@ -356,8 +356,8 @@ void encoder_run(encoder_params_t *params) {
     auto tt1 = chrono::steady_clock::now();
     size_t read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
     auto tt2 = chrono::steady_clock::now();
-    eprintf("receive_frame took %.3f ms\n", (double) (chrono::duration_cast<chrono::microseconds>(tt2 - tt1).count()) / 1000.0);
-    cdprintf(">> video timestamp                 = %d, approx %.4f seconds\n", (int) timestamp, ((double) timestamp) / 1000000.0);
+    eprintf("receive_frame took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(tt2 - tt1).count()) / 1000.0);
+    cdprintf(">> video timestamp                 = %d, approx %.4f seconds", (int) timestamp, ((double) timestamp) / 1000000.0);
     total_read += read;
 
     int delta = (timestamp - last_timestamp);
@@ -383,7 +383,7 @@ void encoder_run(encoder_params_t *params) {
       auto ht1 = chrono::steady_clock::now();
       sws_scale(sws, sws_in, sws_linesize, 0, vc->height, vframe->data, vframe->linesize);
       auto ht2 = chrono::steady_clock::now();
-      eprintf("scale took %.3f ms\n", (double) (chrono::duration_cast<chrono::microseconds>(ht2 - ht1).count()) / 1000.0);
+      eprintf("scale took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(ht2 - ht1).count()) / 1000.0);
 
       vnext_pts = timestamp;
       vframe->pts = vnext_pts;
@@ -393,7 +393,7 @@ void encoder_run(encoder_params_t *params) {
         auto t1 = chrono::steady_clock::now();
         ret = avcodec_send_frame(vc, vframe);
         auto t2 = chrono::steady_clock::now();
-        eprintf("send_frame took %.3f ms\n", (double) (chrono::duration_cast<chrono::microseconds>(t2 - t1).count()) / 1000.0);
+        eprintf("send_frame took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(t2 - t1).count()) / 1000.0);
       }
       if (ret < 0) {
           fprintf(stderr, "Error encoding video frame\n");

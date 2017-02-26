@@ -51,14 +51,5 @@ int64_t CAPSULE_STDCALL capsule_frame_timestamp () {
 }
 
 bool CAPSULE_STDCALL capsule_capture_ready () {
-  static int num_frame = 0;
-
-  num_frame++;
-#if defined(CAPSULE_WINDOWS)
-  if (num_frame < 120) {
-    return false;
-  }
-#endif
-
   return capsule_capture_active() && capsule_frame_ready();
 }

@@ -135,6 +135,8 @@ void* dlopen (const char * filename, int flag) {
 #ifdef CAPSULE_LINUX
 extern "C" {
   void glXSwapBuffers (void *a, void *b) {
+    capdata.saw_opengl = true;
+
     if (capsule_x11_should_capture()) {
       // capsule_log("About to capture frame..");
       opengl_capture(0, 0);

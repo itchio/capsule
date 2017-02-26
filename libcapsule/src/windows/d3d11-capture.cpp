@@ -41,6 +41,7 @@ struct d3d11_data {
   uint32_t                  pitch; // linesize, may not be (width * components) because of alignemnt
 };
 
+static struct d3d11_data data = {};
 
 HINSTANCE hD3DCompiler = NULL;
 pD3DCompile pD3DCompileFunc = NULL;
@@ -76,9 +77,6 @@ float4 main(VertData input) : SV_Target \
 { \
   return diffuseTexture.Sample(textureSampler, input.texCoord); \
 }";
-
-
-static struct d3d11_data data = {};
 
 /**
  * Copy the format, size, and multisampling information of the

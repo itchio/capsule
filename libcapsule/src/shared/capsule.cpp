@@ -5,6 +5,8 @@
 #include <stdio.h>
 #include <stdint.h>
 
+struct capture_data capdata = {0};
+
 #if !defined(CAPSULE_WINDOWS)
 void __attribute__((constructor)) capsule_load() {
   pid_t pid = getpid();
