@@ -15,12 +15,14 @@
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
 #include <unistd.h>   // unlink
+#include <signal.h>   // signal, SIGPIPE
 #elif defined(CAPSULE_OSX)
 #include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
 #include <errno.h>    // for errno
 #include <unistd.h>   // unlink
+#include <signal.h>   // signal, SIGPIPE
 #else
 #define LEAN_AND_MEAN
 #include <windows.h>
@@ -100,6 +102,10 @@ void capsule_io_init(
   io->pipe_r = create_pipe(pipe_r_path, PIPE_ACCESS_INBOUND);
   io->pipe_w = create_pipe(pipe_w_path, PIPE_ACCESS_OUTBOUND);
 #else
+  // ignore SIGPIPE - those will get disconnected when
+  // the game shuts down, and that's okay.
+  signal(SIGPIPE, SIG_IGN);
+
   create_fifo(fifo_r_path);
   io->fifo_r_path = &fifo_r_path;
 
