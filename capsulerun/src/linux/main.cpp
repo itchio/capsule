@@ -100,7 +100,7 @@ int capsulerun_main (int argc, char **argv) {
   memset(&private_data, 0, sizeof(private_data));
   private_data.io = &io;
 
-  capsule_x11_init(&private_data);
+  capsule_hotkey_init(&private_data);
 
   struct encoder_params_s encoder_params;
   memset(&encoder_params, 0, sizeof(encoder_params));

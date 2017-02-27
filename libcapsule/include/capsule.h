@@ -10,14 +10,14 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
+#if defined(CAPSULE_WINDOWS)
+#define getpid(a) 0
+#define pid_t int
+#else // CAPSULE_WINDOWS
 #include <sys/types.h>
 #include <unistd.h>
 #include <time.h>
-#else // CAPSULE_LINUX or CAPSULE_OSX
-#define getpid(a) 0
-#define pid_t int
-#endif // not CAPSULE_LINUX nor CAPSULE_OSX
+#endif // !CAPSULE_WINDOWS
 
 #ifdef CAPSULE_WINDOWS
 

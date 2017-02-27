@@ -4,16 +4,16 @@
 
 #include <string>
 
-#if defined(CAPSULE_LINUX) || defined(CAPSULE_OSX)
+#if defined(CAPSULE_WINDOWS)
+#include <io.h>
+#include <fcntl.h>
+#else // CAPSULE_WINDOWS
 #include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
 
 #include <unistd.h>
-#else // CAPSULE_LINUX || CAPSULE_OSX
-#include <io.h>
-#include <fcntl.h>
-#endif // !(CAPSULE_LINUX || CAPSULE_OSX)
+#endif // !CAPSULE_WINDOWS
 
 #include <thread> // for making trouble double
 #include <mutex> // for trouble mitigation

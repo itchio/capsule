@@ -15,7 +15,7 @@ void __attribute__((constructor)) capsule_load() {
 #if defined(CAPSULE_LINUX)
   capsule_log("LD_LIBRARY_PATH: %s", getenv("LD_LIBRARY_PATH"));
   capsule_log("LD_PRELOAD: %s", getenv("LD_PRELOAD"));
-#elif defined(CAPSULE_OSX)
+#elif defined(CAPSULE_MACOS)
   capsule_log("DYLD_INSERT_LIBRARIES: %s", getenv("DYLD_INSERT_LIBRARIES"));
   capsule_log("LD_PRELOAD: %s", getenv("LD_PRELOAD"));
 #endif

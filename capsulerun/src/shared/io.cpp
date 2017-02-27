@@ -16,7 +16,7 @@
 #include <fcntl.h>    // for O_* constants
 #include <unistd.h>   // unlink
 #include <signal.h>   // signal, SIGPIPE
-#elif defined(CAPSULE_OSX)
+#elif defined(CAPSULE_MACOS)
 #include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
