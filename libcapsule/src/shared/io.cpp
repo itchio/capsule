@@ -105,12 +105,20 @@ static void capsule_capture_start () {
             return;
         }
     }
-    capdata.active = true;
+    capsule_capture_flip();
     capsule_log("capsule_capture_start: success!");
 }
 #else // CAPSULE_WINDOWS
 static void capsule_capture_start () {
-    capsule_log("non-windows capsule capture: stub!");
+    if (capdata.saw_opengl) {
+        // cool, it'll initialize on next swapbuffers
+    } else {
+        capsule_log("Cannot start capture: no capture method available");
+        return;
+    }
+
+    capsule_capture_flip();
+    capsule_log("capsule_capture_start: success!");
 }
 #endif // !CAPSULE_WINDOWS
 

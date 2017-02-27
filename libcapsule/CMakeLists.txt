@@ -42,12 +42,6 @@ if(APPLE)
   )
 endif()
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-  list(APPEND libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/linux/control-x11.cpp
-  )
-endif()
-
 if(WIN32)
   list(APPEND libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/windows/hooks.cpp
@@ -93,5 +87,10 @@ if(APPLE)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-  target_link_libraries(capsule -ldl -lX11 -lpthread -lrt)
+  # dlopen, dlsym
+  target_link_libraries(capsule -ldl)
+  # needed by pulse-simple
+  target_link_libraries(capsule -lpthread)
+  # shm_open, etc.
+  target_link_libraries(capsule -lrt)
 endif()

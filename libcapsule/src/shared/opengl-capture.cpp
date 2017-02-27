@@ -136,12 +136,7 @@ void* dlopen (const char * filename, int flag) {
 extern "C" {
   void glXSwapBuffers (void *a, void *b) {
     capdata.saw_opengl = true;
-
-    if (capsule_x11_should_capture()) {
-      // capsule_log("About to capture frame..");
-      opengl_capture(0, 0);
-    }
-    // capsule_log("About to call real swap buffers..");
+    opengl_capture(0, 0);
     return _realglXSwapBuffers(a, b);
   }
 

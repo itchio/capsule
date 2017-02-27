@@ -22,6 +22,7 @@ if(WIN32)
     ${capsulerun_SOURCE_DIR}/shared/io.cpp
     ${capsulerun_SOURCE_DIR}/windows/wasapi.cpp
     ${capsulerun_SOURCE_DIR}/windows/arguments.cpp
+    ${capsulerun_SOURCE_DIR}/windows/hotkey.cpp
     ${capsulerun_SOURCE_DIR}/windows/main.cpp
   )
 endif()
@@ -41,6 +42,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     ${capsulerun_SOURCE_DIR}/shared/env.cpp
     ${capsulerun_SOURCE_DIR}/shared/io.cpp
     ${capsulerun_SOURCE_DIR}/linux/pulse.cpp
+    ${capsulerun_SOURCE_DIR}/linux/hotkey.cpp
     ${capsulerun_SOURCE_DIR}/linux/main.cpp
   )
   add_definitions(-D__STDC_CONSTANT_MACROS)
@@ -85,5 +87,6 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 
   # needed on old Debian for reasons? (probably because of libpulse-simple?)
   target_link_libraries(capsulerun -lpthread)
+  target_link_libraries(capsulerun -lX11)
   target_link_libraries(capsulerun -lrt)
 endif()

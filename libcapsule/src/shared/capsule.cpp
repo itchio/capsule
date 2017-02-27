@@ -23,10 +23,6 @@ void __attribute__((constructor)) capsule_load() {
   capsule_log("CAPSULE_PIPE_R_PATH: %s", getenv("CAPSULE_PIPE_R_PATH"));
   capsule_log("CAPSULE_PIPE_W_PATH: %s", getenv("CAPSULE_PIPE_W_PATH"));
   capsule_io_init();
-
-#ifdef CAPSULE_LINUX
-  capsule_x11_init();
-#endif
 }
 
 void __attribute__((destructor)) capsule_unload() {

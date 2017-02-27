@@ -2,6 +2,7 @@
 #include <capsule.h>
 
 #include <chrono>
+#include <mutex>
 
 #define FPS 60
 static auto frame_interval = std::chrono::microseconds(1000000 / FPS);
@@ -10,8 +11,18 @@ static bool first_frame = true;
 static int frame_count = 0;
 static std::chrono::time_point<std::chrono::steady_clock> first_ts;
 
+using namespace std;
+
+mutex capdata_mutex;
+
 bool capsule_capture_active () {
+  lock_guard<mutex> lock(capdata_mutex);
   return capdata.active;
+}
+
+void capsule_capture_flip () {
+  lock_guard<mutex> lock(capdata_mutex);
+  capdata.active = !capdata.active;
 }
 
 static inline bool capsule_frame_ready () {

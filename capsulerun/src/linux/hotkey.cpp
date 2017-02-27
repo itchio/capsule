@@ -1,31 +1,17 @@
 
-#include <capsule.h>
+#include <capsulerun.h>
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
 #include <thread>
-#include <mutex>
 
 using namespace std;
 
 Display *capsule_x11_dpy;
 Window capsule_x11_root;
-mutex state_mutex;
-int _capsule_x11_should_capture = 0;
 
-int capsule_x11_should_capture() {
-    lock_guard<mutex> lock(state_mutex);
-    return _capsule_x11_should_capture;
-}
-
-void capsule_x11_capture_flip() {
-    lock_guard<mutex> lock(state_mutex);
-    _capsule_x11_should_capture = !_capsule_x11_should_capture;
-    fprintf(stderr, "capsule_x11: should capture = %d\n", _capsule_x11_should_capture);
-}
-
-void capsule_x11_poll () {
+void capsule_x11_poll (struct encoder_private_s *p) {
     XEvent ev;
 
     while(1) {
@@ -33,7 +19,8 @@ void capsule_x11_poll () {
 
         switch (ev.type) {
             case KeyPress:
-                capsule_x11_capture_flip();
+                capsule_log("capsule_x11_poll: Starting capture!");
+                capsule_io_capture_start(p->io);
             default:
                 break;
         }
@@ -44,7 +31,7 @@ void capsule_x11_poll () {
 //     fprintf(stderr, "X11 error type %d\n", err->type);
 // }
 
-int capsule_x11_init() {
+int capsule_x11_init(struct encoder_private_s *p) {
     // XSetErrorHandler(capsule_x11_error_handler);
     capsule_x11_dpy = XOpenDisplay(0);
     capsule_x11_root = DefaultRootWindow(capsule_x11_dpy);
@@ -76,7 +63,7 @@ int capsule_x11_init() {
     }
     XSelectInput(capsule_x11_dpy, capsule_x11_root, KeyPressMask);
 
-    thread poll_thread(capsule_x11_poll);
+    thread poll_thread(capsule_x11_poll, p);
     poll_thread.detach();
 
     return 0;

@@ -51,31 +51,6 @@ static void wait_for_child (HANDLE hProcess) {
   }
 }
 
-
-static void poll_hotkey (struct encoder_private_s *p) {
-  BOOL success = RegisterHotKey(
-    NULL,
-    1,
-    MOD_NOREPEAT,
-    VK_F9
-  );
-
-  if (!success) {
-    DWORD err = GetLastError();
-    capsule_log("Could not register hotkey: %d (%x)", err, err);
-    return;
-  }
-
-  MSG msg = {0};
-  while (GetMessage(&msg, NULL, 0, 0) != 0) {
-    if (msg.message = WM_HOTKEY) {
-      capsule_log("Hotkey received!");
-      capsule_io_capture_start(p->io);
-      wasapi_start(p);
-    }
-  }
-}
-
 int capsulerun_main (int argc, char **argv) {
   capsule_log("thanks for flying capsule on Windows");
 

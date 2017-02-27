@@ -19,11 +19,6 @@
 #define pid_t int
 #endif // not CAPSULE_LINUX nor CAPSULE_OSX
 
-#ifdef CAPSULE_LINUX
-int capsule_x11_init();
-int capsule_x11_should_capture();
-#endif
-
 #ifdef CAPSULE_WINDOWS
 
 #ifdef BUILD_CAPSULE_DLL
@@ -85,6 +80,7 @@ struct capture_data {
 extern struct capture_data capdata;
 
 bool CAPSULE_STDCALL capsule_capture_ready();
+void CAPSULE_STDCALL capsule_capture_flip();
 int64_t CAPSULE_STDCALL capsule_frame_timestamp();
 
 void CAPSULE_STDCALL capsule_io_init();
