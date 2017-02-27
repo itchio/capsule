@@ -165,7 +165,7 @@ make -j4
 Capsulerun usage:
 
 ```bash
-capsulerun/capsulerun $PWD/libcapsule path/to/some/game.x86_64
+capsulerun/capsulerun -L $PWD/libcapsule -- path/to/some/game.x86_64
 ```
 
 When launching, one might want to override mesa version:
@@ -222,7 +222,7 @@ the 64-bit `capsulerun.exe`, and both DLLs.
 capsulerun usage:
 
 ```
-C:\path\to\capsule\build\capsulerun.exe C:\path\to\capsule\build some_game.exe
+C:\path\to\capsule\build\capsulerun.exe -L C:\path\to\capsule\build -- some_game.exe
 ```
 
 Note that at the time of this writing (git blame is your friend), capsulerun doesn't yet relay arguments to the child.
