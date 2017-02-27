@@ -32,6 +32,9 @@ if(APPLE)
     ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
     ${capsulerun_SOURCE_DIR}/shared/env.cpp
     ${capsulerun_SOURCE_DIR}/shared/io.cpp
+    ${capsulerun_SOURCE_DIR}/macos/DDHotKeyCenter.m
+    ${capsulerun_SOURCE_DIR}/macos/DDHotKeyUtilities.m
+    ${capsulerun_SOURCE_DIR}/macos/hotkey.mm
     ${capsulerun_SOURCE_DIR}/macos/main.cpp
   )
 endif()
@@ -73,6 +76,11 @@ if(APPLE)
     include_directories(${${NEEDED_LIB}_PKG_INCLUDE_DIRS})
     target_link_libraries(capsulerun ${${NEEDED_LIB}_PKG_LDFLAGS} ${${NEEDED_LIB}_PKG_LIBRARIES})
   endforeach(NEEDED_LIB)
+
+  find_library(COCOA_LIBRARY Cocoa)
+  target_link_libraries(capsulerun ${COCOA_LIBRARY})
+  find_library(CARBON_LIBRARY Carbon)
+  target_link_libraries(capsulerun ${CARBON_LIBRARY})
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")

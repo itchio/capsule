@@ -1,5 +1,5 @@
 
-#include "capsulerun.h"
+#include <capsulerun.h>
 
 #include "../shared/env.h" // merge_envs
 #include "../shared/io.h" // create_fifo, receive stuff
@@ -20,10 +20,6 @@
 
 using namespace std;
 
-typedef struct encoder_private_s {
-  capsule_io_t *io;
-} encoder_private_t;
-
 int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
   return capsule_io_receive_video_format(p->io, vfmt);
 }
@@ -34,7 +30,7 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
 
 extern char **environ;
 
-int capsulerun_main (int argc, char **argv) {
+int capsulerun_main_thread (int argc, char **argv) {
   capsule_log("thanks for flying capsule on macOS");
 
   if (argc < 3) {
@@ -91,6 +87,8 @@ int capsulerun_main (int argc, char **argv) {
   memset(&private_data, 0, sizeof(private_data));
   private_data.io = &io;
 
+  capsule_hotkey_init(&private_data);
+
   struct encoder_params_s encoder_params;
   memset(&encoder_params, 0, sizeof(encoder_params));
   encoder_params.private_data = &private_data;
@@ -125,5 +123,12 @@ int capsulerun_main (int argc, char **argv) {
   capsule_log("waiting for encoder thread...");
   encoder_thread.join();
 
+  exit(0);
+}
+
+int capsulerun_main (int argc, char **argv) {
+  thread main_thread(capsulerun_main_thread, argc, argv);
+  capsule_run_app();
   return 0;
 }
+

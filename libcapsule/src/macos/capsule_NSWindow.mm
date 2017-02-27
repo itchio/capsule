@@ -21,7 +21,7 @@ static CGWindowID windowId = kCGNullWindowID;
 }
 
 - (void)handleTimer:(NSTimer *)timer {
-  if (capsule_capturing != 2) {
+  if (!capdata.active) {
     [timer invalidate];
     return;
   }
