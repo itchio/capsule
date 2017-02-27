@@ -22,7 +22,7 @@ if(WIN32)
     ${capsulerun_SOURCE_DIR}/shared/io.cpp
     ${capsulerun_SOURCE_DIR}/windows/strings.cpp
     ${capsulerun_SOURCE_DIR}/windows/wasapi.cpp
-    ${capsulerun_SOURCE_DIR}/windows/arguments.cpp
+    ${capsulerun_SOURCE_DIR}/windows/quote.cpp
     ${capsulerun_SOURCE_DIR}/windows/hotkey.cpp
     ${capsulerun_SOURCE_DIR}/windows/main.cpp
   )

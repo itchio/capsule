@@ -3,6 +3,8 @@
 // called "twisty little passages, all alike" - very appropriately so.
 // https://blogs.msdn.microsoft.com/twistylittlepassagesallalike/2011/04/23/everyone-quotes-command-line-arguments-the-wrong-way/
 
+#include "quote.h"
+
 #include <string>
 
 /**
