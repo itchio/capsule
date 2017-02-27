@@ -37,21 +37,8 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
 }
 
 int capsulerun_main (capsule_args_t *args) {
-  int argc = args->argc;
-  char **argv = args->argv;
-
-  capsule_log("thanks for flying capsule on GNU/Linux");
-
-  if (argc < 3) {
-    capsule_log("usage: capsulerun LIBCAPSULE_DIR EXECUTABLE");
-    exit(1);
-  }
-
-  char *libcapsule_dir = argv[1];
-  char *executable_path = argv[2];
-
   char libcapsule_path[CAPSULE_MAX_PATH_LENGTH];
-  const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s/libcapsule.so", libcapsule_dir);
+  const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s/libcapsule.so", args->libpath);
 
   if (libcapsule_path_length > CAPSULE_MAX_PATH_LENGTH) {
     capsule_log("libcapsule path too long (%d > %d)", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
@@ -59,7 +46,6 @@ int capsulerun_main (capsule_args_t *args) {
   }
 
   pid_t child_pid;
-  char **child_argv = &argv[2];
 
   if (setenv("LD_PRELOAD", libcapsule_path, 1 /* replace */) != 0) {
     capsule_log("couldn't set LD_PRELOAD'");
@@ -85,10 +71,10 @@ int capsulerun_main (capsule_args_t *args) {
   // spawn game
   int child_err = posix_spawn(
     &child_pid,
-    executable_path,
+    args->exec,
     NULL, // file_actions
     NULL, // spawn_attrs
-    child_argv,
+    args->exec_argv,
     child_environ // environment
   );
   if (child_err != 0) {

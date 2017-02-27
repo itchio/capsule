@@ -31,20 +31,7 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
 extern char **environ;
 
 void capsulerun_main_thread (capsule_args_t *args) {
-  int argc = args->argc;
-  char **argv = args->argv;
-
-  capsule_log("thanks for flying capsule on macOS");
-
-  if (argc < 3) {
-    capsule_log("usage: capsulerun LIBCAPSULE_DIR EXECUTABLE");
-    exit(1);
-  }
-
-  char *libcapsule_dir = argv[1];
-  char *executable_path = argv[2];
-
-  auto libcapsule_path = string(libcapsule_dir) + "/libcapsule.dylib";
+  auto libcapsule_path = string(args->libpath) + "/libcapsule.dylib";
 
   // TODO: respect outside DYLD_INSERT_LIBRARIES ?
   auto dyld_insert_var = "DYLD_INSERT_LIBRARIES=" + libcapsule_path;
@@ -65,17 +52,16 @@ void capsulerun_main_thread (capsule_args_t *args) {
   char **child_environ = merge_envs(environ, env_additions);
 
   pid_t child_pid;
-  char **child_argv = &argv[2];
 
   capsule_io_t io;
   capsule_io_init(&io, fifo_r_path, fifo_w_path);
 
   int child_err = posix_spawn(
     &child_pid,
-    executable_path,
+    args->exec,
     NULL, // file_actions
     NULL, // spawn_attrs
-    child_argv,
+    args->exec_argv,
     child_environ
   );
   if (child_err != 0) {
