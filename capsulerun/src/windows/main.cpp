@@ -11,17 +11,12 @@
 #include "capsulerun.h"
 
 #include "../shared/io.h"
+#include "strings.h"
 
 using namespace std;
 
 static bool connected = false;
 static DWORD exitCode = 0;
-
-void toWideChar (const char *s, wchar_t **ws) {
-  int wchars_num = MultiByteToWideChar(CP_UTF8, 0, s, -1, NULL, 0);
-  *ws = (wchar_t *) malloc(wchars_num * sizeof(wchar_t));
-  MultiByteToWideChar(CP_UTF8, 0, s, -1, *ws, wchars_num);
-}
 
 int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
   return capsule_io_receive_video_format(p->io, vfmt);
@@ -120,19 +115,19 @@ int capsulerun_main (int argc, char **argv) {
   }
 
   bool first_arg = true;
-  LPWSTR in_command_line = GetCommandLineW();
-  int num_args;
-  LPWSTR* argv_w = CommandLineToArgvW(in_command_line, &num_args);
 
   wstring command_line_w;
-  for (int i = 2; i < num_args; i++) {
-    string arg = argv[i];
+  for (int i = 2; i < argc; i++) {
+    wchar_t *arg;
+    // this "leaks" mem, but it's one time, so don't care
+    toWideChar(argv[i], &arg);
+
     if (first_arg) {
       first_arg = false;
     } else {
       command_line_w.append(L" ");
     }
-    ArgvQuote(argv_w[i], command_line_w, false);
+    ArgvQuote(arg, command_line_w, false);
   }
 
   capsule_log("Launching %S", command_line_w.c_str());
