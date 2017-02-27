@@ -36,7 +36,10 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
   return capsule_io_receive_video_frame(p->io, buffer, buffer_size, timestamp);
 }
 
-int capsulerun_main (int argc, char **argv) {
+int capsulerun_main (capsule_args_t *args) {
+  int argc = args->argc;
+  char **argv = args->argv;
+
   capsule_log("thanks for flying capsule on GNU/Linux");
 
   if (argc < 3) {

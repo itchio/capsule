@@ -14,12 +14,14 @@ set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/include)
 include_directories(${capsulerun_INCLUDE_DIRS} ${capsulerun_INCLUDE_DIR} ${libcapsule_INCLUDE_DIR})
 
 set(capsulerun_SRC
-${capsulerun_SOURCE_DIR}/shared/main.cpp)
+  ${capsulerun_SOURCE_DIR}/shared/main.cpp
+  ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
+  ${capsulerun_SOURCE_DIR}/shared/io.cpp
+  ${capsulerun_SOURCE_DIR}/shared/argparse.c
+)
 
 if(WIN32)
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
-    ${capsulerun_SOURCE_DIR}/shared/io.cpp
     ${capsulerun_SOURCE_DIR}/windows/strings.cpp
     ${capsulerun_SOURCE_DIR}/windows/wasapi.cpp
     ${capsulerun_SOURCE_DIR}/windows/quote.cpp
@@ -30,9 +32,7 @@ endif()
 
 if(APPLE)
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
     ${capsulerun_SOURCE_DIR}/shared/env.cpp
-    ${capsulerun_SOURCE_DIR}/shared/io.cpp
     ${capsulerun_SOURCE_DIR}/macos/DDHotKeyCenter.m
     ${capsulerun_SOURCE_DIR}/macos/DDHotKeyUtilities.m
     ${capsulerun_SOURCE_DIR}/macos/hotkey.mm
@@ -42,9 +42,7 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
     ${capsulerun_SOURCE_DIR}/shared/env.cpp
-    ${capsulerun_SOURCE_DIR}/shared/io.cpp
     ${capsulerun_SOURCE_DIR}/linux/pulse.cpp
     ${capsulerun_SOURCE_DIR}/linux/hotkey.cpp
     ${capsulerun_SOURCE_DIR}/linux/main.cpp

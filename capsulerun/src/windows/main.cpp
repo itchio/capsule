@@ -46,17 +46,7 @@ static void wait_for_child (HANDLE hProcess) {
   }
 }
 
-int capsulerun_main (int argc, char **argv) {
-  capsule_log("thanks for flying capsule on Windows");
-
-  if (argc < 3) {
-    capsule_log("usage: capsulerun LIBCAPSULE_DIR EXECUTABLE");
-    exit(1);
-  }
-
-  char *libcapsule_dir = argv[1];
-  char *executable_path = argv[2];
-
+int capsulerun_main (capsule_args_t *args) {
   // From Deviare-InProc's doc: 
   //   If "szDllNameW" string ends with 'x86.dll', 'x64.dll', '32.dll', '64.dll', the dll name will be adjusted
   //   in order to match the process platform. I.e.: "mydll_x86.dll" will become "mydll_x64.dll" on 64-bit processes.
@@ -65,7 +55,7 @@ int capsulerun_main (int argc, char **argv) {
   // Don't ask me, I don't know either.
   const char *libcapsule_name = "capsule32.dll";
   char libcapsule_path[CAPSULE_MAX_PATH_LENGTH];
-  const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s\\%s", libcapsule_dir, libcapsule_name);
+  const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s\\%s", args->libpath, libcapsule_name);
 
   if (libcapsule_path_length > CAPSULE_MAX_PATH_LENGTH) {
     capsule_log("libcapsule path too long (%d > %d)", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
@@ -83,7 +73,7 @@ int capsulerun_main (int argc, char **argv) {
   ZeroMemory(&pi, sizeof(pi));  
 
   wchar_t *executable_path_w;
-  toWideChar(executable_path, &executable_path_w);
+  toWideChar(args->exec, &executable_path_w);
 
   wchar_t *libcapsule_path_w;
   toWideChar(libcapsule_path, &libcapsule_path_w);
@@ -117,10 +107,10 @@ int capsulerun_main (int argc, char **argv) {
   bool first_arg = true;
 
   wstring command_line_w;
-  for (int i = 2; i < argc; i++) {
+  for (int i = 0; i < args->exec_argc; i++) {
     wchar_t *arg;
     // this "leaks" mem, but it's one time, so don't care
-    toWideChar(argv[i], &arg);
+    toWideChar(args->exec_argv[i], &arg);
 
     if (first_arg) {
       first_arg = false;

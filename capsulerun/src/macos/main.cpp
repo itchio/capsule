@@ -30,7 +30,10 @@ int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_si
 
 extern char **environ;
 
-int capsulerun_main_thread (int argc, char **argv) {
+void capsulerun_main_thread (capsule_args_t *args) {
+  int argc = args->argc;
+  char **argv = args->argv;
+
   capsule_log("thanks for flying capsule on macOS");
 
   if (argc < 3) {
@@ -126,8 +129,8 @@ int capsulerun_main_thread (int argc, char **argv) {
   exit(0);
 }
 
-int capsulerun_main (int argc, char **argv) {
-  thread main_thread(capsulerun_main_thread, argc, argv);
+int capsulerun_main (capsule_args_t *args) {
+  thread main_thread(capsulerun_main_thread, args);
   capsule_run_app();
   return 0;
 }

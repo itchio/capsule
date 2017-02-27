@@ -4,6 +4,7 @@
 #include <capsule/constants.h>
 #include "capsulerun_types.h"
 #include "capsulerun_macros.h"
+#include "capsulerun_args.h"
 
 #if defined(_WIN32)
 #define CAPSULERUN_WINDOWS
@@ -24,7 +25,7 @@
 #include <sys/types.h>
 #endif // CAPSULERUN_LINUX || CAPSULERUN_OSX
 
-int capsulerun_main (int argc, char **argv);
+int capsulerun_main (capsule_args_t *args);
 
 typedef int (*receive_video_format_t)(void *private_data, video_format_t *vfmt);
 typedef int (*receive_video_frame_t)(void *private_data, uint8_t *buffer, size_t buffer_size, int64_t *timestamp);
