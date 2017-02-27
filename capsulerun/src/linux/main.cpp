@@ -81,7 +81,7 @@ int capsulerun_main (capsule_args_t *args) {
     capsule_log("child spawn error %d: %s", child_err, strerror(child_err));
   }
 
-  capsule_log("pid %d given to child %s", child_pid, executable_path);
+  capsule_log("pid %d given to child %s", child_pid, args->exec);
 
   capsule_io_connect(&io);
 
