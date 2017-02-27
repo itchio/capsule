@@ -280,6 +280,8 @@ static inline capsule_pix_fmt_t dxgi_format_to_pix_fmt(DXGI_FORMAT format) {
   switch (fix_dxgi_format(format)) {
     case DXGI_FORMAT_B8G8R8A8_UNORM:
       return CAPSULE_PIX_FMT_BGRA;
+    case DXGI_FORMAT_B8G8R8X8_UNORM:
+      return CAPSULE_PIX_FMT_BGRA;
     case DXGI_FORMAT_R8G8B8A8_UNORM:
       return CAPSULE_PIX_FMT_RGBA;
     case DXGI_FORMAT_R10G10B10A2_UNORM:
