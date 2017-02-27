@@ -168,8 +168,7 @@ int capsulerun_main (int argc, char **argv) {
     ZeroMemory(&private_data, sizeof(encoder_private_s));
     private_data.io = &io;
 
-    thread hotkey_thread(poll_hotkey, &private_data);
-    hotkey_thread.detach();
+    capsule_hotkey_init(&private_data);
 
     struct encoder_params_s encoder_params;
     ZeroMemory(&encoder_params, sizeof(encoder_private_s));

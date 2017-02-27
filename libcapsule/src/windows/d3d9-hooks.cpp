@@ -300,6 +300,8 @@ static void install_device_hooks(IDirect3D9 *obj) {
   if (!CreateDevice_hookId) {
     LPVOID CreateDevice_addr = capsule_get_IDirect3D9_CreateDevice_address((void *) obj);
 
+    capsule_log("Address of CreateDevice: %p", CreateDevice_addr);
+
     err = cHookMgr.Hook(
       &CreateDevice_hookId,
       (LPVOID *) &CreateDevice_real,

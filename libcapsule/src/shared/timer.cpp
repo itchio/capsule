@@ -20,7 +20,7 @@ bool capsule_capture_active () {
   return capdata.active;
 }
 
-void capsule_capture_flip () {
+void CAPSULE_STDCALL capsule_capture_flip () {
   lock_guard<mutex> lock(capdata_mutex);
   capdata.active = !capdata.active;
 }

@@ -11,7 +11,7 @@ using namespace std;
 Display *capsule_x11_dpy;
 Window capsule_x11_root;
 
-void capsule_x11_poll (struct encoder_private_s *p) {
+static void capsule_hotkey_poll (struct encoder_private_s *p) {
     XEvent ev;
 
     while(1) {
@@ -19,7 +19,7 @@ void capsule_x11_poll (struct encoder_private_s *p) {
 
         switch (ev.type) {
             case KeyPress:
-                capsule_log("capsule_x11_poll: Starting capture!");
+                capsule_log("capsule_hotkey_poll: Starting capture!");
                 capsule_io_capture_start(p->io);
             default:
                 break;
@@ -31,7 +31,7 @@ void capsule_x11_poll (struct encoder_private_s *p) {
 //     fprintf(stderr, "X11 error type %d\n", err->type);
 // }
 
-int capsule_x11_init(struct encoder_private_s *p) {
+int capsule_hotkey_init(struct encoder_private_s *p) {
     // XSetErrorHandler(capsule_x11_error_handler);
     capsule_x11_dpy = XOpenDisplay(0);
     capsule_x11_root = DefaultRootWindow(capsule_x11_dpy);
@@ -63,7 +63,7 @@ int capsule_x11_init(struct encoder_private_s *p) {
     }
     XSelectInput(capsule_x11_dpy, capsule_x11_root, KeyPressMask);
 
-    thread poll_thread(capsule_x11_poll, p);
+    thread poll_thread(capsule_hotkey_poll, p);
     poll_thread.detach();
 
     return 0;

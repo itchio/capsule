@@ -25,4 +25,4 @@ typedef struct encoder_private_s {
 int receive_audio_format (encoder_private_t *p, audio_format_t *fmt);
 void *receive_audio_frames (encoder_private_t *p, int *frames_received);
 
-int capsule_x11_init(encoder_private_t *p);
+int capsule_hotkey_init(encoder_private_t *p);
