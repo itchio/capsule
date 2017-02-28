@@ -22,6 +22,7 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/shared/VideoReceiver.cpp
   ${capsulerun_SOURCE_DIR}/shared/Session.cpp
   ${capsulerun_SOURCE_DIR}/shared/ShmemRead.cpp
+  ${capsulerun_SOURCE_DIR}/shared/Connection.cpp
 )
 
 if(WIN32)
