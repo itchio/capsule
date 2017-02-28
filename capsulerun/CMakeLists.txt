@@ -21,6 +21,7 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/shared/MainLoop.cpp
   ${capsulerun_SOURCE_DIR}/shared/AudioReceiver.cpp
   ${capsulerun_SOURCE_DIR}/shared/VideoReceiver.cpp
+  ${capsulerun_SOURCE_DIR}/shared/ShmemRead.cpp
 )
 
 if(WIN32)

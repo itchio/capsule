@@ -3,25 +3,6 @@
 
 #include "MainLoop.h"
 
-#if defined(CAPSULE_LINUX)
-#include <sys/mman.h>
-#include <sys/stat.h> // for mode constants
-#include <fcntl.h>    // for O_* constants
-#include <unistd.h>   // unlink
-#elif defined(CAPSULE_MACOS)
-#include <sys/mman.h>
-#include <sys/stat.h> // for mode constants
-#include <fcntl.h>    // for O_* constants
-#include <errno.h>    // for errno
-#include <unistd.h>   // unlink
-#else
-#define LEAN_AND_MEAN
-#include <windows.h>
-#undef LEAN_AND_MEAN
-
-#include <io.h>
-#endif
-
 using namespace Capsule::Messages;
 using namespace std;
 
@@ -63,6 +44,16 @@ void MainLoop::run () {
 
     delete[] buf;
   }
+
+  if (videoReceiver) {
+    videoReceiver->close();
+  }
+
+  if (encoderThread) {
+    capsule_log("Waiting for encoder thread...");
+    encoderThread->join();
+    delete encoderThread;
+  }
 }
 
 void MainLoop::setupEncoder (const Packet *pkt) {
@@ -77,56 +68,14 @@ void MainLoop::setupEncoder (const Packet *pkt) {
   vfmt.vflip = vs->vflip();
   vfmt.pitch = vs->pitch();
 
-  // TODO: wrap shm into class
-  auto shmem = vs->shmem();
-  capsule_log("shm path: %s", shmem->path()->str().c_str());
-  capsule_log("shm size: %d", shmem->size());
-
-  char *mapped = nullptr;
-
-#if defined(CAPSULE_WINDOWS)
-  HANDLE hMapFile = OpenFileMappingA(
-    FILE_MAP_READ, // read access
-    FALSE, // do not inherit the name
-    shmem->path()->str().c_str() // name of mapping object
+  auto shm_path = vs->shmem()->path()->str();  
+  auto shm = new ShmemRead(
+    shm_path,
+    vs->shmem()->size()
   );
-
-  if (!hMapFile) {
-    capsule_log("Could not open shmem area");
-    exit(1);
-  }
-
-  mapped = (char*) MapViewOfFile(
-    hMapFile,
-    FILE_MAP_READ, // read access
-    0,
-    0,
-    shmem->size()
-  );
-#else
-  int shmem_handle = shm_open(shmem->path()->str().c_str(), O_RDONLY, 0755);
-  if (!(shmem_handle > 0)) {
-    capsule_log("Could not open shmem area");
-    exit(1);
-  }
-
-  mapped = (char *) mmap(
-      nullptr, // addr
-      shmem->size(), // length
-      PROT_READ, // prot
-      MAP_SHARED, // flags
-      shmem_handle, // fd
-      0 // offset
-  );
-#endif
-
-  if (!mapped) {
-    capsule_log("Could not map shmem area");
-    exit(1);
-  }
 
   // TODO: split into Session class
-  videoReceiver = new VideoReceiver(io, vfmt, mapped);
+  videoReceiver = new VideoReceiver(io, vfmt, shm);
 
   // FIXME: leak
   struct encoder_params_s *encoder_params = (struct encoder_params_s *) malloc(sizeof(struct encoder_params_s));

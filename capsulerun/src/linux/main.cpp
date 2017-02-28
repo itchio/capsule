@@ -30,14 +30,6 @@
 
 using namespace std;
 
-int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
-  return capsule_io_receive_video_format(p->io, vfmt);
-}
-
-int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  return capsule_io_receive_video_frame(p->io, buffer, buffer_size, timestamp);
-}
-
 int capsulerun_main (capsule_args_t *args) {
   char libcapsule_path[CAPSULE_MAX_PATH_LENGTH];
   const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s/libcapsule.so", args->libpath);
@@ -96,19 +88,6 @@ int capsulerun_main (capsule_args_t *args) {
   MainLoop ml {args, &io};
   ml.run();
 
-  struct encoder_params_s encoder_params;
-  memset(&encoder_params, 0, sizeof(encoder_params));
-  encoder_params.private_data = &private_data;
-  encoder_params.receive_video_format = (receive_video_format_t) receive_video_format;
-  encoder_params.receive_video_frame = (receive_video_frame_t) receive_video_frame;
-
-  encoder_params.has_audio = 1;
-  encoder_params.receive_audio_format = (receive_audio_format_t) receive_audio_format;
-  encoder_params.receive_audio_frames = (receive_audio_frames_t) receive_audio_frames;
-
-  capsule_log("starting encoder thread...");
-  thread encoder_thread(encoder_run, &encoder_params);
-
   int child_status;
   pid_t wait_result;
 
@@ -129,9 +108,6 @@ int capsulerun_main (capsule_args_t *args) {
       capsule_log("continued");
     }
   } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
-
-  capsule_log("waiting for encoder thread...");
-  encoder_thread.join();
 
   return 0;
 }
