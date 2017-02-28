@@ -1,3 +1,4 @@
+#pragma once
 
 #include <capsulerun.h>
 #include "./io.h"
@@ -18,22 +19,22 @@ class VideoReceiver {
       io(io),
       vfmt(vfmt),
       shm(shm),
-      closed(false)
+      stopped(false)
       {};
     ~VideoReceiver();
     void frameCommitted(int index, int64_t timestamp);
     int receiveFormat(video_format_t *vfmt);
     int receiveFrame(uint8_t *buffer, size_t buffer_size, int64_t *timestamp);
-    void close();
+    void stop();
 
   private:
     char *mapped;
-    LockingQueue<FrameInfo> frameQueue;
+    LockingQueue<FrameInfo> queue;
 
     capsule_io_t *io;
     video_format_t vfmt;
     ShmemRead *shm;
 
-    bool closed;
-    std::mutex closedMutex;
+    bool stopped;
+    std::mutex stopped_mutex;
 };

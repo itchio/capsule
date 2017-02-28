@@ -6,10 +6,6 @@
 using namespace Capsule::Messages;
 using namespace std;
 
-VideoReceiver::~VideoReceiver () {
-  delete shm;
-}
-
 int VideoReceiver::receiveFormat(video_format_t *vfmt_out) {
   memcpy(vfmt_out, &vfmt, sizeof(video_format_t));
   return 0;
@@ -21,15 +17,15 @@ int VideoReceiver::receiveFrame(uint8_t *buffer, size_t buffer_size, int64_t *ti
   FrameInfo info {};
 
   while (true) {
-    if (frameQueue.tryWaitAndPop(info, 200)) {
+    if (queue.tryWaitAndPop(info, 200)) {
       // got a frame!
       break;
     }
 
-    // didn't get a frame, are we closed?
+    // didn't get a frame, are we stopped?
     {
-      lock_guard<mutex> lock(closedMutex);
-      if (closed) {
+      lock_guard<mutex> lock(stopped_mutex);
+      if (stopped) {
         return 0;
       }
     }
@@ -50,18 +46,22 @@ int VideoReceiver::receiveFrame(uint8_t *buffer, size_t buffer_size, int64_t *ti
 
 void VideoReceiver::frameCommitted(int index, int64_t timestamp) {
   {
-    lock_guard<mutex> lock(closedMutex);
-    if (closed) {
+    lock_guard<mutex> lock(stopped_mutex);
+    if (stopped) {
       // just ignore
       return;
     }
   }
 
   FrameInfo info {index, timestamp};
-  frameQueue.push(info);
+  queue.push(info);
 }
 
-void VideoReceiver::close() {
-  lock_guard<mutex> lock(closedMutex);
-  closed = true;
+void VideoReceiver::stop() {
+  lock_guard<mutex> lock(stopped_mutex);
+  stopped = true;
+}
+
+VideoReceiver::~VideoReceiver () {
+  delete shm;
 }

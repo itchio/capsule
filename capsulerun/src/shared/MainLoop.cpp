@@ -6,14 +6,6 @@
 using namespace Capsule::Messages;
 using namespace std;
 
-int receive_video_format (MainLoop *ml, video_format_t *vfmt) {
-  return ml->videoReceiver->receiveFormat(vfmt);
-}
-
-int receive_video_frame (MainLoop *ml, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  return ml->videoReceiver->receiveFrame(buffer, buffer_size, timestamp);
-}
-
 void MainLoop::run () {
   capsule_log("In MainLoop::run, exec is %s", args->exec);
 
@@ -28,12 +20,17 @@ void MainLoop::run () {
     capsule_log("MainLoop::run: received %s", EnumNameMessage(pkt->message_type()));
     switch (pkt->message_type()) {
       case Message_VideoSetup: {
-        setupEncoder(pkt);
+        auto vs = static_cast<const VideoSetup*>(pkt->message());
+        startSession(vs);
         break;
       }
       case Message_VideoFrameCommitted: {
         auto vfc = static_cast<const VideoFrameCommitted*>(pkt->message());
-        videoReceiver->frameCommitted(vfc->index(), vfc->timestamp());
+        if (session && session->video) {
+          session->video->frameCommitted(vfc->index(), vfc->timestamp());
+        } else {
+          capsule_log("no session, ignoring VideoFrameCommitted")
+        }
         break;
       }
       default: {
@@ -45,21 +42,13 @@ void MainLoop::run () {
     delete[] buf;
   }
 
-  if (videoReceiver) {
-    videoReceiver->close();
-  }
-
-  if (encoderThread) {
-    capsule_log("Waiting for encoder thread...");
-    encoderThread->join();
-    delete encoderThread;
+  if (session) {
+    session->stop();
   }
 }
 
-void MainLoop::setupEncoder (const Packet *pkt) {
+void MainLoop::startSession (const VideoSetup *vs) {
   capsule_log("Setting up encoder");
-
-  auto vs = static_cast<const VideoSetup*>(pkt->message());
 
   video_format_t vfmt;
   vfmt.width = vs->width();
@@ -74,17 +63,9 @@ void MainLoop::setupEncoder (const Packet *pkt) {
     vs->shmem()->size()
   );
 
-  // TODO: split into Session class
-  videoReceiver = new VideoReceiver(io, vfmt, shm);
+  auto video = new VideoReceiver(io, vfmt, shm);
 
-  // FIXME: leak
-  struct encoder_params_s *encoder_params = (struct encoder_params_s *) malloc(sizeof(struct encoder_params_s));
-  memset(encoder_params, 0, sizeof(encoder_params));
-  encoder_params->private_data = this;
-  encoder_params->receive_video_format = (receive_video_format_t) receive_video_format;
-  encoder_params->receive_video_frame  = (receive_video_frame_t) receive_video_frame;
-
-  encoder_params->has_audio = 0;  
-
-  encoderThread = new thread(encoder_run, encoder_params);
+  // TODO: handle case where we can't start session
+  session = new Session(video, nullptr);
+  session->start();
 }

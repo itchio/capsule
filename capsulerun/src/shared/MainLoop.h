@@ -8,6 +8,7 @@
 
 #include "VideoReceiver.h"
 #include "AudioReceiver.h"
+#include "Session.h"
 
 #include <thread>
 
@@ -18,15 +19,11 @@ class MainLoop {
       io(io)
       {};
     void run(void);
-    void setupEncoder(const Capsule::Messages::Packet *pkt);
-
-    VideoReceiver *videoReceiver;
+    void startSession(const Capsule::Messages::VideoSetup *vs);
 
   private:
     capsule_args_t *args;
     capsule_io_t *io;
-    bool running;
-    bool capturing;
 
-    std::thread *encoderThread;
+    Session *session;    
 };

@@ -19,8 +19,8 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/shared/io.cpp
   ${capsulerun_SOURCE_DIR}/shared/argparse.c
   ${capsulerun_SOURCE_DIR}/shared/MainLoop.cpp
-  ${capsulerun_SOURCE_DIR}/shared/AudioReceiver.cpp
   ${capsulerun_SOURCE_DIR}/shared/VideoReceiver.cpp
+  ${capsulerun_SOURCE_DIR}/shared/Session.cpp
   ${capsulerun_SOURCE_DIR}/shared/ShmemRead.cpp
 )
 
