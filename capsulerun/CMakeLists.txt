@@ -18,7 +18,9 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
   ${capsulerun_SOURCE_DIR}/shared/io.cpp
   ${capsulerun_SOURCE_DIR}/shared/argparse.c
-  ${capsulerun_SOURCE_DIR}/shared/mainloop.cpp
+  ${capsulerun_SOURCE_DIR}/shared/MainLoop.cpp
+  ${capsulerun_SOURCE_DIR}/shared/AudioReceiver.cpp
+  ${capsulerun_SOURCE_DIR}/shared/VideoReceiver.cpp
 )
 
 if(WIN32)

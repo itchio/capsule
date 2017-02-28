@@ -1,24 +1,15 @@
 #pragma once
 
+#include <capsule/messages.h>
+
 #include <capsulerun.h>
 #include <capsulerun_args.h>
-#include "../shared/io.h"
+#include "./io.h"
 
-class VideoFrameReceiver {
-  public:
-    VideoFrameReceiver(capsule_io_t *io, video_format_t vfmt) :
-      io(io),
-      vfmt(vfmt)
-      {};
-    void frameReady(int index);
-    void receiveFrame();
+#include "VideoReceiver.h"
+#include "AudioReceiver.h"
 
-  private:
-    char *mapped;
-
-    capsule_io_t *io;
-    video_format_t vfmt;
-};
+#include <thread>
 
 class MainLoop {
   public:
@@ -27,6 +18,9 @@ class MainLoop {
       io(io)
       {};
     void run(void);
+    void setupEncoder(const Capsule::Messages::Packet *pkt);
+
+    VideoReceiver *videoReceiver;
 
   private:
     capsule_args_t *args;
@@ -35,5 +29,4 @@ class MainLoop {
     bool capturing;
 
     std::thread *encoderThread;
-    VideoFrameReceiver *frameReceiver;
 };
