@@ -35,15 +35,6 @@ using namespace std;
 using namespace Capsule::Messages;
 
 #if defined(CAPSULE_WINDOWS)
-#define READPKT(io)           capsule_hread_packet((io)->pipe_r)
-#define WRITEPKT(builder, io) capsule_hwrite_packet((builder), (io)->pipe_w)
-#else // CAPSULE_WINDOWS
-#define READPKT(io)           capsule_read_packet((io)->fifo_r)
-#define WRITEPKT(builder, io) capsule_write_packet((builder), (io)->fifo_w)
-#endif // !CAPSULE_WINDOWS
-
-
-#if defined(CAPSULE_WINDOWS)
 
 static HANDLE create_pipe(
   std::string &pipe_path,

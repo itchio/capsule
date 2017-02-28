@@ -54,3 +54,10 @@ void capsule_io_capture_start(
     capsule_io_t *io
 );
 
+#if defined(CAPSULE_WINDOWS)
+#define READPKT(io)           capsule_hread_packet((io)->pipe_r)
+#define WRITEPKT(builder, io) capsule_hwrite_packet((builder), (io)->pipe_w)
+#else // CAPSULE_WINDOWS
+#define READPKT(io)           capsule_read_packet((io)->fifo_r)
+#define WRITEPKT(builder, io) capsule_write_packet((builder), (io)->fifo_w)
+#endif // !CAPSULE_WINDOWS

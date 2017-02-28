@@ -9,6 +9,7 @@
 #include "quote.h"
 
 #include "capsulerun.h"
+#include "capsulerun_mainloop.h"
 
 #include "../shared/io.h"
 #include "strings.h"
@@ -154,6 +155,9 @@ int capsulerun_main (capsule_args_t *args) {
     private_data.io = &io;
 
     capsule_hotkey_init(&private_data);
+
+    MainLoop ml(args, &io);
+    ml.run();
 
     struct encoder_params_s encoder_params;
     ZeroMemory(&encoder_params, sizeof(encoder_private_s));
