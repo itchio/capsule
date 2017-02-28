@@ -66,6 +66,20 @@ int main (int argc, char **argv) {
   args.exec_argc = argc - num_positional_args;
   args.exec_argv = argv + num_positional_args;
 
+#if !defined(CAPSULE_WINDOWS)
+  // on non-windows platforms, exec_argv needs to include the executable
+  int real_exec_argc = args.exec_argc + 1;
+  char **real_exec_argv = (char **) calloc(real_exec_argc + 1, sizeof(char *));
+
+  real_exec_argv[0] = args.exec;
+  for (int i = 0; i < args.exec_argc; i++) {
+    real_exec_argv[i + 1] = args.exec_argv[i];
+  }
+
+  args.exec_argc = real_exec_argc;
+  args.exec_argv = real_exec_argv;
+#endif // !CAPSULE_WINDOWS
+
   capsule_log("thanks for flying capsule on %s", CAPSULE_PLATFORM);
 
   // different for each platform, CMake compiles the right one in.
