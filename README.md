@@ -64,7 +64,7 @@ calls to them so that it may capture video and audio frames.
       * [ ] capsulerun picks correct library architecture to inject
     * [x] Interposing dlopen/dlsym
     * [x] Communicate by fifo
-    * [ ] Shared memory
+    * [x] Shared memory
   * Control
     * [x] X11 recording hotkey support
   * Video
@@ -96,7 +96,7 @@ calls to them so that it may capture video and audio frames.
       * [ ] capsulerun picks correct library architecture to inject
     * [x] Interposing via Objective-C method swizzling
     * [x] Communicate by fifo
-    * [ ] Shared memory
+    * [x] Shared memory
   * Control
     * [x] Cocoa recording hotkey support
   * Video
@@ -118,7 +118,7 @@ calls to them so that it may capture video and audio frames.
     * [x] Hooks various libraries via Deviare-InProc
       * [x] capsulerun picks correct library architecture to inject
     * [x] Communicate by named pipe
-    * [ ] Shared memory
+    * [x] Shared memory
   * Control
     * [ ] Win32 recording hotkey support
       * (but basic research done)
@@ -224,8 +224,6 @@ capsulerun usage:
 ```
 C:\path\to\capsule\build\capsulerun.exe -L C:\path\to\capsule\build -- some_game.exe
 ```
-
-Note that at the time of this writing (git blame is your friend), capsulerun doesn't yet relay arguments to the child.
 
 If the `scripts\configure.cmd` / `scripts\build.cmd` method fails for you, read them
 to figure out the proper invocations for your system.
