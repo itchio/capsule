@@ -92,7 +92,7 @@ static bool dc_capture_init_format() {
   // TODO: error checking
   GetWindowText(data.window, window_title, MAX_TITLE_LENGTH);
 
-  capsule_log("dc_capture_init_format: initializing for window %S: stub!",
+  capsule_log("dc_capture_init_format: initializing for window %S",
               window_title);
   delete[] window_title;
 
@@ -128,8 +128,6 @@ static bool dc_capture_init_format() {
 }
 
 bool dc_capture_init() {
-  capsule_log("dc_capture_init: stub!");
-
   DWORD pid = GetCurrentProcessId();
   capsule_log("dc_capture_init: our pid is %d", pid);
 
