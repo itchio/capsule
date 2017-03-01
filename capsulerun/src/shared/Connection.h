@@ -10,6 +10,8 @@ class Connection {
     void write(const flatbuffers::FlatBufferBuilder &builder);
     char *read();
 
+    void write_capture_start();
+
   private:
 #if defined(CAPSULE_WINDOWS)
     HANDLE pipe_r;

@@ -1,5 +1,6 @@
 
 #include <capsulerun.h>
+#include "../shared/MainLoop.h"
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
@@ -11,7 +12,7 @@ using namespace std;
 Display *capsule_x11_dpy;
 Window capsule_x11_root;
 
-static void capsule_hotkey_poll (struct encoder_private_s *p) {
+static void capsule_hotkey_poll (MainLoop *ml) {
     XEvent ev;
 
     while(1) {
@@ -19,8 +20,7 @@ static void capsule_hotkey_poll (struct encoder_private_s *p) {
 
         switch (ev.type) {
             case KeyPress:
-                capsule_log("capsule_hotkey_poll: Starting capture!");
-                capsule_io_capture_start(p->io);
+                ml->capture_flip();
             default:
                 break;
         }
@@ -31,7 +31,7 @@ static void capsule_hotkey_poll (struct encoder_private_s *p) {
 //     fprintf(stderr, "X11 error type %d\n", err->type);
 // }
 
-int capsule_hotkey_init(struct encoder_private_s *p) {
+int capsule_hotkey_init(MainLoop *ml) {
     // XSetErrorHandler(capsule_x11_error_handler);
     capsule_x11_dpy = XOpenDisplay(0);
     capsule_x11_root = DefaultRootWindow(capsule_x11_dpy);
@@ -63,7 +63,7 @@ int capsule_hotkey_init(struct encoder_private_s *p) {
     }
     XSelectInput(capsule_x11_dpy, capsule_x11_root, KeyPressMask);
 
-    thread poll_thread(capsule_hotkey_poll, p);
+    thread poll_thread(capsule_hotkey_poll, ml);
     poll_thread.detach();
 
     return 0;

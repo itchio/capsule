@@ -5,6 +5,7 @@
 
 #include "LockingQueue.h"
 #include "ShmemRead.h"
+#include "Connection.h"
 
 #include <mutex>
 
@@ -15,8 +16,8 @@ struct FrameInfo {
 
 class VideoReceiver {
   public:
-    VideoReceiver(capsule_io_t *io, video_format_t vfmt, ShmemRead *shm) :
-      io(io),
+    VideoReceiver(Connection *conn, video_format_t vfmt, ShmemRead *shm) :
+      conn(conn),
       vfmt(vfmt),
       shm(shm),
       stopped(false)
@@ -31,7 +32,7 @@ class VideoReceiver {
     char *mapped;
     LockingQueue<FrameInfo> queue;
 
-    capsule_io_t *io;
+    Connection *conn;
     video_format_t vfmt;
     ShmemRead *shm;
 

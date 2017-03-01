@@ -4,26 +4,30 @@
 
 #include <capsulerun.h>
 #include <capsulerun_args.h>
-#include "./io.h"
 
 #include "VideoReceiver.h"
 #include "AudioReceiver.h"
 #include "Session.h"
+#include "Connection.h"
 
 #include <thread>
 
 class MainLoop {
   public:
-    MainLoop(capsule_args_t *args, capsule_io_t *io) :
+    MainLoop(capsule_args_t *args, Connection *conn) :
       args(args),
-      io(io)
+      conn(conn)
       {};
     void run(void);
-    void startSession(const Capsule::Messages::VideoSetup *vs);
+    void capture_flip();
 
   private:
-    capsule_args_t *args;
-    capsule_io_t *io;
+    void capture_start();
+    void capture_stop();
+    void start_session(const Capsule::Messages::VideoSetup *vs);
 
+    capsule_args_t *args;
+
+    Connection *conn;
     Session *session = nullptr;
 };

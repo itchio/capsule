@@ -30,6 +30,8 @@
 
 using namespace std;
 
+int capsule_hotkey_init(MainLoop *ml);
+
 int capsulerun_main (capsule_args_t *args) {
   char libcapsule_path[CAPSULE_MAX_PATH_LENGTH];
   const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s/libcapsule.so", args->libpath);
@@ -59,8 +61,7 @@ int capsulerun_main (capsule_args_t *args) {
   };
   char **child_environ = merge_envs(environ, env_additions);
 
-  capsule_io_t io = {};
-  capsule_io_init(&io, fifo_r_path, fifo_w_path);
+  auto conn = new Connection(fifo_r_path, fifo_w_path);
 
   // spawn game
   int child_err = posix_spawn(
@@ -77,15 +78,10 @@ int capsulerun_main (capsule_args_t *args) {
 
   capsule_log("pid %d given to child %s", child_pid, args->exec);
 
-  capsule_io_connect(&io);
+  conn->connect();
+  MainLoop ml {args, conn};
 
-  struct encoder_private_s private_data;
-  memset(&private_data, 0, sizeof(private_data));
-  private_data.io = &io;
-
-  capsule_hotkey_init(&private_data);
-
-  MainLoop ml {args, &io};
+  capsule_hotkey_init(&ml);
   ml.run();
 
   int child_status;

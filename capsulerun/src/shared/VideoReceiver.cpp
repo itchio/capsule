@@ -12,8 +12,6 @@ int VideoReceiver::receiveFormat(video_format_t *vfmt_out) {
 }
 
 int VideoReceiver::receiveFrame(uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  // FIXME: use tryWaitAndPop and check another condition
-  // for early stoppage
   FrameInfo info {};
 
   while (true) {
@@ -39,7 +37,7 @@ int VideoReceiver::receiveFrame(uint8_t *buffer, size_t buffer_size, int64_t *ti
   auto vfp = CreateVideoFrameProcessed(builder, info.index); 
   auto opkt = CreatePacket(builder, Message_VideoFrameProcessed, vfp.Union());
   builder.Finish(opkt);
-  WRITEPKT(builder, io);
+  conn->write(builder);
 
   return buffer_size;
 }

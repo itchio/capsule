@@ -10,7 +10,7 @@ void MainLoop::run () {
   capsule_log("In MainLoop::run, exec is %s", args->exec);
 
   while (true) {
-    char *buf = READPKT(io);
+    char *buf = conn->read();
     if (!buf) {
       capsule_log("MainLoop::run: pipe closed");
       break;
@@ -21,7 +21,7 @@ void MainLoop::run () {
     switch (pkt->message_type()) {
       case Message_VideoSetup: {
         auto vs = static_cast<const VideoSetup*>(pkt->message());
-        startSession(vs);
+        start_session(vs);
         break;
       }
       case Message_VideoFrameCommitted: {
@@ -48,7 +48,32 @@ void MainLoop::run () {
   }
 }
 
-void MainLoop::startSession (const VideoSetup *vs) {
+void MainLoop::capture_flip () {
+  if (session) {
+    capture_stop();
+  } else {
+    // TODO: ignore subsequent capture_start until the capture actually started
+    capture_start();
+  }
+}
+
+void MainLoop::capture_start () {
+  flatbuffers::FlatBufferBuilder builder(1024);
+  auto cps = CreateCaptureStart(builder);
+  auto opkt = CreatePacket(builder, Message_CaptureStart, cps.Union());
+  builder.Finish(opkt);
+  conn->write(builder);
+}
+
+void MainLoop::capture_stop () {
+  flatbuffers::FlatBufferBuilder builder(1024);
+  auto cps = CreateCaptureStop(builder);
+  auto opkt = CreatePacket(builder, Message_CaptureStart, cps.Union());
+  builder.Finish(opkt);
+  conn->write(builder);
+}
+
+void MainLoop::start_session (const VideoSetup *vs) {
   capsule_log("Setting up encoder");
 
   video_format_t vfmt;
@@ -64,7 +89,7 @@ void MainLoop::startSession (const VideoSetup *vs) {
     vs->shmem()->size()
   );
 
-  auto video = new VideoReceiver(io, vfmt, shm);
+  auto video = new VideoReceiver(conn, vfmt, shm);
 
   // TODO: handle case where we can't start session
   session = new Session(video, nullptr);
