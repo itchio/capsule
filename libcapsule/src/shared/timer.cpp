@@ -45,6 +45,11 @@ bool CAPSULE_STDCALL capsule_capture_try_stop () {
 static inline bool capsule_frame_ready () {
   static std::chrono::time_point<std::chrono::steady_clock> last_ts;
 
+  if (!capsule_capture_active()) {
+    first_frame = true;
+    return false;
+  }
+
   auto interval = frame_interval;
 
   if (first_frame) {
@@ -78,5 +83,5 @@ int64_t CAPSULE_STDCALL capsule_frame_timestamp () {
 }
 
 bool CAPSULE_STDCALL capsule_capture_ready () {
-  return capsule_capture_active() && capsule_frame_ready();
+  return capsule_frame_ready();
 }
