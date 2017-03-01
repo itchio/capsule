@@ -97,6 +97,9 @@ static void capsule_capture_start () {
     capsule_log("capsule_capture_start: enumerating our options");
     if (capdata.saw_dxgi || capdata.saw_d3d9 || capdata.saw_opengl) {
         // cool, these will initialize on next present/swapbuffers
+        if (capsule_capture_try_start()) {
+            capsule_log("capsule_capture_start: success! (dxgi/d3d9/opengl)");
+        }
     } else {
         // try dc capture then
         bool success = dc_capture_init();
@@ -104,23 +107,33 @@ static void capsule_capture_start () {
             capsule_log("Cannot start capture: no capture method available")
             return;
         }
+
+        if (capsule_capture_try_start()) {
+            capsule_log("capsule_capture_start: success! (dxgi/d3d9/opengl)");
+        } else {
+            capsule_log("capsule_capture_start: should tear down dc capture: stub");
+        }
     }
-    capsule_capture_flip();
-    capsule_log("capsule_capture_start: success!");
 }
 #else // CAPSULE_WINDOWS
 static void capsule_capture_start () {
     if (capdata.saw_opengl) {
         // cool, it'll initialize on next swapbuffers
+        if (capsule_capture_try_start()) {
+            capsule_log("capsule_capture_start: success! (opengl)");
+        }
     } else {
         capsule_log("Cannot start capture: no capture method available");
         return;
     }
-
-    capsule_capture_flip();
-    capsule_log("capsule_capture_start: success!");
 }
 #endif // !CAPSULE_WINDOWS
+
+static void capsule_capture_stop () {
+    if (capsule_capture_try_stop()) {
+        capsule_log("capsule_capture_stop: stopped!");
+    }
+}
 
 static void poll_infile() {
     while (true) {
@@ -132,13 +145,13 @@ static void poll_infile() {
         auto pkt = GetPacket(buf);
         switch (pkt->message_type()) {
             case Message_CaptureStart: {
-                capsule_log("capture start!");
+                capsule_log("poll_infile: received CaptureStart");
                 capsule_capture_start();
-                capsule_log("capture started, moving on!");
                 break;
             }
             case Message_CaptureStop: {
-                capsule_log("capture stop!");
+                capsule_log("poll_infile: received CaptureStop");
+                capsule_capture_stop();
                 break;
             }
             case Message_VideoFrameProcessed: {

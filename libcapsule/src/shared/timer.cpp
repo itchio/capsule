@@ -15,14 +15,31 @@ using namespace std;
 
 mutex capdata_mutex;
 
-bool capsule_capture_active () {
+bool CAPSULE_STDCALL capsule_capture_active () {
   lock_guard<mutex> lock(capdata_mutex);
   return capdata.active;
 }
 
-void CAPSULE_STDCALL capsule_capture_flip () {
+bool CAPSULE_STDCALL capsule_capture_try_start () {
   lock_guard<mutex> lock(capdata_mutex);
-  capdata.active = !capdata.active;
+  if (capdata.active) {
+    capsule_log("capsule_capture_try_start: already active, ignoring start");
+    return false;
+  }
+
+  capdata.active = true;
+  return true;
+}
+
+bool CAPSULE_STDCALL capsule_capture_try_stop () {
+  lock_guard<mutex> lock(capdata_mutex);
+  if (!capdata.active) {
+    capsule_log("capsule_capture_try_stop: not active, ignoring stop");
+    return false;
+  }
+
+  capdata.active = false;
+  return true;
 }
 
 static inline bool capsule_frame_ready () {

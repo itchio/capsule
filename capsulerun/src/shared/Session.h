@@ -13,6 +13,7 @@ class Session {
     ~Session();
     void start();
     void stop();
+    void join();
 
     struct encoder_params_s encoder_params;
 

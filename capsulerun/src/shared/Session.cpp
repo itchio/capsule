@@ -37,7 +37,9 @@ void Session::stop () {
   if (audio) {
     audio->stop();
   }
+}
 
+void Session::join () {
   capsule_log("Waiting for encoder thread...");
   encoder_thread->join();
 }

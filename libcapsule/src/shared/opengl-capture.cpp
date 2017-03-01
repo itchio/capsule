@@ -150,10 +150,14 @@ extern "C" {
  * Capture one OpenGL frame
  */
 void CAPSULE_STDCALL opengl_capture (int width, int height) {
-  static char *frameData = nullptr;
+  static char *frame_data = nullptr;
   static bool first_frame = true;
 
   if (!capsule_capture_ready()) {
+    if (!capsule_capture_active()) {
+      first_frame = true;
+    }
+
     return;
   }
 
@@ -188,15 +192,15 @@ void CAPSULE_STDCALL opengl_capture (int width, int height) {
   }
 
   size_t pitch = width * components;
-  size_t frameDataSize = pitch * height;
-  if (!frameData) {
-    frameData = (char*) malloc(frameDataSize);
+  size_t frame_data_size = pitch * height;
+  if (!frame_data) {
+    frame_data = (char*) malloc(frame_data_size);
   }
-  _realglReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, frameData);
+  _realglReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, frame_data);
 
   if (first_frame) {
     capsule_write_video_format(width, height, CAPSULE_PIX_FMT_BGRA, 1 /* vflip */, pitch);
     first_frame = false;
   }
-  capsule_write_video_frame(timestamp, frameData, frameDataSize);
+  capsule_write_video_frame(timestamp, frame_data, frame_data_size);
 }

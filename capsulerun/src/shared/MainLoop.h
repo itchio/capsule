@@ -11,6 +11,7 @@
 #include "Connection.h"
 
 #include <thread>
+#include <vector>
 
 class MainLoop {
   public:
@@ -22,6 +23,9 @@ class MainLoop {
     void capture_flip();
 
   private:
+    void end_session();
+    void join_sessions();
+
     void capture_start();
     void capture_stop();
     void start_session(const Capsule::Messages::VideoSetup *vs);
@@ -30,4 +34,5 @@ class MainLoop {
 
     Connection *conn;
     Session *session = nullptr;
+    std::vector<Session *> old_sessions;
 };

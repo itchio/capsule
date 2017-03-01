@@ -80,7 +80,9 @@ struct capture_data {
 extern struct capture_data capdata;
 
 bool CAPSULE_STDCALL capsule_capture_ready();
-void CAPSULE_STDCALL capsule_capture_flip();
+bool CAPSULE_STDCALL capsule_capture_active();
+bool CAPSULE_STDCALL capsule_capture_try_start();
+bool CAPSULE_STDCALL capsule_capture_try_stop();
 int64_t CAPSULE_STDCALL capsule_frame_timestamp();
 
 void CAPSULE_STDCALL capsule_io_init();

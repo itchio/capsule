@@ -42,13 +42,12 @@ void MainLoop::run () {
     delete[] buf;
   }
 
-  capsule_log("address of session: %p", session);
-  if (session) {
-    session->stop();
-  }
+  end_session();  
+  join_sessions();
 }
 
 void MainLoop::capture_flip () {
+  capsule_log("MainLoop::capture_flip")
   if (session) {
     capture_stop();
   } else {
@@ -65,10 +64,36 @@ void MainLoop::capture_start () {
   conn->write(builder);
 }
 
+void MainLoop::end_session () {
+  if (!session) {
+    capsule_log("MainLoop::end_session: no session to end")
+    return;
+  }
+
+  capsule_log("MainLoop::end_session: ending %p", session)
+  auto old_session = session;
+  session = nullptr;
+  old_session->stop();
+  old_sessions.push_back(old_session);
+}
+
+void MainLoop::join_sessions () {
+  capsule_log("MainLoop::join_sessions: joining %d sessions", old_sessions.size())
+
+  for (Session *session: old_sessions) {
+    capsule_log("MainLoop::join_sessions: joining session %p", session)
+    session->join();
+  }
+
+  capsule_log("MainLoop::join_sessions: joined all sessions!")
+}
+
 void MainLoop::capture_stop () {
+  end_session();
+
   flatbuffers::FlatBufferBuilder builder(1024);
   auto cps = CreateCaptureStop(builder);
-  auto opkt = CreatePacket(builder, Message_CaptureStart, cps.Union());
+  auto opkt = CreatePacket(builder, Message_CaptureStop, cps.Union());
   builder.Finish(opkt);
   conn->write(builder);
 }
