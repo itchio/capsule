@@ -32,5 +32,3 @@ typedef struct encoder_private_s {
 void wasapi_start (encoder_private_t *p);
 int wasapi_receive_audio_format (encoder_private_t *p, audio_format_t *afmt);
 void *wasapi_receive_audio_frames (encoder_private_t *p, int *num_frames);
-
-int capsule_hotkey_init(encoder_private_t *p);

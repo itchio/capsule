@@ -1,11 +1,13 @@
 
 #include <capsulerun.h>
 
+#include "../src/shared/MainLoop.h"
+
 #include <thread>
 
 using namespace std;
 
-static void capsule_hotkey_poll(struct encoder_private_s *p) {
+static void capsule_hotkey_poll(MainLoop *ml) {
   BOOL success = RegisterHotKey(NULL, 1, MOD_NOREPEAT, VK_F9);
 
   if (!success) {
@@ -18,17 +20,16 @@ static void capsule_hotkey_poll(struct encoder_private_s *p) {
   while (GetMessage(&msg, NULL, 0, 0) != 0) {
     if (msg.message = WM_HOTKEY) {
       capsule_log("capsule_hotkey_poll: Starting capture!");
-      wasapi_start(p);
-      capsule_io_capture_start(p->io);
+      ml->capture_flip();
     }
   }
 }
 
-int capsule_hotkey_init(struct encoder_private_s *p) {
+int capsule_hotkey_init(MainLoop *ml) {
   // we must register from the same thread we use to poll,
   // since we don't register it for a specific hwnd.
   // That's how Win32 message queues work!
-  thread poll_thread(capsule_hotkey_poll, p);
+  thread poll_thread(capsule_hotkey_poll, ml);
   poll_thread.detach();
 
   return 0;

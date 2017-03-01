@@ -10,7 +10,6 @@
 
 #include "capsulerun.h"
 
-#include "../shared/io.h"
 #include "../shared/MainLoop.h"
 
 #include "strings.h"
@@ -20,13 +19,7 @@ using namespace std;
 static bool connected = false;
 static DWORD exitCode = 0;
 
-int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
-  return capsule_io_receive_video_format(p->io, vfmt);
-}
-
-int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  return capsule_io_receive_video_frame(p->io, buffer, buffer_size, timestamp);
-}
+int capsule_hotkey_init(MainLoop *ml);
 
 static void wait_for_child (HANDLE hProcess) {
   LONG platform = NktHookLibHelpers::GetProcessPlatform(hProcess);
@@ -80,11 +73,10 @@ int capsulerun_main (capsule_args_t *args) {
   wchar_t *libcapsule_path_w;
   toWideChar(libcapsule_path, &libcapsule_path_w);
 
-  capsule_io_t io;
-
   string pipe_r_path = "\\\\.\\pipe\\capsule.runr";
   string pipe_w_path = "\\\\.\\pipe\\capsule.runw";
-  capsule_io_init(&io, pipe_r_path, pipe_w_path);
+
+  Connection *conn = new Connection(pipe_r_path, pipe_w_path);
 
   // swapped on purpose
   err = SetEnvironmentVariableA("CAPSULE_PIPE_R_PATH", pipe_w_path.c_str());
@@ -148,16 +140,13 @@ int capsulerun_main (capsule_args_t *args) {
     thread child_thread(wait_for_child, pi.hProcess);
     child_thread.detach();
 
-    capsule_io_connect(&io);
+    conn->connect();
     connected = true;
 
-    struct encoder_private_s private_data;
-    ZeroMemory(&private_data, sizeof(encoder_private_s));
-    private_data.io = &io;
+    MainLoop ml {args, conn};
 
-    capsule_hotkey_init(&private_data);
+    capsule_hotkey_init(&ml);
 
-    MainLoop ml(args, &io);
     ml.run();
   } else {
     capsule_log("Error %lu: Cannot launch process and inject dll.", err);
