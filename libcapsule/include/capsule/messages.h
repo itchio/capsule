@@ -1,7 +1,21 @@
 
 #pragma once
 
+// this little trick is required because apparently
+// windows.h defines 'min', and flatbuffers.h uses std::min,
+// and they don't play well together. This lets us include
+// messages.h even if windows.h was already included.
+#if defined(min)
+#define capsule__hide__min min
+#undef min
+#endif
+
 #include "messages_generated.h"
+
+#if defined(capsule__hide__min)
+#define min capsule__hide__min
+#undef capsule__hide__min
+#endif
 
 #include <capsule/constants.h>
 

@@ -25,5 +25,5 @@ class MainLoop {
     capsule_args_t *args;
     capsule_io_t *io;
 
-    Session *session;    
+    Session *session = nullptr;
 };

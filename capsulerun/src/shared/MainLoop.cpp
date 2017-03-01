@@ -42,6 +42,7 @@ void MainLoop::run () {
     delete[] buf;
   }
 
+  capsule_log("address of session: %p", session);
   if (session) {
     session->stop();
   }

@@ -347,8 +347,12 @@ void encoder_run(encoder_params_t *params) {
 
   int samples_received = 0;
   int samples_used = 0;
-  int in_sample_size = afmt_in.channels * afmt_in.samplewidth / 8;
+  int in_sample_size  = 0;
   float *in_samples;
+
+  if (params->has_audio) {
+    in_sample_size = afmt_in.channels * afmt_in.samplewidth / 8;
+  }
 
   int samples_filled = 0;
 

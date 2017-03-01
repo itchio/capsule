@@ -108,12 +108,12 @@ Connection::Connection(std::string &r_path, std::string &w_path) {
 void Connection::connect() {
 #if defined(CAPSULE_WINDOWS)
   BOOL success = false;
-  success = ConnectNamedPipe(io->pipe_r, NULL);
+  success = ConnectNamedPipe(pipe_r, NULL);
   if (!success) {
     throw runtime_error("Could not connect to named pipe for reading");
   }
 
-  success = ConnectNamedPipe(io->pipe_w, NULL);
+  success = ConnectNamedPipe(pipe_w, NULL);
   if (!success) {
     throw runtime_error("Could not connect to named pipe for writing");
   }

@@ -9,9 +9,10 @@
 #include "quote.h"
 
 #include "capsulerun.h"
-#include "capsulerun_mainloop.h"
 
 #include "../shared/io.h"
+#include "../shared/MainLoop.h"
+
 #include "strings.h"
 
 using namespace std;
@@ -158,22 +159,6 @@ int capsulerun_main (capsule_args_t *args) {
 
     MainLoop ml(args, &io);
     ml.run();
-
-    struct encoder_params_s encoder_params;
-    ZeroMemory(&encoder_params, sizeof(encoder_private_s));
-    encoder_params.private_data = &private_data;
-    encoder_params.receive_video_format = (receive_video_format_t) receive_video_format;
-    encoder_params.receive_video_frame = (receive_video_frame_t) receive_video_frame;
-
-    encoder_params.has_audio = 1;
-    encoder_params.receive_audio_format = (receive_audio_format_t) wasapi_receive_audio_format;
-    encoder_params.receive_audio_frames = (receive_audio_frames_t) wasapi_receive_audio_frames;
-
-    capsule_log("Starting encoder thread...");
-    thread encoder_thread(encoder_run, &encoder_params);
-
-    capsule_log("Waiting on encoder thread...");
-    encoder_thread.join();
   } else {
     capsule_log("Error %lu: Cannot launch process and inject dll.", err);
     return 127;

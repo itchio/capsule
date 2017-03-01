@@ -3,6 +3,10 @@
 #include <capsule/platform.h>
 #include <string>
 
+#define LEAN_AND_MEAN
+#include <windows.h>
+#undef LEAN_AND_MEAN
+
 class ShmemRead {
   public:
     ShmemRead(const std::string &path, uint64_t size);
