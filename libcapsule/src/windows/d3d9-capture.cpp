@@ -257,6 +257,10 @@ void d3d9_capture (IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer) {
   static bool first_frame = true;
 
   if (!capsule_capture_ready()) {
+    if (!capsule_capture_active()) {
+      first_frame = true;
+    }
+
     return;
   }
 

@@ -641,6 +641,10 @@ void d3d11_capture(void *swap_ptr, void *backbuffer_ptr) {
   static bool first_frame = true;
 
   if (!capsule_capture_ready()) {
+    if (!capsule_capture_active()) {
+      first_frame = true;
+    }
+
     return;
   }
 

@@ -28,7 +28,7 @@ set(capsulerun_SRC
 if(WIN32)
   list(APPEND capsulerun_SRC
     ${capsulerun_SOURCE_DIR}/windows/strings.cpp
-    ${capsulerun_SOURCE_DIR}/windows/wasapi.cpp
+    ${capsulerun_SOURCE_DIR}/windows/WasapiReceiver.cpp
     ${capsulerun_SOURCE_DIR}/windows/quote.cpp
     ${capsulerun_SOURCE_DIR}/windows/hotkey.cpp
     ${capsulerun_SOURCE_DIR}/windows/main.cpp

@@ -62,11 +62,6 @@ static void capture_hwnd(HWND hwnd) {
 
   int frame_data_size = data.cx * data.cy * components;
   capsule_write_video_frame(timestamp, data.frame_data, frame_data_size);
-
-  // TODO: proper cleanup somewhere
-  // ReleaseDC(NULL, hdc_target);
-  // DeleteDC(hdc);
-  // DeleteObject(bmp);
 }
 
 static void dc_capture_capture() { capture_hwnd(data.window); }
@@ -74,6 +69,14 @@ static void dc_capture_capture() { capture_hwnd(data.window); }
 static void dc_capture_loop() {
   while (true) {
     Sleep(16); // FIXME: that's dumb
+    if (!capsule_capture_active()) {
+      // TODO: proper cleanup somewhere
+      // ReleaseDC(NULL, hdc_target);
+      // DeleteDC(hdc);
+      // DeleteObject(bmp);
+      return;
+    }
+
     dc_capture_capture();
   }
 }

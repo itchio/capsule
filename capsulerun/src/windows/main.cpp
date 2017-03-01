@@ -11,6 +11,7 @@
 #include "capsulerun.h"
 
 #include "../shared/MainLoop.h"
+#include "./WasapiReceiver.h"
 
 #include "strings.h"
 
@@ -20,6 +21,10 @@ static bool connected = false;
 static DWORD exitCode = 0;
 
 int capsule_hotkey_init(MainLoop *ml);
+
+AudioReceiver *audio_receiver_factory() {
+  return new WasapiReceiver();
+}
 
 static void wait_for_child (HANDLE hProcess) {
   LONG platform = NktHookLibHelpers::GetProcessPlatform(hProcess);
@@ -144,6 +149,7 @@ int capsulerun_main (capsule_args_t *args) {
     connected = true;
 
     MainLoop ml {args, conn};
+    ml.audio_receiver_factory = audio_receiver_factory;
 
     capsule_hotkey_init(&ml);
 
