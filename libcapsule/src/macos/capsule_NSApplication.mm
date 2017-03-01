@@ -21,7 +21,7 @@
 // static CapsuleFixedRecorder *recorder;
 
 - (void)capsule_sendEvent:(NSEvent*)event {
-  NSLog(@"NSApplication event: %@", event);
+  // NSLog(@"NSApplication event: %@", event);
   [self capsule_sendEvent:event];
 }
 

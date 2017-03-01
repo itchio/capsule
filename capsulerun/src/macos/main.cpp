@@ -2,7 +2,7 @@
 #include <capsulerun.h>
 
 #include "../shared/env.h" // merge_envs
-#include "../shared/io.h" // create_fifo, receive stuff
+#include "../shared/MainLoop.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,15 +18,9 @@
 
 #include <thread>
 
+int capsule_hotkey_init(MainLoop *ml);
+
 using namespace std;
-
-int receive_video_format (encoder_private_t *p, video_format_t *vfmt) {
-  return capsule_io_receive_video_format(p->io, vfmt);
-}
-
-int receive_video_frame (encoder_private_t *p, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  return capsule_io_receive_video_frame(p->io, buffer, buffer_size, timestamp);
-}
 
 extern char **environ;
 
@@ -53,8 +47,7 @@ void capsulerun_main_thread (capsule_args_t *args) {
 
   pid_t child_pid;
 
-  capsule_io_t io;
-  capsule_io_init(&io, fifo_r_path, fifo_w_path);
+  Connection *conn = new Connection(fifo_r_path, fifo_w_path);
 
   int child_err = posix_spawn(
     &child_pid,
@@ -70,23 +63,11 @@ void capsulerun_main_thread (capsule_args_t *args) {
 
   capsule_log("pid %d given to child %s", child_pid, args->exec);
 
-  capsule_io_connect(&io);
+  conn->connect();
 
-  struct encoder_private_s private_data;
-  memset(&private_data, 0, sizeof(private_data));
-  private_data.io = &io;
-
-  capsule_hotkey_init(&private_data);
-
-  struct encoder_params_s encoder_params;
-  memset(&encoder_params, 0, sizeof(encoder_params));
-  encoder_params.private_data = &private_data;
-  encoder_params.receive_video_format = (receive_video_format_t) receive_video_format;
-  encoder_params.receive_video_frame = (receive_video_frame_t) receive_video_frame;
-
-  encoder_params.has_audio = 0;
-
-  thread encoder_thread(encoder_run, &encoder_params);
+  MainLoop ml {args, conn};
+  capsule_hotkey_init(&ml);
+  ml.run();
 
   int child_status;
   pid_t wait_result;
@@ -108,9 +89,6 @@ void capsulerun_main_thread (capsule_args_t *args) {
       capsule_log("continued");
     }
   } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
-
-  capsule_log("waiting for encoder thread...");
-  encoder_thread.join();
 
   exit(0);
 }
