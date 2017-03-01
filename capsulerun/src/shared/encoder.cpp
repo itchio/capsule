@@ -134,8 +134,11 @@ void encoder_run(encoder_params_t *params) {
 
   vc->codec_id = vcodec_id;
   vc->codec_type = AVMEDIA_TYPE_VIDEO;
-  vc->pix_fmt = AV_PIX_FMT_YUV420P; // damn you twitter
-  // vc->pix_fmt = AV_PIX_FMT_YUV444P;
+  if (params->use_yuv444) {
+    vc->pix_fmt = AV_PIX_FMT_YUV444P;
+  } else {
+    vc->pix_fmt = AV_PIX_FMT_YUV420P;
+  }
 
   // resolution must be a multiple of two
   vc->width = width;

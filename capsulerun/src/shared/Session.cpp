@@ -38,6 +38,8 @@ void Session::start () {
     encoder_params.has_audio = 0;  
   }
 
+  encoder_params.use_yuv444 = args->yuv444;
+
   encoder_thread = new thread(encoder_run, &encoder_params);
 }
 

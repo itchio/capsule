@@ -42,6 +42,8 @@ typedef struct encoder_params_s {
   int has_audio;
   receive_audio_format_t receive_audio_format;
   receive_audio_frames_t receive_audio_frames;
+
+  int use_yuv444;
 } encoder_params_t;
 
 void encoder_run(encoder_params_t *params);

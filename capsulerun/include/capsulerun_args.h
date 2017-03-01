@@ -11,4 +11,5 @@ typedef struct capsule_args_s {
 
   // options
   char *dir;
+  int yuv444;
 } capsule_args_t;

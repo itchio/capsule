@@ -119,6 +119,6 @@ void MainLoop::start_session (const VideoSetup *vs) {
     audio = audio_receiver_factory();
   }
 
-  session = new Session(video, audio);
+  session = new Session(args, video, audio);
   session->start();
 }

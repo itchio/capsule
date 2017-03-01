@@ -8,8 +8,6 @@
 #include <windows.h>
 #undef LEAN_AND_MEAN
 
-// IMMDeviceEnumerator, IMMDevice
-#include <mmDeviceapi.h>
 // PKEY_Device_FriendlyName
 #include <Functiondiscoverykeys_devpkey.h>
 

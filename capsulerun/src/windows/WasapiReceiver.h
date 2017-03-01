@@ -2,12 +2,18 @@
 
 #include "../shared/AudioReceiver.h"
 
+// IMMDeviceEnumerator, IMMDevice
+#include <mmDeviceapi.h>
 // IAudioClient, IAudioCaptureClient
 #include <audioclient.h>
 
 // REFERENCE_TIME time units per second and per millisecond
 #define REFTIMES_PER_SEC  10000000
 #define REFTIMES_PER_MILLISEC  10000
+
+#define LEAN_AND_MEAN
+#include <windows.h>
+#undef LEAN_AND_MEAN
 
 #include <mutex>
 

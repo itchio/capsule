@@ -10,6 +10,9 @@ static const char *const usage[] = {
 
 #if defined(CAPSULE_WINDOWS)
 #include "../windows/strings.h"
+#define LEAN_AND_MEAN
+#include <windows.h>
+#undef LEAN_AND_MEAN
 #endif // CAPSULE_WINDOWS
 
 #if defined(CAPSULE_WINDOWS)
@@ -32,12 +35,16 @@ int main (int argc, char **argv) {
   struct capsule_args_s args;
   memset(&args, 0, sizeof(args));
   args.dir = ".";
+  args.yuv444 = 0;
 
   struct argparse_option options[] = {
     OPT_HELP(),
-    OPT_GROUP("Basic options"),
+    OPT_GROUP("Required options"),
     OPT_STRING('L', "libpath", &args.libpath, "where libcapsule can be found"),
-    OPT_STRING('d', "dir", &args.dir, "where to output .mp4 videos"),
+    OPT_GROUP("Basic options"),
+    OPT_STRING('d', "dir", &args.dir, "where to output .mp4 videos (defaults to current directory)"),
+    OPT_GROUP("Video options"),
+    OPT_BOOLEAN(0, "yuv444", &args.yuv444, "use yuv444 colorspace ?"),
     OPT_END(),
   };
   struct argparse argparse;

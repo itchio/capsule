@@ -7,7 +7,8 @@
 
 class Session {
   public: 
-    Session(VideoReceiver *video, AudioReceiver *audio) :
+    Session(capsule_args_t *args, VideoReceiver *video, AudioReceiver *audio) :
+      args(args),
       video(video),
       audio(audio) {};
     ~Session();
@@ -24,4 +25,5 @@ class Session {
 
   private:
     std::thread *encoder_thread;
+    capsule_args_t *args;
 };
