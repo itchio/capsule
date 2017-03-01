@@ -5,6 +5,7 @@
 #include "../shared/io.h" // create_fifo, receive stuff
 
 #include "../shared/MainLoop.h"
+#include "./PulseReceiver.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,6 +32,10 @@
 using namespace std;
 
 int capsule_hotkey_init(MainLoop *ml);
+
+static AudioReceiver *audio_receiver_factory () {
+  return new PulseReceiver();
+}
 
 int capsulerun_main (capsule_args_t *args) {
   char libcapsule_path[CAPSULE_MAX_PATH_LENGTH];
@@ -80,6 +85,7 @@ int capsulerun_main (capsule_args_t *args) {
 
   conn->connect();
   MainLoop ml {args, conn};
+  ml.audio_receiver_factory = audio_receiver_factory;
 
   capsule_hotkey_init(&ml);
   ml.run();

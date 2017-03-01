@@ -4,9 +4,9 @@
 
 class AudioReceiver {
   public:
-    virtual ~AudioReceiver();
+    virtual ~AudioReceiver() {};
 
-    virtual int receiveAudioFormat(audio_format_t *afmt);
-    virtual void *receiveAudioFrames(int *num_frames);
-    virtual void stop();
+    virtual int receiveFormat(audio_format_t *afmt) = 0;
+    virtual void *receiveFrames(int *frames_received) = 0;
+    virtual void stop() = 0;
 };

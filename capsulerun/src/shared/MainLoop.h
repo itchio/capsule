@@ -13,6 +13,8 @@
 #include <thread>
 #include <vector>
 
+typedef AudioReceiver * (*audio_receiver_factory_t)();
+
 class MainLoop {
   public:
     MainLoop(capsule_args_t *args, Connection *conn) :
@@ -21,6 +23,8 @@ class MainLoop {
       {};
     void run(void);
     void capture_flip();
+
+    audio_receiver_factory_t audio_receiver_factory = nullptr;
 
   private:
     void end_session();

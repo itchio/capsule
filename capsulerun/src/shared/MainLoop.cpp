@@ -115,8 +115,11 @@ void MainLoop::start_session (const VideoSetup *vs) {
   );
 
   auto video = new VideoReceiver(conn, vfmt, shm);
+  AudioReceiver *audio = nullptr;
+  if (audio_receiver_factory) {
+    audio = audio_receiver_factory();
+  }
 
-  // TODO: handle case where we can't start session
-  session = new Session(video, nullptr);
+  session = new Session(video, audio);
   session->start();
 }
