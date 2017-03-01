@@ -9,19 +9,19 @@
 using namespace std;
 
 static int receive_video_format (Session *s, video_format_t *vfmt) {
-  return s->video->receiveFormat(vfmt);
+  return s->video->receive_format(vfmt);
 }
 
 static int receive_video_frame (Session *s, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  return s->video->receiveFrame(buffer, buffer_size, timestamp);
+  return s->video->receive_frame(buffer, buffer_size, timestamp);
 }
 
 static int receive_audio_format (Session *s, audio_format_t *afmt) {
-  return s->audio->receiveFormat(afmt);
+  return s->audio->receive_format(afmt);
 }
 
 static void *receive_audio_frames (Session *s, int *frames_received) {
-  return s->audio->receiveFrames(frames_received);
+  return s->audio->receive_frames(frames_received);
 }
 
 void Session::start () {

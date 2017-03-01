@@ -17,7 +17,6 @@ void MainLoop::run () {
     }
 
     auto pkt = GetPacket(buf);
-    capsule_log("MainLoop::run: received %s", EnumNameMessage(pkt->message_type()));
     switch (pkt->message_type()) {
       case Message_VideoSetup: {
         auto vs = static_cast<const VideoSetup*>(pkt->message());
@@ -27,14 +26,14 @@ void MainLoop::run () {
       case Message_VideoFrameCommitted: {
         auto vfc = static_cast<const VideoFrameCommitted*>(pkt->message());
         if (session && session->video) {
-          session->video->frameCommitted(vfc->index(), vfc->timestamp());
+          session->video->frame_committed(vfc->index(), vfc->timestamp());
         } else {
           capsule_log("no session, ignoring VideoFrameCommitted")
         }
         break;
       }
       default: {
-        capsule_log("Unknown message type, not sure what to do");
+        capsule_log("MainLoop::run: received %s - not sure what to do", EnumNameMessage(pkt->message_type()));
         break;
       }
     }

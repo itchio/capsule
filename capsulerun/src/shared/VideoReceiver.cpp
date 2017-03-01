@@ -6,12 +6,12 @@
 using namespace Capsule::Messages;
 using namespace std;
 
-int VideoReceiver::receiveFormat(video_format_t *vfmt_out) {
+int VideoReceiver::receive_format(video_format_t *vfmt_out) {
   memcpy(vfmt_out, &vfmt, sizeof(video_format_t));
   return 0;
 }
 
-int VideoReceiver::receiveFrame(uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
+int VideoReceiver::receive_frame(uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
   FrameInfo info {};
 
   while (true) {
@@ -42,7 +42,7 @@ int VideoReceiver::receiveFrame(uint8_t *buffer, size_t buffer_size, int64_t *ti
   return buffer_size;
 }
 
-void VideoReceiver::frameCommitted(int index, int64_t timestamp) {
+void VideoReceiver::frame_committed(int index, int64_t timestamp) {
   {
     lock_guard<mutex> lock(stopped_mutex);
     if (stopped) {

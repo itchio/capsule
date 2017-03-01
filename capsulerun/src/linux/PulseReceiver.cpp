@@ -1,13 +1,19 @@
 #include "PulseReceiver.h"
 
 #include <stdexcept>
+#include <chrono>
 
 #include <string.h> // memset, memcpy
 
-// #define AUDIO_NB_SAMPLES 1024
-#define AUDIO_NB_SAMPLES 128
-
 using namespace std;
+
+static void read_loop (PulseReceiver *pr) {
+  while (true) {
+    if (!pr->read_from_pa()) {
+      return;
+    }
+  }
+}
 
 PulseReceiver::PulseReceiver() {
   memset(&afmt, 0, sizeof(audio_format_t));
@@ -40,46 +46,114 @@ PulseReceiver::PulseReceiver() {
   afmt.channels = ss.channels;
   afmt.samplerate = ss.rate;
   afmt.samplewidth = 32;
-  audio_buffer_size =
+  buffer_size =
       AUDIO_NB_SAMPLES * afmt.channels * (afmt.samplewidth / 8);
-  audio_buffer = (uint8_t *) malloc(audio_buffer_size);
-  memset(audio_buffer, 0, audio_buffer_size);
+  in_buffer = (uint8_t *) calloc(1, buffer_size);
+  buffers = (uint8_t *) calloc(AUDIO_NB_BUFFERS, buffer_size);
+
+  for (int i = 0; i < AUDIO_NB_BUFFERS; i++) {
+    buffer_state[i] = AUDIO_BUFFER_PROCESSED;
+  }
+  commit_index = 0;
+  process_index = 0;
+
+  // start reading
+  pa_thread = new thread(read_loop, this);
 }
 
-int PulseReceiver::receiveFormat(audio_format_t *afmt_out) {
+bool PulseReceiver::read_from_pa() {
+  {
+    lock_guard<mutex> lock(pa_mutex);
+
+    if (!ctx) {
+      // we're closed!
+      return false;
+    }
+
+#if defined(CAPSULE_PULSE_PROFILE)
+    auto tt1 = chrono::steady_clock::now();
+#endif
+
+    int pa_err;
+    int ret = pa_simple_read(ctx, in_buffer, buffer_size, &pa_err);
+    if (ret < 0) {
+        fprintf(stderr, "Could not read from pulseaudio, error %d (%x)\n", pa_err, pa_err);
+        return false;
+    }
+
+#if defined(CAPSULE_PULSE_PROFILE)
+    auto tt2 = chrono::steady_clock::now();
+    capsule_log("pa_simple_read took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(tt2 - tt1).count()) / 1000.0);
+#endif
+  }
+
+  // cool, so we got a buffer, now let's find room for it.
+  {
+    lock_guard<mutex> lock(buffer_mutex);
+
+    if (buffer_state[commit_index] != AUDIO_BUFFER_PROCESSED) {
+      // no room for it, just skip those then
+      if (!overrun) {
+        overrun = true;
+        fprintf(stderr, "PulseReceiver: buffer overrun (captured audio but nowhere to place it)\n");
+      }
+      // keep trying tho
+      return true;
+    }
+
+    overrun = false;
+
+    uint8_t *target = buffers + (commit_index * buffer_size);
+    memcpy(target, in_buffer, buffer_size);
+    buffer_state[commit_index] = AUDIO_BUFFER_COMMITTED;
+    commit_index = (commit_index + 1) % AUDIO_NB_BUFFERS;
+  }
+
+  return true;
+}
+
+int PulseReceiver::receive_format(audio_format_t *afmt_out) {
   memcpy(afmt_out, &afmt, sizeof(audio_format_t));
   return 0;
 }
 
-void *PulseReceiver::receiveFrames(int *frames_received) {
-  lock_guard<mutex> lock(pa_mutex);
+void *PulseReceiver::receive_frames(int *frames_received) {
+  lock_guard<mutex> lock(buffer_mutex);
 
-  if (!ctx) {
-    // we're closed!'
+  if (buffer_state[process_index] != AUDIO_BUFFER_COMMITTED) {
+    // nothing to receive
     *frames_received = 0;
     return NULL;
-  }
+  } else {
+    // ooh there's a buffer ready
 
-  int pa_err;
-  int ret = pa_simple_read(ctx, audio_buffer, audio_buffer_size, &pa_err);
-  if (ret < 0) {
-      fprintf(stderr, "Could not read from pulseaudio, error %d (%x)\n", pa_err, pa_err);
-      *frames_received = 0;
-      return NULL;
-  }
+    // if the previous one was processing, that means we've processed it.
+    auto prev_process_index = (process_index == 0) ? (AUDIO_NB_BUFFERS - 1) : (process_index - 1);
+    if (buffer_state[prev_process_index] == AUDIO_BUFFER_PROCESSING) {
+      buffer_state[prev_process_index] = AUDIO_BUFFER_PROCESSED;
+    }
 
-  *frames_received = AUDIO_NB_SAMPLES;
-  return audio_buffer;
+    uint8_t *source = buffers + (process_index * buffer_size);
+    *frames_received = AUDIO_NB_SAMPLES;
+    buffer_state[process_index] = AUDIO_BUFFER_PROCESSING;
+    process_index = (process_index + 1) % AUDIO_NB_BUFFERS;
+    return source;
+  }
 }
 
 void PulseReceiver::stop() {
-  lock_guard<mutex> lock(pa_mutex);
+  {
+    lock_guard<mutex> lock(pa_mutex);
 
-  // TODO: what about concurrency?
-  pa_simple_free(ctx);
-  ctx = nullptr;
+    // TODO: what about concurrency?
+    pa_simple_free(ctx);
+    ctx = nullptr;
+  }
+
+  pa_thread->join();
 }
 
 PulseReceiver::~PulseReceiver() {
-  free(audio_buffer);
+  free(in_buffer);
+  free(buffers);
 }

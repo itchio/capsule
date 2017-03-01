@@ -23,9 +23,9 @@ class VideoReceiver {
       stopped(false)
       {};
     ~VideoReceiver();
-    void frameCommitted(int index, int64_t timestamp);
-    int receiveFormat(video_format_t *vfmt);
-    int receiveFrame(uint8_t *buffer, size_t buffer_size, int64_t *timestamp);
+    void frame_committed(int index, int64_t timestamp);
+    int receive_format(video_format_t *vfmt);
+    int receive_frame(uint8_t *buffer, size_t buffer_size, int64_t *timestamp);
     void stop();
 
   private:
