@@ -155,11 +155,18 @@ void encoder_run(encoder_params_t *params) {
   vc->qmin = 20;
   vc->qmax = 20;
 
+  // multithreading
+  // vc->thread_count = 4;
+
   vc->flags |= CODEC_FLAG_GLOBAL_HEADER;
+
+  vc->profile = FF_PROFILE_H264_BASELINE;
 
   // see also "placebo" and "ultrafast" presets
   // av_opt_set(vc->priv_data, "preset", "veryfast", AV_OPT_SEARCH_CHILDREN);
   av_opt_set(vc->priv_data, "preset", "ultrafast", AV_OPT_SEARCH_CHILDREN);
+
+  av_opt_set(vc->priv_data, "tune", "zerolatency", AV_OPT_SEARCH_CHILDREN);
 
   ret = avcodec_open2(vc, vcodec, NULL);
   if (ret < 0) {
