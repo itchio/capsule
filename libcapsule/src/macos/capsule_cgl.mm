@@ -25,7 +25,7 @@ CGLError capsule_CGLFlushDrawable (CGLContextObj ctx) {
     // capsule_log("no nsCtx");
   }
 
-  opengl_capture(width, height);
+  gl_capture(width, height);
 
   return ret;
 }

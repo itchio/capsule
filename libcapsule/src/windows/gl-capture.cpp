@@ -7,7 +7,7 @@ SIZE_T wglSwapBuffersHookId;
 
 bool CAPSULE_STDCALL wglSwapBuffers_hook (HANDLE hdc) {
   capdata.saw_opengl = true;
-  opengl_capture(0, 0);
+  gl_capture(0, 0);
   return wglSwapBuffers_real(hdc);
 }
 

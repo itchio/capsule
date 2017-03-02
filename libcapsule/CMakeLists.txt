@@ -21,7 +21,7 @@ add_definitions(-DBUILD_CAPSULE_DLL)
 
 set(libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/shared/capsule.cpp
-    ${libcapsule_SOURCE_DIR}/shared/opengl-capture.cpp
+    ${libcapsule_SOURCE_DIR}/shared/gl-capture.cpp
     ${libcapsule_SOURCE_DIR}/shared/io.cpp
     ${libcapsule_SOURCE_DIR}/shared/timer.cpp
     ${libcapsule_SOURCE_DIR}/shared/logging.cpp
@@ -53,7 +53,7 @@ if(WIN32)
     ${libcapsule_SOURCE_DIR}/windows/d3d9-capture.cpp
     ${libcapsule_SOURCE_DIR}/windows/d3d10-capture.cpp
     ${libcapsule_SOURCE_DIR}/windows/d3d11-capture.cpp
-    ${libcapsule_SOURCE_DIR}/windows/opengl-capture.cpp
+    ${libcapsule_SOURCE_DIR}/windows/gl-capture.cpp
     ${libcapsule_SOURCE_DIR}/windows/ddraw-hooks.cpp
     ${libcapsule_SOURCE_DIR}/windows/ddraw-capture.cpp
     ${libcapsule_SOURCE_DIR}/windows/dc-capture.cpp

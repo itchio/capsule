@@ -90,7 +90,7 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
 void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_data, size_t frame_data_size);
 
 // OpenGL-specific
-void CAPSULE_STDCALL opengl_capture(int width, int height);
+void CAPSULE_STDCALL gl_capture(int width, int height);
 
 void* glXGetProcAddressARB(const char*);
 void glXSwapBuffers(void *a, void *b);
