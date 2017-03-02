@@ -61,7 +61,7 @@ WasapiReceiver::WasapiReceiver() {
   }
 
   // Print endpoint friendly name and endpoint ID.
-  capsule_log("WasapiReceiver: Capturing from: \"%S\"\n", var_name.pwszVal);
+  capsule_log("WasapiReceiver: Capturing from: \"%S\"", var_name.pwszVal);
 
   hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, NULL, (void**) &audio_client);
   if (FAILED(hr)) {
