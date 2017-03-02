@@ -12,6 +12,11 @@ using namespace std;
 #include <chrono>
 #endif // CAPSULERUN_PROFILE
 
+#include <microprofile.h>
+
+MICROPROFILE_DEFINE(VideoReceiverWait, "VideoReceiver", "VWait", MP_CHOCOLATE3);
+MICROPROFILE_DEFINE(VideoReceiverCopy, "VideoReceiver", "VCopy", MP_CORNSILK3);
+
 int VideoReceiver::receive_format(video_format_t *vfmt_out) {
   memcpy(vfmt_out, &vfmt, sizeof(video_format_t));
   return 0;
@@ -21,9 +26,12 @@ int VideoReceiver::receive_frame(uint8_t *buffer, size_t buffer_size, int64_t *t
   FrameInfo info {};
 
   while (true) {
-    if (queue.tryWaitAndPop(info, 200)) {
-      // got a frame!
-      break;
+    {
+      MICROPROFILE_SCOPE(VideoReceiverWait);
+      if (queue.tryWaitAndPop(info, 200)) {
+        // got a frame!
+        break;
+      }
     }
 
     // didn't get a frame, are we stopped?
@@ -36,14 +44,10 @@ int VideoReceiver::receive_frame(uint8_t *buffer, size_t buffer_size, int64_t *t
   }
   
   void *source = shm->mapped + (buffer_size * info.index);
-#ifdef CAPSULERUN_PROFILE
-  auto t1 = chrono::steady_clock::now();
-#endif // CAPSULERUN_PROFILE
-  memcpy(buffer, source, buffer_size);
-#ifdef CAPSULERUN_PROFILE
-  auto t2 = chrono::steady_clock::now();
-  eprintf("memcpy took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(t2 - t1).count()) / 1000.0);
-#endif // CAPSULERUN_PROFILE
+  {
+    MICROPROFILE_SCOPE(VideoReceiverCopy);
+    memcpy(buffer, source, buffer_size);
+  }
   *timestamp = info.timestamp;
 
   flatbuffers::FlatBufferBuilder builder(1024);

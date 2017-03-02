@@ -8,37 +8,52 @@
 using namespace Capsule::Messages;
 using namespace std;
 
+MICROPROFILE_DEFINE(MainLoopMain, "MainLoop", "Main", 0xff0000);
+MICROPROFILE_DEFINE(MainLoopCycle, "MainLoop", "Cycle", 0xff00ff38);
+MICROPROFILE_DEFINE(MainLoopRead, "MainLoop", "Read", 0xff00ff00);
+MICROPROFILE_DEFINE(MainLoopProcess, "MainLoop", "Process", 0xff773744);
+
 void MainLoop::run () {
+  MICROPROFILE_SCOPE(MainLoopCycle);
   capsule_log("In MainLoop::run, exec is %s", args->exec);
 
   while (true) {
+    MICROPROFILE_SCOPE(MainLoopCycle);
     MicroProfileFlip(0);
 
-    char *buf = conn->read();
-    if (!buf) {
-      capsule_log("MainLoop::run: pipe closed");
-      break;
+    char *buf;
+
+    {
+      MICROPROFILE_SCOPE(MainLoopRead);
+      buf = conn->read();
+      if (!buf) {
+        capsule_log("MainLoop::run: pipe closed");
+        break;
+      }
     }
 
-    auto pkt = GetPacket(buf);
-    switch (pkt->message_type()) {
-      case Message_VideoSetup: {
-        auto vs = static_cast<const VideoSetup*>(pkt->message());
-        start_session(vs);
-        break;
-      }
-      case Message_VideoFrameCommitted: {
-        auto vfc = static_cast<const VideoFrameCommitted*>(pkt->message());
-        if (session && session->video) {
-          session->video->frame_committed(vfc->index(), vfc->timestamp());
-        } else {
-          capsule_log("no session, ignoring VideoFrameCommitted")
+    {
+      MICROPROFILE_SCOPE(MainLoopProcess);
+      auto pkt = GetPacket(buf);
+      switch (pkt->message_type()) {
+        case Message_VideoSetup: {
+          auto vs = static_cast<const VideoSetup*>(pkt->message());
+          start_session(vs);
+          break;
         }
-        break;
-      }
-      default: {
-        capsule_log("MainLoop::run: received %s - not sure what to do", EnumNameMessage(pkt->message_type()));
-        break;
+        case Message_VideoFrameCommitted: {
+          auto vfc = static_cast<const VideoFrameCommitted*>(pkt->message());
+          if (session && session->video) {
+            session->video->frame_committed(vfc->index(), vfc->timestamp());
+          } else {
+            capsule_log("no session, ignoring VideoFrameCommitted")
+          }
+          break;
+        }
+        default: {
+          capsule_log("MainLoop::run: received %s - not sure what to do", EnumNameMessage(pkt->message_type()));
+          break;
+        }
       }
     }
 

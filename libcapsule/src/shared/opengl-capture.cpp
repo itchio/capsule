@@ -156,6 +156,8 @@ void CAPSULE_STDCALL opengl_capture (int width, int height) {
   if (!capsule_capture_ready()) {
     if (!capsule_capture_active()) {
       first_frame = true;
+      free(frame_data);
+      frame_data = nullptr;
     }
 
     return;

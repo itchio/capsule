@@ -16,9 +16,29 @@ extern "C" {
 
 #include <chrono>
 
+#include <microprofile.h>
+
 using namespace std;
 
+MICROPROFILE_DEFINE(EncoderMain, "Encoder", "Main", MP_WHITE);
+MICROPROFILE_DEFINE(EncoderCycle, "Encoder", "Cycle", MP_WHITE);
+
+MICROPROFILE_DEFINE(EncoderReceiveVideoFrame, "Encoder", "VRecv", MP_AQUAMARINE3);
+MICROPROFILE_DEFINE(EncoderScale, "Encoder", "VScale", MP_THISTLE3);
+MICROPROFILE_DEFINE(EncoderSendVideoFrame, "Encoder", "VEncode", MP_AZURE3);
+MICROPROFILE_DEFINE(EncoderRecvVideoPkt, "Encoder", "VMux1", MP_BURLYWOOD3);
+MICROPROFILE_DEFINE(EncoderWriteVideoPkt, "Encoder", "VMux2", MP_BROWN3);
+
+MICROPROFILE_DEFINE(EncoderReceiveAudioFrames, "Encoder", "ARecv", MP_AQUAMARINE4);
+MICROPROFILE_DEFINE(EncoderResample, "Encoder", "AResample", MP_THISTLE4);
+MICROPROFILE_DEFINE(EncoderSendAudioFrames, "Encoder", "AEncode", MP_AZURE4);
+MICROPROFILE_DEFINE(EncoderRecvAudioPkt, "Encoder", "AMux1", MP_BURLYWOOD4);
+MICROPROFILE_DEFINE(EncoderWriteAudioPkt, "Encoder", "AMux2", MP_BROWN4);
+
 void encoder_run(encoder_params_t *params) {
+  MicroProfileOnThreadCreate("encoder");
+  MICROPROFILE_SCOPE(EncoderMain);
+
   int ret;
 
   av_register_all();
@@ -166,7 +186,7 @@ void encoder_run(encoder_params_t *params) {
   // av_opt_set(vc->priv_data, "preset", "veryfast", AV_OPT_SEARCH_CHILDREN);
   av_opt_set(vc->priv_data, "preset", "ultrafast", AV_OPT_SEARCH_CHILDREN);
 
-  av_opt_set(vc->priv_data, "tune", "zerolatency", AV_OPT_SEARCH_CHILDREN);
+  // av_opt_set(vc->priv_data, "tune", "zerolatency", AV_OPT_SEARCH_CHILDREN);
 
   ret = avcodec_open2(vc, vcodec, NULL);
   if (ret < 0) {
@@ -182,7 +202,7 @@ void encoder_run(encoder_params_t *params) {
 
   // audio codec 
   if (params->has_audio) {
-    AVCodec *acodec = avcodec_find_encoder(acodec_id);
+    acodec = avcodec_find_encoder(acodec_id);
     if (!acodec) {
       printf("could not find audio codec\n");
       exit(1);
@@ -244,9 +264,6 @@ void encoder_run(encoder_params_t *params) {
   }
 
   // audio frame
-  uint8_t *audio_buffer;
-  int audio_buffer_size;
-
   if (params->has_audio) {
     aframe = av_frame_alloc();
     if (!aframe) {
@@ -367,14 +384,14 @@ void encoder_run(encoder_params_t *params) {
   int samples_filled = 0;
 
   while (true) {
-  #ifdef CAPSULERUN_PROFILE
-    auto tt1 = chrono::steady_clock::now();
-  #endif // CAPSULERUN_PROFILE
-    size_t read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
-  #ifdef CAPSULERUN_PROFILE
-    auto tt2 = chrono::steady_clock::now();
-    eprintf("receive_frame took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(tt2 - tt1).count()) / 1000.0);
-  #endif // CAPSULERUN_PROFILE
+    MICROPROFILE_SCOPE(EncoderCycle);
+
+    size_t read;
+
+    {
+      MICROPROFILE_SCOPE(EncoderReceiveVideoFrame);
+      read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
+    }
     cdprintf(">> video timestamp                 = %d, approx %.4f seconds", (int) timestamp, ((double) timestamp) / 1000000.0);
     total_read += read;
 
@@ -398,28 +415,18 @@ void encoder_run(encoder_params_t *params) {
     if (read < buffer_size) {
       last_frame = true;
     } else {
-  #ifdef CAPSULERUN_PROFILE
-      auto ht1 = chrono::steady_clock::now();
-  #endif // CAPSULERUN_PROFILE
-      sws_scale(sws, sws_in, sws_linesize, 0, vc->height, vframe->data, vframe->linesize);
-  #ifdef CAPSULERUN_PROFILE
-      auto ht2 = chrono::steady_clock::now();
-      eprintf("scale took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(ht2 - ht1).count()) / 1000.0);
-  #endif // CAPSULERUN_PROFILE
+      {
+        MICROPROFILE_SCOPE(EncoderScale);
+        sws_scale(sws, sws_in, sws_linesize, 0, vc->height, vframe->data, vframe->linesize);
+      }
 
       vnext_pts = timestamp;
       vframe->pts = vnext_pts;
 
       // write video frame
       {
-  #ifdef CAPSULERUN_PROFILE
-        auto t1 = chrono::steady_clock::now();
-  #endif // CAPSULERUN_PROFILE
+        MICROPROFILE_SCOPE(EncoderSendVideoFrame);
         ret = avcodec_send_frame(vc, vframe);
-  #ifdef CAPSULERUN_PROFILE
-        auto t2 = chrono::steady_clock::now();
-        eprintf("send_frame took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(t2 - t1).count()) / 1000.0);
-  #endif // CAPSULERUN_PROFILE
       }
       if (ret < 0) {
           fprintf(stderr, "Error encoding video frame\n");
@@ -431,7 +438,10 @@ void encoder_run(encoder_params_t *params) {
       AVPacket vpkt;
       av_init_packet(&vpkt);
 
-      ret = avcodec_receive_packet(vc, &vpkt);
+      {
+        MICROPROFILE_SCOPE(EncoderRecvVideoPkt);
+        ret = avcodec_receive_packet(vc, &vpkt);
+      }
       if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
           fprintf(stderr, "Error encoding a video frame\n");
           exit(1);
@@ -442,7 +452,10 @@ void encoder_run(encoder_params_t *params) {
           vpkt.stream_index = video_st->index;
 
           /* Write the compressed frame to the media file. */
-          ret = av_interleaved_write_frame(oc, &vpkt);
+          {
+            MICROPROFILE_SCOPE(EncoderWriteVideoPkt);
+            ret = av_interleaved_write_frame(oc, &vpkt);
+          }
           if (ret < 0) {
               fprintf(stderr, "Error while writing video frame\n");
               exit(1);
@@ -471,18 +484,24 @@ void encoder_run(encoder_params_t *params) {
           if (samples_used >= samples_received) {
             samples_used = 0;
 
-            in_samples = (float *) params->receive_audio_frames(params->private_data, &samples_received);
+            {
+              MICROPROFILE_SCOPE(EncoderReceiveAudioFrames);
+              in_samples = (float *) params->receive_audio_frames(params->private_data, &samples_received);
+            }
             if (samples_received == 0) {
               underrun = true;
               break;
             }
           }
 
-          while (samples_used < samples_received && samples_filled < samples_needed) {
-            left_samples[samples_filled]  = in_samples[samples_used * 2];
-            right_samples[samples_filled] = in_samples[samples_used * 2 + 1];
-            samples_filled++;
-            samples_used++;
+          {
+            MICROPROFILE_SCOPE(EncoderResample);
+            while (samples_used < samples_received && samples_filled < samples_needed) {
+              left_samples[samples_filled]  = in_samples[samples_used * 2];
+              right_samples[samples_filled] = in_samples[samples_used * 2 + 1];
+              samples_filled++;
+              samples_used++;
+            }
           }
         }
 
@@ -498,7 +517,10 @@ void encoder_run(encoder_params_t *params) {
 
         samples_filled = 0;
 
-        ret = avcodec_send_frame(ac, aframe);
+        {
+          MICROPROFILE_SCOPE(EncoderSendAudioFrames);
+          ret = avcodec_send_frame(ac, aframe);
+        }
         if (ret < 0) {
           const int err_string_size = 16 * 1024;
           char err_string[err_string_size];
@@ -511,7 +533,10 @@ void encoder_run(encoder_params_t *params) {
         while (ret >= 0) {
           AVPacket apkt;
           av_init_packet(&apkt);
-          ret = avcodec_receive_packet(ac, &apkt);
+          {
+            MICROPROFILE_SCOPE(EncoderRecvAudioPkt);
+            ret = avcodec_receive_packet(ac, &apkt);
+          }
 
           if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
               fprintf(stderr, "Error encoding an audio frame\n");
@@ -520,7 +545,10 @@ void encoder_run(encoder_params_t *params) {
               av_packet_rescale_ts(&apkt, ac->time_base, audio_st->time_base);
               apkt.stream_index = audio_st->index;
               /* Write the compressed audio frame to the media file. */
-              ret = av_interleaved_write_frame(oc, &apkt);
+              {
+                MICROPROFILE_SCOPE(EncoderWriteAudioPkt);
+                ret = av_interleaved_write_frame(oc, &apkt);
+              }
               if (ret < 0) {
                   fprintf(stderr, "Error while writing audio frame\n");
                   exit(1);
@@ -534,7 +562,10 @@ void encoder_run(encoder_params_t *params) {
       while (ret >= 0) {
         AVPacket apkt;
         av_init_packet(&apkt);
-        ret = avcodec_receive_packet(ac, &apkt);
+        {
+          MICROPROFILE_SCOPE(EncoderRecvAudioPkt);
+          ret = avcodec_receive_packet(ac, &apkt);
+        }
 
         if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
             fprintf(stderr, "Error encoding an audio frame\n");
@@ -543,7 +574,10 @@ void encoder_run(encoder_params_t *params) {
             av_packet_rescale_ts(&apkt, ac->time_base, audio_st->time_base);
             apkt.stream_index = audio_st->index;
             /* Write the compressed audio frame to the media file. */
-            ret = av_interleaved_write_frame(oc, &apkt);
+            {
+              MICROPROFILE_SCOPE(EncoderWriteAudioPkt);
+              ret = av_interleaved_write_frame(oc, &apkt);
+            }
             if (ret < 0) {
                 fprintf(stderr, "Error while writing audio frame\n");
                 exit(1);
@@ -633,5 +667,8 @@ void encoder_run(encoder_params_t *params) {
 
   avio_close(oc->pb);
   avformat_free_context(oc);
+
+  // FIXME: seems to crash atm.
+  // MicroProfileOnThreadExit();
 }
 

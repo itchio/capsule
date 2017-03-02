@@ -22,6 +22,11 @@ const IID IID_IAudioCaptureClient = __uuidof(IAudioCaptureClient);
 
 #include <stdexcept>
 
+#include <microprofile.h>
+
+MICROPROFILE_DEFINE(WasapiReceiveFormat, "Wasapi", "WasapiReceiveFormat", 0xff00ff38);
+MICROPROFILE_DEFINE(WasapiReceiveFrames, "Wasapi", "WasapiReceiveFrames", 0xff00ff00);
+
 using namespace std;
 
 WasapiReceiver::WasapiReceiver() {
@@ -114,11 +119,15 @@ WasapiReceiver::WasapiReceiver() {
 }
 
 int WasapiReceiver::receive_format(audio_format_t *afmt_out) {
+  MICROPROFILE_SCOPE(WasapiReceiveFormat);
+
   memcpy(afmt_out, &afmt, sizeof(audio_format_t));
   return 0;
 }
 
 void *WasapiReceiver::receive_frames(int *frames_received) {
+  MICROPROFILE_SCOPE(WasapiReceiveFrames);
+
   lock_guard<mutex> lock(stopped_mutex);
 
   if (stopped) {
