@@ -1,7 +1,7 @@
 #pragma once
 
 // Change these to suit your needs
-// #define CAPSULERUN_PROFILE
+#define CAPSULERUN_PROFILE
 // #define CAPSULERUN_DEBUG
 
 #include <capsulerun_macros.h>

@@ -367,10 +367,14 @@ void encoder_run(encoder_params_t *params) {
   int samples_filled = 0;
 
   while (true) {
+  #ifdef CAPSULERUN_PROFILE
     auto tt1 = chrono::steady_clock::now();
+  #endif // CAPSULERUN_PROFILE
     size_t read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
+  #ifdef CAPSULERUN_PROFILE
     auto tt2 = chrono::steady_clock::now();
     eprintf("receive_frame took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(tt2 - tt1).count()) / 1000.0);
+  #endif // CAPSULERUN_PROFILE
     cdprintf(">> video timestamp                 = %d, approx %.4f seconds", (int) timestamp, ((double) timestamp) / 1000000.0);
     total_read += read;
 
@@ -394,20 +398,28 @@ void encoder_run(encoder_params_t *params) {
     if (read < buffer_size) {
       last_frame = true;
     } else {
+  #ifdef CAPSULERUN_PROFILE
       auto ht1 = chrono::steady_clock::now();
+  #endif // CAPSULERUN_PROFILE
       sws_scale(sws, sws_in, sws_linesize, 0, vc->height, vframe->data, vframe->linesize);
+  #ifdef CAPSULERUN_PROFILE
       auto ht2 = chrono::steady_clock::now();
       eprintf("scale took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(ht2 - ht1).count()) / 1000.0);
+  #endif // CAPSULERUN_PROFILE
 
       vnext_pts = timestamp;
       vframe->pts = vnext_pts;
 
       // write video frame
       {
+  #ifdef CAPSULERUN_PROFILE
         auto t1 = chrono::steady_clock::now();
+  #endif // CAPSULERUN_PROFILE
         ret = avcodec_send_frame(vc, vframe);
+  #ifdef CAPSULERUN_PROFILE
         auto t2 = chrono::steady_clock::now();
         eprintf("send_frame took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(t2 - t1).count()) / 1000.0);
+  #endif // CAPSULERUN_PROFILE
       }
       if (ret < 0) {
           fprintf(stderr, "Error encoding video frame\n");

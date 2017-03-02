@@ -6,6 +6,12 @@
 using namespace Capsule::Messages;
 using namespace std;
 
+#include <capsulerun_macros.h>
+
+#ifdef CAPSULERUN_PROFILE
+#include <chrono>
+#endif // CAPSULERUN_PROFILE
+
 int VideoReceiver::receive_format(video_format_t *vfmt_out) {
   memcpy(vfmt_out, &vfmt, sizeof(video_format_t));
   return 0;
@@ -30,7 +36,14 @@ int VideoReceiver::receive_frame(uint8_t *buffer, size_t buffer_size, int64_t *t
   }
   
   void *source = shm->mapped + (buffer_size * info.index);
+#ifdef CAPSULERUN_PROFILE
+  auto t1 = chrono::steady_clock::now();
+#endif // CAPSULERUN_PROFILE
   memcpy(buffer, source, buffer_size);
+#ifdef CAPSULERUN_PROFILE
+  auto t2 = chrono::steady_clock::now();
+  eprintf("memcpy took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(t2 - t1).count()) / 1000.0);
+#endif // CAPSULERUN_PROFILE
   *timestamp = info.timestamp;
 
   flatbuffers::FlatBufferBuilder builder(1024);
