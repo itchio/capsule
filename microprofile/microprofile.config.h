@@ -1,0 +1,2 @@
+
+#define MICROPROFILE_GPU_TIMERS 0

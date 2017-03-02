@@ -11,7 +11,7 @@ set(capsulerun_INCLUDE_DIRS SYSTEM)
 
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/include)
 
-include_directories(${capsulerun_INCLUDE_DIRS} ${capsulerun_INCLUDE_DIR} ${libcapsule_INCLUDE_DIR})
+include_directories(${capsulerun_INCLUDE_DIRS} ${capsulerun_INCLUDE_DIR} ${libcapsule_INCLUDE_DIR} ${microprofile_INCLUDE_DIR})
 
 set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/shared/main.cpp
@@ -23,6 +23,7 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/shared/Session.cpp
   ${capsulerun_SOURCE_DIR}/shared/ShmemRead.cpp
   ${capsulerun_SOURCE_DIR}/shared/Connection.cpp
+  ${microprofile_SOURCE_DIR}/microprofile.cpp
 )
 
 if(WIN32)
@@ -71,6 +72,9 @@ if(WIN32)
       "${FFMPEG_LIBRARY_DIR}/${NEEDED_DLL}"
       $<TARGET_FILE_DIR:capsulerun>)
   endforeach(NEEDED_DLL)
+
+  # needed for microprofile
+  target_link_libraries(capsulerun ws2_32.lib)
 endif()
 
 if(APPLE)

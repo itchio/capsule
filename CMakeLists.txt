@@ -61,5 +61,9 @@ if(WIN32)
   endif()
 endif()
 
+add_definitions(-DMICROPROFILE_USE_CONFIG)
+set(microprofile_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/microprofile)
+set(microprofile_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/microprofile)
+
 add_subdirectory(libcapsule)
 add_subdirectory(capsulerun)

@@ -3,6 +3,8 @@
 
 #include "MainLoop.h"
 
+#include <microprofile.h>
+
 using namespace Capsule::Messages;
 using namespace std;
 
@@ -10,6 +12,8 @@ void MainLoop::run () {
   capsule_log("In MainLoop::run, exec is %s", args->exec);
 
   while (true) {
+    MicroProfileFlip(0);
+
     char *buf = conn->read();
     if (!buf) {
       capsule_log("MainLoop::run: pipe closed");

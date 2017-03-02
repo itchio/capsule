@@ -3,17 +3,21 @@
 
 #include "argparse.h"
 
-static const char *const usage[] = {
-  "capsulerun -L libpath [options] -- executable [args]",
-  NULL
-};
-
 #if defined(CAPSULE_WINDOWS)
 #include "../windows/strings.h"
 #define LEAN_AND_MEAN
 #include <windows.h>
 #undef LEAN_AND_MEAN
 #endif // CAPSULE_WINDOWS
+
+#include <microprofile.h>
+
+MICROPROFILE_DEFINE(MAIN, "MAIN", "Main", 0xff0000);
+
+static const char *const usage[] = {
+  "capsulerun -L libpath [options] -- executable [args]",
+  NULL
+};
 
 #if defined(CAPSULE_WINDOWS)
 int main (int _argc, char **_argv) {
@@ -31,6 +35,13 @@ int main (int _argc, char **_argv) {
 int main (int argc, char **argv) {
 
 #endif // !CAPSULE_WINDOWS
+
+  MicroProfileOnThreadCreate("Main");
+
+  MicroProfileSetEnableAllGroups(true);
+	MicroProfileSetForceMetaCounters(true);
+
+	MicroProfileStartContextSwitchTrace();
 
   struct capsule_args_s args;
   memset(&args, 0, sizeof(args));
@@ -89,12 +100,16 @@ int main (int argc, char **argv) {
 
   capsule_log("thanks for flying capsule on %s", CAPSULE_PLATFORM);
 
-  // different for each platform, CMake compiles the right one in.
-  int ret = capsulerun_main(&args);
+  {
+    MICROPROFILE_SCOPE(MAIN);
+
+    // different for each platform, CMake compiles the right one in.
+    int ret = capsulerun_main(&args);
 
 #if defined(CAPSULE_WINDOWS)
-  free(argv);
+    free(argv);
 #endif // CAPSULE_WINDOWS
 
-  return ret;
+    return ret;
+  }
 }
