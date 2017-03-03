@@ -76,9 +76,9 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_RENDERBUFFER_WIDTH 36162
 #define GL_RENDERBUFFER_HEIGHT 36163
 
-// state geters
+// state getters
 
-typedef GLenum (CAPSULE_STDCALL *glGetError_t)();
+typedef GLenum(CAPSULE_STDCALL *glGetError_t)();
 static glGetError_t _glGetError;
 
 typedef void *(CAPSULE_STDCALL *glGetIntegerv_t)(GLenum pname, GLint *data);
@@ -86,18 +86,26 @@ static glGetIntegerv_t _glGetIntegerv;
 
 // textures
 
-typedef void (CAPSULE_STDCALL *glGenTextures_t)(GLsizei n, GLuint *buffers);
+typedef void(CAPSULE_STDCALL *glGenTextures_t)(GLsizei n, GLuint *buffers);
 static glGenTextures_t _glGenTextures;
 
-typedef void (CAPSULE_STDCALL *glBindTexture_t)(GLenum target, GLuint texture);
+typedef void(CAPSULE_STDCALL *glBindTexture_t)(GLenum target, GLuint texture);
 static glBindTexture_t _glBindTexture;
 
-typedef void (CAPSULE_STDCALL *glTexImage2D_t)(GLenum target, GLint level,
-		GLint internal_format, GLsizei width, GLsizei height,
-		GLint border, GLenum format, GLenum type, const GLvoid *data);
+typedef void(CAPSULE_STDCALL *glTexImage2D_t)(GLenum target, GLint level,
+                                              GLint internal_format,
+                                              GLsizei width, GLsizei height,
+                                              GLint border, GLenum format,
+                                              GLenum type, const GLvoid *data);
 static glTexImage2D_t _glTexImage2D;
 
-typedef void (CAPSULE_STDCALL *glDeleteTextures_t)(GLsizei n, const GLuint* buffers);
+typedef void(CAPSULE_STDCALL *glGetTexImage_t)(GLenum target, GLint level,
+                                               GLenum format, GLenum type,
+                                               GLvoid *img);
+static glGetTexImage_t _glGetTexImage;
+
+typedef void(CAPSULE_STDCALL *glDeleteTextures_t)(GLsizei n,
+                                                  const GLuint *buffers);
 static glDeleteTextures_t _glDeleteTextures;
 
 // buffers
@@ -105,25 +113,52 @@ static glDeleteTextures_t _glDeleteTextures;
 typedef void(CAPSULE_STDCALL *glGenBuffers_t)(GLsizei n, GLuint *buffers);
 static glGenBuffers_t _glGenBuffers;
 
-typedef void (CAPSULE_STDCALL*glBindBuffer_t)(GLenum target, GLuint buffer);
+typedef void(CAPSULE_STDCALL *glBindBuffer_t)(GLenum target, GLuint buffer);
 static glBindBuffer_t _glBindBuffer;
 
-typedef void (CAPSULE_STDCALL *glBufferData_t) (GLenum target, GLsizeiptrARB size,
-		const GLvoid* data, GLenum usage);
+typedef void(CAPSULE_STDCALL *glReadBuffer_t)(GLenum);
+static glReadBuffer_t _glReadBuffer;
+
+typedef void(CAPSULE_STDCALL *glDrawBuffer_t)(GLenum mode);
+static glDrawBuffer_t _glDrawBuffer;
+
+typedef void(CAPSULE_STDCALL *glBufferData_t)(GLenum target, GLsizeiptrARB size,
+                                              const GLvoid *data, GLenum usage);
 static glBufferData_t _glBufferData;
 
-typedef GLboolean (CAPSULE_STDCALL *glUnmapBuffer_t)(GLenum target);
+typedef GLvoid *(CAPSULE_STDCALL *glMapBuffer_t)(GLenum target, GLenum access);
+static glMapBuffer_t _glMapBuffer;
+
+typedef GLboolean(CAPSULE_STDCALL *glUnmapBuffer_t)(GLenum target);
 static glUnmapBuffer_t _glUnmapBuffer;
 
-typedef void (CAPSULE_STDCALL *glDeleteBuffers_t)(GLsizei n, const GLuint* buffers);
+typedef void(CAPSULE_STDCALL *glDeleteBuffers_t)(GLsizei n,
+                                                 const GLuint *buffers);
 static glDeleteBuffers_t _glDeleteBuffers;
 
 // framebuffers
 
-typedef void (CAPSULE_STDCALL *glGenFramebuffers_t)(GLsizei n, GLuint* buffers);
+typedef void(CAPSULE_STDCALL *glGenFramebuffers_t)(GLsizei n, GLuint *buffers);
 static glGenFramebuffers_t _glGenFramebuffers;
 
-typedef void (CAPSULE_STDCALL *glDeleteFramebuffers_t)(GLsizei n, GLuint *framebuffers);
+typedef void(CAPSULE_STDCALL *glBindFramebuffer_t)(GLenum target,
+                                                   GLuint framebuffer);
+static glBindFramebuffer_t _glBindFramebuffer;
+
+    typedef void(CAPSULE_STDCALL *glBlitFramebuffer_t)(
+        GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0,
+        GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
+static glBlitFramebuffer_t _glBlitFramebuffer;
+
+typedef void(CAPSULE_STDCALL *glFramebufferTexture2D_t)(GLenum target,
+                                                        GLenum attachment,
+                                                        GLenum textarget,
+                                                        GLuint texture,
+                                                        GLint level);
+static glFramebufferTexture2D_t _glFramebufferTexture2D;
+
+typedef void(CAPSULE_STDCALL *glDeleteFramebuffers_t)(GLsizei n,
+                                                      GLuint *framebuffers);
 static glDeleteFramebuffers_t _glDeleteFramebuffers;
 
 // deprecated

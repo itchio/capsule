@@ -62,15 +62,22 @@ bool CAPSULE_STDCALL init_gl_functions() {
   GLSYM(glGenTextures)
   GLSYM(glBindTexture)
   GLSYM(glTexImage2D)
+  GLSYM(glGetTexImage)
   GLSYM(glDeleteTextures)
 
   GLSYM(glGenBuffers)
   GLSYM(glBindBuffer)
+  GLSYM(glReadBuffer)
+  GLSYM(glDrawBuffer)
   GLSYM(glBufferData)
+  GLSYM(glMapBuffer)
   GLSYM(glUnmapBuffer)
   GLSYM(glDeleteBuffers)
 
   GLSYM(glGenFramebuffers)
+  GLSYM(glBindFramebuffer)
+  GLSYM(glBlitFramebuffer)
+  GLSYM(glFramebufferTexture2D)
   GLSYM(glDeleteFramebuffers)
 
   GLSYM(glReadPixels)
@@ -344,15 +351,119 @@ static bool gl_init (int width, int height) {
   return true;
 }
 
-void gl_shmem_capture () {
-  auto timestamp = capsule_frame_timestamp();
-
-  _glReadPixels(0, 0, data.cx, data.cy, GL_BGRA, GL_UNSIGNED_BYTE, data.frame_data);
-	if (gl_error("gl_capture", "failed to read pixels")) {
+static void gl_copy_backbuffer(GLuint dst) {
+	_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, data.fbo);
+	if (gl_error("gl_copy_backbuffer", "failed to bind FBO")) {
 		return;
 	}
 
-  capsule_write_video_frame(timestamp, data.frame_data, data.cy * data.pitch);
+	_glBindTexture(GL_TEXTURE_2D, dst);
+	if (gl_error("gl_copy_backbuffer", "failed to bind texture")) {
+		return;
+	}
+
+	_glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+			GL_TEXTURE_2D, dst, 0);
+	if (gl_error("gl_copy_backbuffer", "failed to set frame buffer")) {
+		return;
+	}
+
+	_glReadBuffer(GL_BACK);
+
+	_glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	if (gl_error("gl_copy_backbuffer", "failed to set draw buffer")) {
+		return;
+	}
+
+	_glBlitFramebuffer(0, 0, data.cx, data.cy,
+			0, 0, data.cx, data.cy, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	gl_error("gl_copy_backbuffer", "failed to blit");
+}
+
+static inline void gl_shmem_capture_queue_copy(void) {
+	for (int i = 0; i < NUM_BUFFERS; i++) {
+		if (data.texture_ready[i]) {
+			GLvoid *buffer;
+
+			data.texture_ready[i] = false;
+
+			_glBindBuffer(GL_PIXEL_PACK_BUFFER, data.pbos[i]);
+			if (gl_error("gl_shmem_capture_queue_copy", "failed to bind pbo")) {
+				return;
+			}
+
+			buffer = _glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
+			if (buffer) {
+				data.texture_mapped[i] = true;
+
+        // FIXME: the timestamp is actually 3 frames
+        // behind. does it matter? who knows!
+        auto timestamp = capsule_frame_timestamp();
+        capsule_write_video_frame(timestamp, (char*) buffer, data.cy * data.pitch);
+			}
+			break;
+		}
+	}
+}
+
+static inline void gl_shmem_capture_stage(GLuint dst_pbo, GLuint src_tex) {
+	_glBindTexture(GL_TEXTURE_2D, src_tex);
+	if (gl_error("gl_shmem_capture_stage", "failed to bind src_tex")) {
+		return;
+	}
+
+	_glBindBuffer(GL_PIXEL_PACK_BUFFER, dst_pbo);
+	if (gl_error("gl_shmem_capture_stage", "failed to bind dst_pbo")) {
+		return;
+	}
+
+	_glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, 0);
+	if (gl_error("gl_shmem_capture_stage", "failed to read src_tex")) {
+		return;
+	}
+}
+
+void gl_shmem_capture () {
+  int next_tex;
+  GLint last_fbo;
+  GLint last_tex;
+
+  // save last fbo & texture to restore them after capture
+  {
+    _glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &last_fbo);
+    if (gl_error("gl_shmem_capture", "failed to get last fbo")) {
+      return;
+    }
+
+    _glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_tex);
+    if (gl_error("gl_shmem_capture", "failed to get last texture")) {
+      return;
+    }
+  }
+
+  // try to map & send all the textures that are ready
+  gl_shmem_capture_queue_copy();
+
+  next_tex = (data.cur_tex + 1) % NUM_BUFFERS;
+
+  gl_copy_backbuffer(data.textures[next_tex]);
+
+  if (data.copy_wait < NUM_BUFFERS - 1) {
+    data.copy_wait++;
+  } else {
+    GLuint src = data.textures[next_tex];
+    GLuint dst = data.pbos[next_tex];
+
+    // TODO: look into - obs has some locking here
+    _glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+    data.texture_mapped[next_tex] = false;
+
+    gl_shmem_capture_stage(dst, src);
+    data.texture_ready[next_tex] = true;
+  }
+
+  _glBindTexture(GL_TEXTURE_2D, last_tex);
+  _glBindFramebuffer(GL_DRAW_FRAMEBUFFER, last_fbo);
 }
 
 /**
