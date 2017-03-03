@@ -4,9 +4,9 @@
 
 #include "WasapiReceiver.h"
 
-#define LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#undef LEAN_AND_MEAN
+#undef WIN32_LEAN_AND_MEAN
 
 // PKEY_Device_FriendlyName
 #include <Functiondiscoverykeys_devpkey.h>

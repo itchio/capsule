@@ -16,9 +16,9 @@
 #include <unistd.h>   // unlink
 #include <signal.h>   // signal, SIGPIPE
 #else
-#define LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#undef LEAN_AND_MEAN
+#undef WIN32_LEAN_AND_MEAN
 
 #include <io.h>
 #endif

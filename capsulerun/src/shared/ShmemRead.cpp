@@ -14,10 +14,6 @@
 #include <errno.h>    // for errno
 #include <unistd.h>   // unlink
 #else
-#define LEAN_AND_MEAN
-#include <windows.h>
-#undef LEAN_AND_MEAN
-
 #include <io.h>
 #endif
 

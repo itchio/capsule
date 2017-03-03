@@ -11,9 +11,9 @@
 #define REFTIMES_PER_SEC  10000000
 #define REFTIMES_PER_MILLISEC  10000
 
-#define LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#undef LEAN_AND_MEAN
+#undef WIN32_LEAN_AND_MEAN
 
 #include <mutex>
 

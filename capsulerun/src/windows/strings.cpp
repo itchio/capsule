@@ -1,10 +1,11 @@
 
-#define LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#undef LEAN_AND_MEAN
+#undef WIN32_LEAN_AND_MEAN
 
 #include "strings.h"
 #include <stdio.h>
+#include <stdlib.h>
 
 void toWideChar (const char *s, wchar_t **ws) {
   int wchars_num = MultiByteToWideChar(CP_UTF8, 0, s, -1, NULL, 0);

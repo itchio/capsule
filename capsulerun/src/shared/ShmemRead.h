@@ -4,9 +4,9 @@
 #include <string>
 
 #if defined(CAPSULE_WINDOWS)
-#define LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#undef LEAN_AND_MEAN
+#undef WIN32_LEAN_AND_MEAN
 #endif // CAPSULE_WINDOWS
 
 class ShmemRead {

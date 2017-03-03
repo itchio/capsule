@@ -21,9 +21,9 @@
 
 #if defined(CAPSULE_WINDOWS)
 #include <io.h>
-#define LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#undef LEAN_AND_MEAN
+#undef WIN32_LEAN_AND_MEAN
 #else
 #include <unistd.h>
 #endif // CAPSULE_WINDOWS

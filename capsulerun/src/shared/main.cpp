@@ -5,9 +5,10 @@
 
 #if defined(CAPSULE_WINDOWS)
 #include "../windows/strings.h"
-#define LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#undef LEAN_AND_MEAN
+#undef WIN32_LEAN_AND_MEAN
+#include <shellapi.h> // CommandLineToArgvW
 #endif // CAPSULE_WINDOWS
 
 #include <microprofile.h>

@@ -105,7 +105,7 @@ int glXQueryExtension(void *a, void *b, void *c);
 #include <NktHookLib.h>
 
 // LoadLibrary, etc.
-#define WIN32_LEAN_AND_MEAN
+#define WIN32_WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 extern CNktHookLib cHookMgr;
