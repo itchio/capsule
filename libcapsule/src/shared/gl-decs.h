@@ -192,6 +192,9 @@ static wglGetProcAddress_t _wglGetProcAddress;
 
 #elif defined(CAPSULE_MACOS)
 
-#define terryglGetProcAddress nullptr
+typedef terryglGetProcAddress_t glGetProcAddress_t;
+static glGetProcAddress_t _glGetProcAddress;
 
-#endif // CAPSULE_LINUX
+#define terryglGetProcAddress _glGetProcAddress
+
+#endif // CAPSULE_MACOS

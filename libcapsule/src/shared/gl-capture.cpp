@@ -147,6 +147,8 @@ bool CAPSULE_STDCALL load_opengl (const char *opengl_path) {
   GLSYM(glXGetProcAddressARB)
 #elif defined(CAPSULE_WINDOWS)
   GLSYM(wglGetProcAddress)
+#elif defined(CAPSULE_MACOS)
+  GLSYM(glGetProcAddress)
 #endif
 }
 
