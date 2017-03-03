@@ -4,7 +4,7 @@
 
 #if defined(CAPSULE_WINDOWS)
 #include <windows.h>
-#define dlopen(a, b) LoadLibrary((a))
+#define dlopen(a, b) LoadLibraryA((a))
 #define dlsym GetProcAddress
 #define RTLD_NOW 0
 #define RTLD_LOCAL 0

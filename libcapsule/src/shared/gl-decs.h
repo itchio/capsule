@@ -168,89 +168,37 @@ typedef void(CAPSULE_STDCALL *glReadPixels_t)(GLint x, GLint y, GLsizei width,
                                               GLenum type, GLvoid *data);
 static glReadPixels_t _glReadPixels;
 
-// Original decls from obs, for reference:
-// https://github.com/jp9000/obs-studio/blob/master/plugins/win-capture/graphics-hook/gl-decs.h
+// platform-specific
 
-/*
+typedef void* (*terryglGetProcAddress_t)(const char*);
 
-typedef void (WINAPI *GLTEXIMAGE2DPROC)(GLenum target, GLint level,
-		GLint internal_format, GLsizei width, GLsizei height,
-		GLint border, GLenum format, GLenum type, const GLvoid *data);
-typedef void (WINAPI *GLGETTEXIMAGEPROC)(GLenum target, GLint level,
-		GLenum format, GLenum type, GLvoid *img);
-typedef void (WINAPI *GLREADBUFFERPROC)(GLenum);
-typedef void (WINAPI *GLDRAWBUFFERPROC)(GLenum mode);
-typedef void (WINAPI *GLGETINTEGERVPROC)(GLenum pname, GLint *params);
-typedef GLenum (WINAPI *GLGETERRORPROC)();
-typedef BOOL (WINAPI *WGLSWAPLAYERBUFFERSPROC)(HDC, UINT);
-typedef BOOL (WINAPI *WGLSWAPBUFFERSPROC)(HDC);
-typedef BOOL (WINAPI *WGLDELETECONTEXTPROC)(HGLRC);
-typedef PROC (WINAPI *WGLGETPROCADDRESSPROC)(LPCSTR);
-typedef BOOL (WINAPI *WGLMAKECURRENTPROC)(HDC, HGLRC);
-typedef HDC (WINAPI *WGLGETCURRENTDCPROC)();
-typedef HGLRC (WINAPI *WGLGETCURRENTCONTEXTPROC)();
-typedef HGLRC (WINAPI *WGLCREATECONTEXTPROC)(HDC);
-typedef void (WINAPI *GLBUFFERDATAARBPROC) (GLenum target, GLsizeiptrARB size,
-		const GLvoid* data, GLenum usage);
-typedef void (WINAPI *GLDELETEBUFFERSARBPROC)(GLsizei n, const GLuint* buffers);
-typedef void (WINAPI *GLDELETETEXTURESPROC)(GLsizei n, const GLuint* buffers);
-typedef void (WINAPI *GLGENBUFFERSARBPROC)(GLsizei n, GLuint* buffers);
-typedef void (WINAPI *GLGENTEXTURESPROC)(GLsizei n, GLuint* textures);
-typedef GLvoid* (WINAPI *GLMAPBUFFERPROC)(GLenum target, GLenum access);
-typedef GLboolean (WINAPI *GLUNMAPBUFFERPROC)(GLenum target);
-typedef void (WINAPI *GLBINDBUFFERPROC)(GLenum target, GLuint buffer);
-typedef void (WINAPI *GLBINDTEXTUREPROC)(GLenum target, GLuint texture);
-typedef void (WINAPI *GLGENFRAMEBUFFERSPROC)(GLsizei n, GLuint* buffers);
-typedef void (WINAPI *GLDELETEFRAMEBUFFERSPROC)(GLsizei n,
-		GLuint *framebuffers);
-typedef void (WINAPI *GLBINDFRAMEBUFFERPROC)(GLenum target, GLuint framebuffer);
-typedef void (WINAPI *GLBLITFRAMEBUFFERPROC)(GLint srcX0, GLint srcY0,
-		GLint srcX1, GLint srcY1, GLint dstX0, GLint dstY0,
-		GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
-typedef void (WINAPI *GLFRAMEBUFFERTEXTURE2DPROC)(GLenum target,
-		GLenum attachment, GLenum textarget, GLuint texture,
-		GLint level);
-typedef BOOL (WINAPI *WGLSETRESOURCESHAREHANDLENVPROC)(void*, HANDLE);
-typedef HANDLE (WINAPI *WGLDXOPENDEVICENVPROC)(void*);
-typedef BOOL (WINAPI *WGLDXCLOSEDEVICENVPROC)(HANDLE);
-typedef HANDLE (WINAPI *WGLDXREGISTEROBJECTNVPROC)(HANDLE, void *, GLuint, GLenum, GLenum);
-typedef BOOL (WINAPI *WGLDXUNREGISTEROBJECTNVPROC)(HANDLE, HANDLE);
-typedef BOOL (WINAPI *WGLDXOBJECTACCESSNVPROC)(HANDLE, GLenum);
-typedef BOOL (WINAPI *WGLDXLOCKOBJECTSNVPROC)(HANDLE, GLint, HANDLE *);
-typedef BOOL (WINAPI *WGLDXUNLOCKOBJECTSNVPROC)(HANDLE, GLint, HANDLE *);
+#if defined(CAPSULE_LINUX)
 
-static GLTEXIMAGE2DPROC glTexImage2D = NULL;
-static GLGETTEXIMAGEPROC glGetTexImage = NULL;
-static GLREADBUFFERPROC glReadBuffer = NULL;
-static GLDRAWBUFFERPROC glDrawBuffer = NULL;
-static GLGETINTEGERVPROC glGetIntegerv = NULL;
-static GLGETERRORPROC glGetError = NULL;
-static WGLGETPROCADDRESSPROC jimglGetProcAddress = NULL;
-static WGLMAKECURRENTPROC jimglMakeCurrent = NULL;
-static WGLGETCURRENTDCPROC jimglGetCurrentDC = NULL;
-static WGLGETCURRENTCONTEXTPROC jimglGetCurrentContext = NULL;
-static GLBUFFERDATAARBPROC glBufferData = NULL;
-static GLDELETEBUFFERSARBPROC glDeleteBuffers = NULL;
-static GLDELETETEXTURESPROC glDeleteTextures = NULL;
-static GLGENBUFFERSARBPROC glGenBuffers = NULL;
-static GLGENTEXTURESPROC glGenTextures = NULL;
-static GLMAPBUFFERPROC glMapBuffer = NULL;
-static GLUNMAPBUFFERPROC glUnmapBuffer = NULL;
-static GLBINDBUFFERPROC glBindBuffer = NULL;
-static GLBINDTEXTUREPROC glBindTexture = NULL;
-static GLGENFRAMEBUFFERSPROC glGenFramebuffers = NULL;
-static GLDELETEFRAMEBUFFERSPROC glDeleteFramebuffers = NULL;
-static GLBINDFRAMEBUFFERPROC glBindFramebuffer = NULL;
-static GLBLITFRAMEBUFFERPROC glBlitFramebuffer = NULL;
-static GLFRAMEBUFFERTEXTURE2DPROC glFramebufferTexture2D = NULL;
+// this intercepts swapbuffers for games statically-linked
+// against libGL. Others go through dlopen, which we intercept
+// as well.
+void glXSwapBuffers (void *a, void *b);
 
-static WGLSETRESOURCESHAREHANDLENVPROC jimglDXSetResourceShareHandleNV = NULL;
-static WGLDXOPENDEVICENVPROC jimglDXOpenDeviceNV = NULL;
-static WGLDXCLOSEDEVICENVPROC jimglDXCloseDeviceNV = NULL;
-static WGLDXREGISTEROBJECTNVPROC jimglDXRegisterObjectNV = NULL;
-static WGLDXUNREGISTEROBJECTNVPROC jimglDXUnregisterObjectNV = NULL;
-static WGLDXOBJECTACCESSNVPROC jimglDXObjectAccessNV = NULL;
-static WGLDXLOCKOBJECTSNVPROC jimglDXLockObjectsNV = NULL;
-static WGLDXUNLOCKOBJECTSNVPROC jimglDXUnlockObjectsNV = NULL;
+typedef int (*glXQueryExtension_t)(void*, void*, void*);
+static glXQueryExtension_t _glXQueryExtension;
 
-*/
+typedef void (*glXSwapBuffers_t)(void*, void*);
+static glXSwapBuffers_t _glXSwapBuffers;
+
+typedef terryglGetProcAddress_t glXGetProcAddressARB_t;
+static glXGetProcAddressARB_t _glXGetProcAddressARB;
+
+#define terryglGetProcAddress _glXGetProcAddressARB
+
+#elif defined(CAPSULE_WINDOWS)
+
+typedef terryglGetProcAddress_t wglGetProcAddress_t;
+static wglGetProcAddress_t _wglGetProcAddress;
+
+#define terryglGetProcAddress _wglGetProcAddress
+
+#elif defined(CAPSULE_MACOS)
+
+#define terryglGetProcAddress nullptr
+
+#endif // CAPSULE_LINUX

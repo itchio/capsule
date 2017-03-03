@@ -38,7 +38,7 @@ static inline bool gl_error(const char *func, const char *str) {
 	return false;
 }
 
-void CAPSULE_STDCALL load_opengl (const char *);
+bool CAPSULE_STDCALL load_opengl (const char *opengl_path);
 
 void CAPSULE_STDCALL ensure_opengl() {
 	if (!gl_handle) {
@@ -47,7 +47,12 @@ void CAPSULE_STDCALL ensure_opengl() {
 }
 
 #define GLSYM(sym) { \
-  _ ## sym = (sym ## _t) dlsym(gl_handle, #sym); \
+  if (! _ ## sym && terryglGetProcAddress) { \
+    _ ## sym = (sym ## _t) terryglGetProcAddress(#sym);\
+  } \
+  if (! _ ## sym) { \
+    _ ## sym = (sym ## _t) dlsym(gl_handle, #sym); \
+  } \
   if (! _ ## sym) { \
     capsule_log("failed to glsym %s", #sym); \
     return false; \
@@ -117,16 +122,7 @@ static void gl_free() {
 }
 
 #ifdef CAPSULE_LINUX
-void glXSwapBuffers (void *a, void *b);
 
-typedef int (*glXQueryExtension_t)(void*, void*, void*);
-glXQueryExtension_t _glXQueryExtension;
-
-typedef void (*glXSwapBuffers_t)(void*, void*);
-glXSwapBuffers_t _glXSwapBuffers;
-
-typedef void* (*glXGetProcAddressARB_t)(const char*);
-glXGetProcAddressARB_t _glXGetProcAddressARB;
 #endif
 
 typedef void* (*dlopen_type)(const char*, int);
@@ -135,49 +131,42 @@ dlopen_type _dlopen;
 void CAPSULE_STDCALL ensure_real_dlopen() {
 #ifdef CAPSULE_LINUX
   if (!_dlopen) {
+    // on linux, since we intercept dlopen, we need to
+    // get back the actual dlopen, so that we can, y'know,
+    // open libraries.
     capsule_log("Getting real dlopen");
     _dlopen = (dlopen_type) dlsym(RTLD_NEXT, "dlopen");
   }
 #endif
 }
 
-void CAPSULE_STDCALL load_opengl (const char *openglPath) {
-  capsule_log("Loading real opengl from %s", openglPath);
-#if defined(CAPSULE_WINDOWS)
-  gl_handle = dlopen(L"OPENGL32.DLL", (RTLD_NOW|RTLD_LOCAL));
-#elif defined(CAPSULE_LINUX)
+bool CAPSULE_STDCALL load_opengl (const char *opengl_path) {
+#if defined(CAPSULE_LINUX)
   ensure_real_dlopen();
-  gl_handle = _dlopen(openglPath, (RTLD_NOW|RTLD_LOCAL));
+  gl_handle = _dlopen(opengl_path, (RTLD_NOW|RTLD_LOCAL));
 #else
-  gl_handle = dlopen(openglPath, (RTLD_NOW|RTLD_LOCAL));
+  gl_handle = dlopen(opengl_path, (RTLD_NOW|RTLD_LOCAL));
 #endif
-  capsule_assert("Loaded real OpenGL lib", !!gl_handle);
-  capsule_log("Loaded opengl!");
+
+  if (!gl_handle) {
+    capsule_log("could not load real opengl library from %s", opengl_path);
+    return false;
+  }
 
 #ifdef CAPSULE_LINUX
-  capsule_log("Getting glXQueryExtension adress");
-  _glXQueryExtension = (glXQueryExtension_t) dlsym(gl_handle, "glXQueryExtension");
-  capsule_assert("Got glXQueryExtension", !!_glXQueryExtension);
-  capsule_log("Got glXQueryExtension adress: %p", _glXQueryExtension);
-
-  capsule_log("Getting glXSwapBuffers adress");
-  _glXSwapBuffers = (glXSwapBuffers_t) dlsym(gl_handle, "glXSwapBuffers");
-  capsule_assert("Got glXSwapBuffers", !!_glXSwapBuffers);
-  capsule_log("Got glXSwapBuffers adress: %p", _glXSwapBuffers);
-
-  capsule_log("Getting glXGetProcAddressARB address");
-  _glXGetProcAddressARB = (glXGetProcAddressARB_t) dlsym(gl_handle, "glXGetProcAddressARB");
-  capsule_assert("Got glXGetProcAddressARB", !!_glXGetProcAddressARB);
-  capsule_log("Got glXGetProcAddressARB adress: %p", _glXGetProcAddressARB);
+  GLSYM(glXQueryExtension)
+  GLSYM(glXSwapBuffers)
+  GLSYM(glXGetProcAddressARB)
 #endif
 }
 
 #ifdef CAPSULE_LINUX
 extern "C" {
+
+// this intercepts glXGetProcAddressARB for linux games
+// that link statically against libGL
 void* glXGetProcAddressARB (const char *name) {
   if (strcmp(name, "glXSwapBuffers") == 0) {
-    capsule_log("In glXGetProcAddressARB: %s", name);
-    capsule_log("Returning fake glXSwapBuffers");
     return (void*) &glXSwapBuffers;
   }
 
@@ -186,6 +175,7 @@ void* glXGetProcAddressARB (const char *name) {
   ensure_opengl();
   return _glXGetProcAddressARB(name);
 }
+
 }
 #endif
 
