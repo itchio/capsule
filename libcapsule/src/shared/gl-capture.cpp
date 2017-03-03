@@ -10,6 +10,7 @@
 struct gl_data {
   uint32_t                cx;
   uint32_t                cy;
+  uint32_t                pitch;
   GLuint                  fbo;
 
   int                     cur_tex;
@@ -47,14 +48,18 @@ void CAPSULE_STDCALL ensure_opengl() {
 
 #define GLSYM(sym) { \
   _ ## sym = (sym ## _t) dlsym(gl_handle, #sym); \
-  capsule_assert("Got #sym address", !!_ ## sym); \
+  if (! _ ## sym) { \
+    capsule_log("failed to glsym %s", #sym); \
+    return false; \
+  } \
 }
 
-void CAPSULE_STDCALL ensure_own_opengl() {
+bool CAPSULE_STDCALL init_gl_functions() {
   ensure_opengl();
   GLSYM(glGetError)
   GLSYM(glGetIntegerv)
   GLSYM(glReadPixels)
+  return true;
 }
 
 #ifdef CAPSULE_LINUX
@@ -249,8 +254,6 @@ static bool gl_shmem_init() {
 }
 
 static void gl_init (int width, int height) {
-  ensure_own_opengl();
-
   if (width == 0 || height == 0) {
     int viewport[4];
     _glGetIntegerv(GL_VIEWPORT, viewport);
@@ -275,13 +278,14 @@ static void gl_init (int width, int height) {
     height += 2;
   }
 
-  int components = 4; // BGRA
-  size_t pitch = width * components;
-  size_t frame_data_size = pitch * height;
+  const int components = 4; // BGRA
+  const size_t pitch = width * components;
+  const size_t frame_data_size = pitch * height;
   data.frame_data = (char*) malloc(frame_data_size);
 
   data.cx = width;
   data.cy = height;
+  data.pitch = pitch;
 }
 
 static void gl_free() {
@@ -292,11 +296,39 @@ static void gl_free() {
   memset(&data, 0, sizeof(data));
 }
 
+void gl_shmem_capture () {
+  auto timestamp = capsule_frame_timestamp();
+
+  _glReadPixels(0, 0, data.cx, data.cy, GL_BGRA, GL_UNSIGNED_BYTE, data.frame_data);
+	if (gl_error("gl_capture", "failed to read pixels")) {
+		return;
+	}
+
+  capsule_write_video_frame(timestamp, data.frame_data, data.cy * data.pitch);
+}
+
 /**
  * Capture one OpenGL frame
  */
 void CAPSULE_STDCALL gl_capture (int width, int height) {
+  static bool functions_initialized = false;
+  static bool critical_failure = false;
   static bool first_frame = true;
+
+  if (critical_failure) {
+    return;
+  }
+
+  if (!functions_initialized) {
+    functions_initialized = init_gl_functions();
+    if (!functions_initialized) {
+      critical_failure = true;
+      return;
+    }
+  }
+
+  // reset error flag
+	_glGetError();
 
   if (!capsule_capture_ready()) {
     if (!capsule_capture_active()) {
@@ -307,25 +339,20 @@ void CAPSULE_STDCALL gl_capture (int width, int height) {
     return;
   }
 
-  auto timestamp = capsule_frame_timestamp();
-
   if (first_frame) {
     gl_init(width, height);
   }
 
-  /* reset error flag */
-	_glGetError();
-
-  _glReadPixels(0, 0, data.cx, data.cy, GL_BGRA, GL_UNSIGNED_BYTE, data.frame_data);
-	if (gl_error("gl_capture", "failed to read pixels")) {
-		return;
-	}
-
-  const size_t components = 4;  
-  const size_t pitch = data.cx * components;
   if (first_frame) {
-    capsule_write_video_format(data.cx, data.cy, CAPSULE_PIX_FMT_BGRA, 1 /* vflip */, pitch);
+    capsule_write_video_format(
+      data.cx,
+      data.cy,
+      CAPSULE_PIX_FMT_BGRA,
+      1 /* vflip */,
+      data.pitch
+    );
     first_frame = false;
   }
-  capsule_write_video_frame(timestamp, data.frame_data, data.cy * pitch);
+
+  gl_shmem_capture();
 }
