@@ -42,7 +42,7 @@ calls to them so that it may capture video and audio frames.
   * Video
     * [ ] OpenGL capture
       * [x] Naive (synchronous glReadPixels)
-      * [ ] Async download
+      * [x] Async download
       * [ ] GPU scale/colorspace conversion
       * [ ] Overlay
     * [ ] Encoding
@@ -57,9 +57,9 @@ calls to them so that it may capture video and audio frames.
     * [x] capsulerun launches child
     * [x] capsulerun passes arguments
       * [x] quoted & with unicode handling
-    * [ ] capsulerun handles child quitting unexpectedly
+    * [x] capsulerun handles child quitting unexpectedly
     * [x] capsulerun relays stdout/stderr
-    * [ ] capsulerun relays exit code
+    * [x] capsulerun relays exit code
     * [x] Interposing via `LD_PRELOAD` dlopen/dlsym
       * [ ] capsulerun picks correct library architecture to inject
     * [x] Interposing dlopen/dlsym
@@ -120,8 +120,7 @@ calls to them so that it may capture video and audio frames.
     * [x] Communicate by named pipe
     * [x] Shared memory
   * Control
-    * [ ] Win32 recording hotkey support
-      * (but basic research done)
+    * [x] Win32 recording hotkey support
   * Video
     * [x] Direct3D 9 capture
       * [x] Hooks D3D initialization
@@ -129,7 +128,7 @@ calls to them so that it may capture video and audio frames.
       * [x] Hooks all three present flavors
       * [x] Retrieves & sends backbuffer
     * [ ] Direct3D 10 capture
-    * [ ] Direct3D 11 capture
+    * [x] Direct3D 11 capture
       * [x] Hooks DXGI factory creation
       * [x] Hooks CreateSwapChain
       * [x] Hooks CreateSwapChainForHwnd

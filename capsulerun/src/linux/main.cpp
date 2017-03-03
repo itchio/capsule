@@ -93,6 +93,8 @@ int capsulerun_main (capsule_args_t *args) {
   int child_status;
   pid_t wait_result;
 
+  int exit_code = 0;
+
   do {
     wait_result = waitpid(child_pid, &child_status, 0);
     if (wait_result == -1) {
@@ -102,6 +104,7 @@ int capsulerun_main (capsule_args_t *args) {
 
     if (WIFEXITED(child_status)) {
       capsule_log("exited, status=%d", WEXITSTATUS(child_status));
+      exit_code = WEXITSTATUS(child_status);
     } else if (WIFSIGNALED(child_status)) {
       capsule_log("killed by signal %d", WTERMSIG(child_status));
     } else if (WIFSTOPPED(child_status)) {
@@ -111,5 +114,5 @@ int capsulerun_main (capsule_args_t *args) {
     }
   } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
 
-  return 0;
+  return exit_code;
 }
