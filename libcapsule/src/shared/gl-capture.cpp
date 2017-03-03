@@ -121,10 +121,6 @@ static void gl_free() {
   capsule_log("----------------------- gl capture freed ----------------------");
 }
 
-#ifdef CAPSULE_LINUX
-
-#endif
-
 typedef void* (*dlopen_type)(const char*, int);
 dlopen_type _dlopen;
 
@@ -153,10 +149,12 @@ bool CAPSULE_STDCALL load_opengl (const char *opengl_path) {
     return false;
   }
 
-#ifdef CAPSULE_LINUX
+#if defined(CAPSULE_LINUX)
   GLSYM(glXQueryExtension)
   GLSYM(glXSwapBuffers)
   GLSYM(glXGetProcAddressARB)
+#elif defined(CAPSULE_WINDOWS)
+  GLSYM(wglGetProcAddress)
 #endif
 }
 
