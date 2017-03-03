@@ -76,39 +76,62 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_RENDERBUFFER_WIDTH 36162
 #define GL_RENDERBUFFER_HEIGHT 36163
 
+// state geters
+
 typedef GLenum (CAPSULE_STDCALL *glGetError_t)();
 static glGetError_t _glGetError;
-
-typedef void(CAPSULE_STDCALL *glReadPixels_t)(GLint x, GLint y, GLsizei width,
-                                              GLsizei height, GLenum format,
-                                              GLenum type, GLvoid *data);
-static glReadPixels_t _glReadPixels;
 
 typedef void *(CAPSULE_STDCALL *glGetIntegerv_t)(GLenum pname, GLint *data);
 static glGetIntegerv_t _glGetIntegerv;
 
-typedef void(CAPSULE_STDCALL *glGenBuffers_t)(GLsizei n, GLuint *buffers);
-static glGenBuffers_t _glGenBuffers;
+// textures
 
 typedef void (CAPSULE_STDCALL *glGenTextures_t)(GLsizei n, GLuint *buffers);
 static glGenTextures_t _glGenTextures;
 
-typedef void (CAPSULE_STDCALL *glGenFramebuffers_t)(GLsizei n, GLuint* buffers);
-static glGenFramebuffers_t _glGenFramebuffers;
-
-typedef void (CAPSULE_STDCALL*glBindBuffer_t)(GLenum target, GLuint buffer);
-static glBindBuffer_t _glBindBuffer;
 typedef void (CAPSULE_STDCALL *glBindTexture_t)(GLenum target, GLuint texture);
 static glBindTexture_t _glBindTexture;
-
-typedef void (CAPSULE_STDCALL *glBufferData_t) (GLenum target, GLsizeiptrARB size,
-		const GLvoid* data, GLenum usage);
-static glBufferData_t _glBufferData;
 
 typedef void (CAPSULE_STDCALL *glTexImage2D_t)(GLenum target, GLint level,
 		GLint internal_format, GLsizei width, GLsizei height,
 		GLint border, GLenum format, GLenum type, const GLvoid *data);
 static glTexImage2D_t _glTexImage2D;
+
+typedef void (CAPSULE_STDCALL *glDeleteTextures_t)(GLsizei n, const GLuint* buffers);
+static glDeleteTextures_t _glDeleteTextures;
+
+// buffers
+
+typedef void(CAPSULE_STDCALL *glGenBuffers_t)(GLsizei n, GLuint *buffers);
+static glGenBuffers_t _glGenBuffers;
+
+typedef void (CAPSULE_STDCALL*glBindBuffer_t)(GLenum target, GLuint buffer);
+static glBindBuffer_t _glBindBuffer;
+
+typedef void (CAPSULE_STDCALL *glBufferData_t) (GLenum target, GLsizeiptrARB size,
+		const GLvoid* data, GLenum usage);
+static glBufferData_t _glBufferData;
+
+typedef GLboolean (CAPSULE_STDCALL *glUnmapBuffer_t)(GLenum target);
+static glUnmapBuffer_t _glUnmapBuffer;
+
+typedef void (CAPSULE_STDCALL *glDeleteBuffers_t)(GLsizei n, const GLuint* buffers);
+static glDeleteBuffers_t _glDeleteBuffers;
+
+// framebuffers
+
+typedef void (CAPSULE_STDCALL *glGenFramebuffers_t)(GLsizei n, GLuint* buffers);
+static glGenFramebuffers_t _glGenFramebuffers;
+
+typedef void (CAPSULE_STDCALL *glDeleteFramebuffers_t)(GLsizei n, GLuint *framebuffers);
+static glDeleteFramebuffers_t _glDeleteFramebuffers;
+
+// deprecated
+
+typedef void(CAPSULE_STDCALL *glReadPixels_t)(GLint x, GLint y, GLsizei width,
+                                              GLsizei height, GLenum format,
+                                              GLenum type, GLvoid *data);
+static glReadPixels_t _glReadPixels;
 
 // Original decls from obs, for reference:
 // https://github.com/jp9000/obs-studio/blob/master/plugins/win-capture/graphics-hook/gl-decs.h

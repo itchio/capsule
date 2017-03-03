@@ -58,8 +58,55 @@ bool CAPSULE_STDCALL init_gl_functions() {
   ensure_opengl();
   GLSYM(glGetError)
   GLSYM(glGetIntegerv)
+
+  GLSYM(glGenTextures)
+  GLSYM(glBindTexture)
+  GLSYM(glTexImage2D)
+  GLSYM(glDeleteTextures)
+
+  GLSYM(glGenBuffers)
+  GLSYM(glBindBuffer)
+  GLSYM(glBufferData)
+  GLSYM(glUnmapBuffer)
+  GLSYM(glDeleteBuffers)
+
+  GLSYM(glGenFramebuffers)
+  GLSYM(glDeleteFramebuffers)
+
   GLSYM(glReadPixels)
+
   return true;
+}
+
+static void gl_free() {
+  if (data.frame_data) {
+    free(data.frame_data);
+  }
+
+  for (size_t i = 0; i < NUM_BUFFERS; i++) {
+    if (data.pbos[i]) {
+      if (data.texture_mapped[i]) {
+        _glBindBuffer(GL_PIXEL_PACK_BUFFER, data.pbos[i]);
+        _glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
+        _glBindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+      }
+
+      _glDeleteBuffers(1, &data.pbos[i]);
+    }
+
+    if (data.textures[i])
+      _glDeleteTextures(1, &data.textures[i]);
+  }
+
+  if (data.fbo) {
+		_glDeleteFramebuffers(1, &data.fbo);
+  }
+
+	gl_error("gl_free", "GL error occurred on free");
+
+  memset(&data, 0, sizeof(data));
+
+  capsule_log("----------------------- gl capture freed ----------------------");
 }
 
 #ifdef CAPSULE_LINUX
@@ -253,7 +300,7 @@ static bool gl_shmem_init() {
 	return true;
 }
 
-static void gl_init (int width, int height) {
+static bool gl_init (int width, int height) {
   if (width == 0 || height == 0) {
     int viewport[4];
     _glGetIntegerv(GL_VIEWPORT, viewport);
@@ -286,14 +333,15 @@ static void gl_init (int width, int height) {
   data.cx = width;
   data.cy = height;
   data.pitch = pitch;
-}
 
-static void gl_free() {
-  if (data.frame_data) {
-    free(data.frame_data);
+  bool success = gl_shmem_init();
+
+  if (!success) {
+    gl_free();
+    return false;
   }
 
-  memset(&data, 0, sizeof(data));
+  return true;
 }
 
 void gl_shmem_capture () {
@@ -311,6 +359,7 @@ void gl_shmem_capture () {
  * Capture one OpenGL frame
  */
 void CAPSULE_STDCALL gl_capture (int width, int height) {
+
   static bool functions_initialized = false;
   static bool critical_failure = false;
   static bool first_frame = true;
@@ -331,7 +380,7 @@ void CAPSULE_STDCALL gl_capture (int width, int height) {
 	_glGetError();
 
   if (!capsule_capture_ready()) {
-    if (!capsule_capture_active()) {
+    if (!capsule_capture_active() && !first_frame) {
       first_frame = true;
       gl_free();
     }
@@ -339,20 +388,23 @@ void CAPSULE_STDCALL gl_capture (int width, int height) {
     return;
   }
 
-  if (first_frame) {
+  if (!data.cx) {
     gl_init(width, height);
   }
 
-  if (first_frame) {
-    capsule_write_video_format(
-      data.cx,
-      data.cy,
-      CAPSULE_PIX_FMT_BGRA,
-      1 /* vflip */,
-      data.pitch
-    );
-    first_frame = false;
-  }
+  if (data.cx) {
+    if (first_frame) {
+      capsule_write_video_format(
+        data.cx,
+        data.cy,
+        CAPSULE_PIX_FMT_BGRA,
+        1 /* vflip */,
+        data.pitch
+      );
+      first_frame = false;
+    }
 
-  gl_shmem_capture();
+    gl_shmem_capture();
+  }
 }
+
