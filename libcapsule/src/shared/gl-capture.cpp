@@ -19,9 +19,7 @@ struct gl_data {
   GLuint                  textures[NUM_BUFFERS];
   bool                    texture_ready[NUM_BUFFERS];
   bool                    texture_mapped[NUM_BUFFERS];
-
-  // old (pre-async GPU download)
-  char                    *frame_data;
+  int64_t                 timestamps[NUM_BUFFERS];
 };
 
 static struct gl_data data = {};
@@ -85,16 +83,10 @@ bool CAPSULE_STDCALL init_gl_functions() {
   GLSYM(glFramebufferTexture2D)
   GLSYM(glDeleteFramebuffers)
 
-  GLSYM(glReadPixels)
-
   return true;
 }
 
 static void gl_free() {
-  if (data.frame_data) {
-    free(data.frame_data);
-  }
-
   for (size_t i = 0; i < NUM_BUFFERS; i++) {
     if (data.pbos[i]) {
       if (data.texture_mapped[i]) {
@@ -322,8 +314,6 @@ static bool gl_init (int width, int height) {
 
   const int components = 4; // BGRA
   const size_t pitch = width * components;
-  const size_t frame_data_size = pitch * height;
-  data.frame_data = (char*) malloc(frame_data_size);
 
   data.cx = width;
   data.cy = height;
@@ -372,6 +362,7 @@ static inline void gl_shmem_capture_queue_copy(void) {
 	for (int i = 0; i < NUM_BUFFERS; i++) {
 		if (data.texture_ready[i]) {
 			GLvoid *buffer;
+      auto timestamp = data.timestamps[i];
 
 			data.texture_ready[i] = false;
 
@@ -383,10 +374,6 @@ static inline void gl_shmem_capture_queue_copy(void) {
 			buffer = _glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 			if (buffer) {
 				data.texture_mapped[i] = true;
-
-        // FIXME: the timestamp is actually 3 frames
-        // behind. does it matter? who knows!
-        auto timestamp = capsule_frame_timestamp();
         capsule_write_video_frame(timestamp, (char*) buffer, data.cy * data.pitch);
 			}
 			break;
@@ -416,6 +403,8 @@ void gl_shmem_capture () {
   GLint last_fbo;
   GLint last_tex;
 
+  auto timestamp = capsule_frame_timestamp();
+
   // save last fbo & texture to restore them after capture
   {
     _glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &last_fbo);
@@ -434,6 +423,7 @@ void gl_shmem_capture () {
 
   next_tex = (data.cur_tex + 1) % NUM_BUFFERS;
 
+  data.timestamps[next_tex] = timestamp;
   gl_copy_backbuffer(data.textures[next_tex]);
 
   if (data.copy_wait < NUM_BUFFERS - 1) {

@@ -364,6 +364,7 @@ void encoder_run(encoder_params_t *params) {
   int last_frame = 0;
   float factor = 1.0;
   int64_t timestamp = 0;
+  int64_t first_timestamp = -1;
   int64_t last_timestamp = 0;
   const int FPS_SAMPLE_SIZE = 30;
   float fps_samples[FPS_SAMPLE_SIZE];
@@ -392,6 +393,11 @@ void encoder_run(encoder_params_t *params) {
       MICROPROFILE_SCOPE(EncoderReceiveVideoFrame);
       read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
     }
+    if (first_timestamp < 0) {
+      first_timestamp = timestamp;
+    }
+    timestamp -= first_timestamp;
+
     cdprintf(">> video timestamp                 = %d, approx %.4f seconds", (int) timestamp, ((double) timestamp) / 1000000.0);
     total_read += read;
 

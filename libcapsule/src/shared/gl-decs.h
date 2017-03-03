@@ -161,13 +161,6 @@ typedef void(CAPSULE_STDCALL *glDeleteFramebuffers_t)(GLsizei n,
                                                       GLuint *framebuffers);
 static glDeleteFramebuffers_t _glDeleteFramebuffers;
 
-// deprecated
-
-typedef void(CAPSULE_STDCALL *glReadPixels_t)(GLint x, GLint y, GLsizei width,
-                                              GLsizei height, GLenum format,
-                                              GLenum type, GLvoid *data);
-static glReadPixels_t _glReadPixels;
-
 // platform-specific
 
 typedef void* (*terryglGetProcAddress_t)(const char*);
