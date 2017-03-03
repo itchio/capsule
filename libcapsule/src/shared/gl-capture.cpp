@@ -316,7 +316,7 @@ void CAPSULE_STDCALL gl_capture (int width, int height) {
   /* reset error flag */
 	_glGetError();
 
-  _glReadPixels(0, 0, width, height, GL_BGRA, GL_UNSIGNED_BYTE, data.frame_data);
+  _glReadPixels(0, 0, data.cx, data.cy, GL_BGRA, GL_UNSIGNED_BYTE, data.frame_data);
 	if (gl_error("gl_capture", "failed to read pixels")) {
 		return;
 	}
@@ -324,7 +324,7 @@ void CAPSULE_STDCALL gl_capture (int width, int height) {
   const size_t components = 4;  
   const size_t pitch = data.cx * components;
   if (first_frame) {
-    capsule_write_video_format(width, height, CAPSULE_PIX_FMT_BGRA, 1 /* vflip */, pitch);
+    capsule_write_video_format(data.cx, data.cy, CAPSULE_PIX_FMT_BGRA, 1 /* vflip */, pitch);
     first_frame = false;
   }
   capsule_write_video_frame(timestamp, data.frame_data, data.cy * pitch);
