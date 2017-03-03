@@ -127,6 +127,7 @@ calls to them so that it may capture video and audio frames.
       * [x] Hooks device creation
       * [x] Hooks all three present flavors
       * [x] Retrieves & sends backbuffer
+      * [ ] Async GPU download
     * [ ] Direct3D 10 capture
     * [x] Direct3D 11 capture
       * [x] Hooks DXGI factory creation
@@ -134,6 +135,7 @@ calls to them so that it may capture video and audio frames.
       * [x] Hooks CreateSwapChainForHwnd
       * [x] Hooks present
       * [x] Retrieves & sends backbuffer
+      * [x] Async GPU download
     * [ ] Direct3D 12 capture
     * [ ] Vulkan capture
   * CoreAudio capture

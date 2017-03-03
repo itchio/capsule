@@ -33,12 +33,16 @@ struct d3d11_data {
 
   ID3D11Buffer                   *vertex_buffer;
 
-  ID3D11Texture2D           *copy_surfaces[NUM_BUFFERS]; // staging, CPU_READ_ACCESS
-  ID3D11Texture2D           *textures[NUM_BUFFERS]; // default (in-GPU), useful to resolve multisampled backbuffers
-  ID3D11RenderTargetView    *render_targets[NUM_BUFFERS];
-  int                       cur_tex;
+  ID3D11Texture2D                *copy_surfaces[NUM_BUFFERS]; // staging, CPU_READ_ACCESS
+  ID3D11Texture2D                *textures[NUM_BUFFERS]; // default (in-GPU), useful to resolve multisampled backbuffers
+  ID3D11RenderTargetView         *render_targets[NUM_BUFFERS];
+  bool                           texture_ready[NUM_BUFFERS];
+  bool                           texture_mapped[NUM_BUFFERS];
+  int64_t                        timestamps[NUM_BUFFERS];
+  int                            cur_tex;
+  int                            copy_wait;
 
-  uint32_t                  pitch; // linesize, may not be (width * components) because of alignemnt
+  uint32_t                       pitch; // linesize, may not be (width * components) because of alignemnt
 };
 
 static struct d3d11_data data = {};
@@ -606,43 +610,74 @@ static void d3d11_setup_pipeline(ID3D11RenderTargetView *target, ID3D11ShaderRes
   data.context->VSSetShader(data.vertex_shader, nullptr, 0);
 }
 
+static inline void d3d11_scale_texture(ID3D11RenderTargetView *target,
+		ID3D11ShaderResourceView *resource) {
+	static struct d3d11_state old_state = {0};
+
+	d3d11_save_state(&old_state);
+	d3d11_setup_pipeline(target, resource);
+	data.context->Draw(4, 0);
+	d3d11_restore_state(&old_state);
+}
+
+static inline void d3d11_shmem_queue_copy() {
+	for (size_t i = 0; i < NUM_BUFFERS; i++) {
+		D3D11_MAPPED_SUBRESOURCE map;
+		HRESULT hr;
+
+		if (data.texture_ready[i]) {
+			data.texture_ready[i] = false;
+
+			hr = data.context->Map(data.copy_surfaces[i], 0,
+					D3D11_MAP_READ, 0, &map);
+			if (SUCCEEDED(hr)) {
+				data.texture_mapped[i] = true;
+        auto timestamp = data.timestamps[i];
+        capsule_write_video_frame(timestamp, (char *) map.pData, data.cy * data.pitch);
+			}
+			break;
+		}
+	}
+}
 
 static inline void d3d11_shmem_capture (ID3D11Resource* backbuffer) {
-  // TODO: buffering
-  HRESULT hr;
+  int next_tex;
 
-  auto timestamp = capsule_frame_timestamp();
+  d3d11_shmem_queue_copy();
 
+  next_tex = (data.cur_tex + 1) % NUM_BUFFERS;
+
+  data.timestamps[data.cur_tex] = capsule_frame_timestamp();
+
+  // always using scale
   d3d11_copy_texture(data.scale_tex, backbuffer);
+  d3d11_scale_texture(data.render_targets[data.cur_tex], data.scale_resource);
 
-  static struct d3d11_state old_state = { 0 };
-
-  d3d11_save_state(&old_state);
-  d3d11_setup_pipeline(data.render_targets[data.cur_tex], data.scale_resource);
-  data.context->Draw(4, 0);
-  d3d11_restore_state(&old_state);
-
-  data.context->CopyResource(data.copy_surfaces[data.cur_tex], data.textures[data.cur_tex]);
-  // d3d11_copy_texture(data.copy_surfaces[data.cur_tex], data.textures[data.cur_tex]);
-
-  D3D11_MAPPED_SUBRESOURCE map = {};
-  hr = data.context->Map(data.copy_surfaces[data.cur_tex], 0, D3D11_MAP_READ, 0, &map);
-  if (SUCCEEDED(hr)) {
-    char *frame_data = (char *) map.pData;
-    int frame_data_size = (data.cy / data.size_divider) * data.pitch;
-    capsule_write_video_frame(timestamp, frame_data, frame_data_size);
-    data.context->Unmap(data.copy_surfaces[data.cur_tex], 0);
+  if (data.copy_wait < NUM_BUFFERS - 1) {
+    data.copy_wait++;
   } else {
-    capsule_log("d3d11_shmem_capture: could not map staging surface");
+    ID3D11Texture2D *src = data.textures[next_tex];
+    ID3D11Texture2D *dst = data.copy_surfaces[next_tex];
+
+    // obs has locking here, we don't
+    data.context->Unmap(dst, 0);
+    data.texture_mapped[next_tex] = false;
+
+    d3d11_copy_texture(dst, src);
+    // data.context->CopyResource(data.copy_surfaces[data.cur_tex], data.textures[data.cur_tex]);
+    data.texture_ready[next_tex] = true;
   }
+
+  data.cur_tex = next_tex;
 }
 
 void d3d11_capture(void *swap_ptr, void *backbuffer_ptr) {
   static bool first_frame = true;
 
   if (!capsule_capture_ready()) {
-    if (!capsule_capture_active()) {
+    if (!capsule_capture_active() && !first_frame) {
       first_frame = true;
+      d3d11_free();
     }
 
     return;
@@ -681,6 +716,34 @@ void d3d11_capture(void *swap_ptr, void *backbuffer_ptr) {
   backbuffer->Release();
 }
 
+#define SAFE_RELEASE(x) if ((x)) { (x)->Release(); }
+
 void d3d11_free() {
-  capsule_log("d3d11_free: stub");
+  SAFE_RELEASE(data.scale_tex);
+  SAFE_RELEASE(data.scale_resource);
+  SAFE_RELEASE(data.vertex_shader);
+  SAFE_RELEASE(data.vertex_layout);
+  SAFE_RELEASE(data.pixel_shader);
+  SAFE_RELEASE(data.sampler_state);
+  SAFE_RELEASE(data.blend_state);
+  SAFE_RELEASE(data.zstencil_state);
+  SAFE_RELEASE(data.raster_state);
+  SAFE_RELEASE(data.vertex_buffer);
+
+  for (size_t i = 0; i < NUM_BUFFERS; i++) {
+    if (data.copy_surfaces[i]) {
+      if (data.texture_mapped[i])
+        data.context->Unmap(
+            data.copy_surfaces[i],
+            0);
+      data.copy_surfaces[i]->Release();
+    }
+
+    SAFE_RELEASE(data.textures[i]);
+    SAFE_RELEASE(data.render_targets[i]);
+  }
+
+  memset(&data, 0, sizeof(data));
+
+  capsule_log("----------------- d3d11 capture freed ----------------");
 }
