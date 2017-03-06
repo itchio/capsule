@@ -134,7 +134,7 @@ void MainLoop::start_session (const VideoSetup *vs) {
 
   auto video = new VideoReceiver(conn, vfmt, shm);
   AudioReceiver *audio = nullptr;
-  if (audio_receiver_factory) {
+  if (audio_receiver_factory && !args->no_audio) {
     audio = audio_receiver_factory();
   }
 

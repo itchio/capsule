@@ -47,7 +47,8 @@ int main (int argc, char **argv) {
   struct capsule_args_s args;
   memset(&args, 0, sizeof(args));
   args.dir = ".";
-  args.yuv444 = 0;
+  args.pix_fmt = "yuv420p";
+  args.crf = -1;
 
   struct argparse_option options[] = {
     OPT_HELP(),
@@ -56,7 +57,10 @@ int main (int argc, char **argv) {
     OPT_GROUP("Basic options"),
     OPT_STRING('d', "dir", &args.dir, "where to output .mp4 videos (defaults to current directory)"),
     OPT_GROUP("Video options"),
-    OPT_BOOLEAN(0, "yuv444", &args.yuv444, "use yuv444 colorspace ?"),
+    OPT_STRING(0, "pix_fmt", &args.pix_fmt, "pixel format: yuv420p (default, compatible), or yuv444p"),
+    OPT_INTEGER(0, "crf", &args.crf, "output quality. sane values range from 18 (~visually lossless) to 28 (fast but looks bad)"),
+    OPT_GROUP("Audio options"),
+    OPT_BOOLEAN(0, "no-audio", &args.no_audio, "don't record audio'"),
     OPT_END(),
   };
   struct argparse argparse;

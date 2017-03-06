@@ -35,7 +35,7 @@ MICROPROFILE_DEFINE(EncoderSendAudioFrames, "Encoder", "AEncode", MP_AZURE4);
 MICROPROFILE_DEFINE(EncoderRecvAudioPkt, "Encoder", "AMux1", MP_BURLYWOOD4);
 MICROPROFILE_DEFINE(EncoderWriteAudioPkt, "Encoder", "AMux2", MP_BROWN4);
 
-void encoder_run(encoder_params_t *params) {
+void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   MicroProfileOnThreadCreate("encoder");
   MICROPROFILE_SCOPE(EncoderMain);
 
@@ -154,10 +154,16 @@ void encoder_run(encoder_params_t *params) {
 
   vc->codec_id = vcodec_id;
   vc->codec_type = AVMEDIA_TYPE_VIDEO;
-  if (params->use_yuv444) {
-    vc->pix_fmt = AV_PIX_FMT_YUV444P;
-  } else {
-    vc->pix_fmt = AV_PIX_FMT_YUV420P;
+  vc->pix_fmt = AV_PIX_FMT_YUV420P;
+
+  if (args->pix_fmt) {
+    if (0 == strcmp(args->pix_fmt, "yuv420p")) {
+      vc->pix_fmt = AV_PIX_FMT_YUV420P;
+    } else if (0 == strcmp(args->pix_fmt, "yuv444p")) {
+      vc->pix_fmt = AV_PIX_FMT_YUV444P;
+    } else {
+      capsule_log("Unknown pix_fmt specified: %s - using default", args->pix_fmt)
+    }
   }
 
   // resolution must be a multiple of two
@@ -172,21 +178,34 @@ void encoder_run(encoder_params_t *params) {
   vc->rc_buffer_size = 0;
 
   // H264
-  vc->qmin = 20;
-  vc->qmax = 20;
+  int crf = 20;
+  if (args->crf != -1) {
+    if (args->crf >= 0 && args->crf <= 51) {
+      if (args->crf < 18 || args->crf > 28) {
+        capsule_log("Warning: sane crf values lie within 18-28, using crf %d at your own risks", args->crf)
+      }
+      crf = args->crf;
+    } else {
+      capsule_log("Invalid crf value %d (must be in the 0-51 range), ignoring")
+    }
+  }
+
+  vc->qmin = crf;
+  vc->qmax = crf;
 
   // multithreading
   // vc->thread_count = 4;
 
   vc->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
-  vc->profile = FF_PROFILE_H264_BASELINE;
+  if (vc->pix_fmt == AV_PIX_FMT_YUV444P) {
+    capsule_log("Warning: can't use baseline because yuv444p colorspace selected. Encoding will take more CPU.")
+  } else {
+    vc->profile = FF_PROFILE_H264_BASELINE;
+  }
 
   // see also "placebo" and "ultrafast" presets
-  // av_opt_set(vc->priv_data, "preset", "veryfast", AV_OPT_SEARCH_CHILDREN);
   av_opt_set(vc->priv_data, "preset", "ultrafast", AV_OPT_SEARCH_CHILDREN);
-
-  // av_opt_set(vc->priv_data, "tune", "zerolatency", AV_OPT_SEARCH_CHILDREN);
 
   ret = avcodec_open2(vc, vcodec, NULL);
   if (ret < 0) {
