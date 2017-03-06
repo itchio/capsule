@@ -16,12 +16,7 @@ struct FrameInfo {
 
 class VideoReceiver {
   public:
-    VideoReceiver(Connection *conn, video_format_t vfmt, ShmemRead *shm) :
-      conn(conn),
-      vfmt(vfmt),
-      shm(shm),
-      stopped(false)
-      {};
+    VideoReceiver(Connection *conn, video_format_t vfmt, ShmemRead *shm);
     ~VideoReceiver();
     void frame_committed(int index, int64_t timestamp);
     int receive_format(video_format_t *vfmt);
@@ -29,13 +24,22 @@ class VideoReceiver {
     void stop();
 
   private:
-    char *mapped;
-    LockingQueue<FrameInfo> queue;
-
     Connection *conn;
     video_format_t vfmt;
     ShmemRead *shm;
 
+    char *mapped;
+    LockingQueue<FrameInfo> queue;
+
+    int num_frames;
+    size_t frame_size;
+    int commit_index;
+    char *buffer;
+    int *buffer_state;
+    std::mutex buffer_mutex;
+
     bool stopped;
     std::mutex stopped_mutex;
+
+    bool overrun = false;
 };
