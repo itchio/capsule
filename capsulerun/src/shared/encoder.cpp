@@ -14,6 +14,8 @@ extern "C" {
     #include <libswresample/swresample.h>
 }
 
+#include "./FPSCounter.h"
+
 #include <chrono>
 
 #include <microprofile.h>
@@ -98,8 +100,6 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   struct SwsContext *sws;
   struct SwrContext *swr;
 
-  double video_time;
-
   const char *output_path = "capsule.mp4";
 
   fmt = av_guess_format("mp4", NULL, NULL);
@@ -167,8 +167,8 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   }
 
   // resolution must be a multiple of two
-  vc->width = width;
-  vc->height = height;
+  vc->width = (int) width;
+  vc->height = (int) height;
   // frames per second - pts is in microseconds
   video_st->time_base = AVRational{1,1000000};
   vc->time_base = video_st->time_base;
@@ -373,7 +373,6 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     exit(1);
   }
 
-  size_t total_read = 0;
   size_t last_print_read = 0;
 
   vframe->pts = 0;
@@ -385,12 +384,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   int64_t timestamp = 0;
   int64_t first_timestamp = -1;
   int64_t last_timestamp = 0;
-  const int FPS_SAMPLE_SIZE = 30;
-  float fps_samples[FPS_SAMPLE_SIZE];
-  for (int i = 0; i < FPS_SAMPLE_SIZE; i++) {
-    fps_samples[i] = 0.0f;
-  }
-  int current_fps_sample = 0;
+  FPSCounter fps_counter;
 
   int samples_received = 0;
   int samples_used = 0;
@@ -417,25 +411,12 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     }
     timestamp -= first_timestamp;
 
-    cdprintf(">> video timestamp                 = %d, approx %.4f seconds", (int) timestamp, ((double) timestamp) / 1000000.0);
-    total_read += read;
-
-    int delta = (timestamp - last_timestamp);
+    auto delta = timestamp - last_timestamp;
     last_timestamp = timestamp;
-    if (delta == 0) {
-      delta = 16666;
+    if (fps_counter.tick_delta(delta)) {
+      fprintf(stderr, "FPS: %.2f\n", fps_counter.fps());
+      fflush(stderr);
     }
-    float fps = 1000000.0f / (float) delta;
-    fps_samples[current_fps_sample] = fps;
-    current_fps_sample = (current_fps_sample + 1) % FPS_SAMPLE_SIZE;
-    float mean_fps = 0.0f;
-    for (int i = 0; i < FPS_SAMPLE_SIZE; i++) {
-      mean_fps += fps_samples[i];
-    }
-    mean_fps /= (float) FPS_SAMPLE_SIZE;
-
-    fprintf(stderr, "FPS: %.2f\n", mean_fps);
-    fflush(stderr);
 
     if (read < buffer_size) {
       last_frame = true;

@@ -23,6 +23,7 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/shared/Session.cpp
   ${capsulerun_SOURCE_DIR}/shared/ShmemRead.cpp
   ${capsulerun_SOURCE_DIR}/shared/Connection.cpp
+  ${capsulerun_SOURCE_DIR}/shared/FPSCounter.cpp
   ${microprofile_SOURCE_DIR}/microprofile.cpp
 )
 
