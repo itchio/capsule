@@ -44,9 +44,10 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   int ret;
 
   av_register_all();
-#ifdef CAPSULERUN_PROFILE
-  av_log_set_level(AV_LOG_DEBUG);
-#endif
+
+  if (args->debug_av) {
+    av_log_set_level(AV_LOG_DEBUG);
+  }
 
   // receive video format info
   video_format_t vfmt_in;
@@ -55,20 +56,19 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     printf("could not receive video format");
     exit(1);
   }
-  int64_t width = vfmt_in.width;
-  int64_t height = vfmt_in.height;
-
+  int width = (int) vfmt_in.width;
+  int height = (int) vfmt_in.height;
   int components = 4;
   int linesize = vfmt_in.pitch;
 
-  printf("video resolution: %dx%d, format %d, vflip %d, pitch %d (%d computed)\n",
-    (int) width, (int) height, (int) vfmt_in.format, (int) vfmt_in.vflip,
+  capsule_log("video resolution: %dx%d, format %d, vflip %d, pitch %d (%d computed)",
+    width, height, (int) vfmt_in.format, (int) vfmt_in.vflip,
     (int) linesize, (int) (width * components));
 
   const int buffer_size = height * linesize;
   uint8_t *buffer = (uint8_t*) malloc(buffer_size);
   if (!buffer) {
-    printf("could not allocate buffer\n");
+    capsule_log("could not allocate buffer");
     exit(1);
   }
 
@@ -77,11 +77,11 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   if (params->has_audio) {
     ret = params->receive_audio_format(params->private_data, &afmt_in);
     if (ret != 0) {
-      printf("could not receive audio format");
+      capsule_log("could not receive audio format");
       exit(1);
     }
 
-    printf("audio format: %d channels, %d samplerate, %d samplewidth\n",
+    capsule_log("audio format: %d channels, %d samplerate, %d samplewidth",
       afmt_in.channels, afmt_in.samplerate, afmt_in.samplewidth);
   }
 
@@ -107,7 +107,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   // allocate output media context
   avformat_alloc_output_context2(&oc, fmt, NULL, NULL);
   if (!oc) {
-      printf("could not allocate output context\n");
+      capsule_log("could not allocate output context");
       exit(1);
   }
   oc->oformat = fmt;
@@ -115,14 +115,14 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   /* open the output file, if needed */
   ret = avio_open(&oc->pb, output_path, AVIO_FLAG_WRITE);
   if (ret < 0) {
-      fprintf(stderr, "Could not open '%s'\n", output_path);
+      capsule_log("Could not open '%s'", output_path);
       exit(1);
   }
 
   // video stream
   video_st = avformat_new_stream(oc, NULL);
   if (!video_st) {
-      printf("could not allocate video stream\n");
+      capsule_log("could not allocate video stream");
       exit(1);
   }
   video_st->id = oc->nb_streams - 1;
@@ -131,7 +131,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   if (params->has_audio) {
     audio_st = avformat_new_stream(oc, NULL);
     if (!audio_st) {
-        printf("could not allocate audio stream\n");
+        capsule_log("could not allocate audio stream");
         exit(1);
     }
     audio_st->id = oc->nb_streams - 1;
@@ -140,15 +140,15 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   // video codec
   vcodec = avcodec_find_encoder(vcodec_id);
   if (!vcodec) {
-    printf("could not find video codec\n");
+    capsule_log("could not find video codec");
     exit(1);
   }
 
-  printf("found video codec\n");
+  capsule_log("found video codec");
 
   vc = avcodec_alloc_context3(vcodec);
   if (!vc) {
-      printf("could not allocate video codec context\n");
+      capsule_log("could not allocate video codec context");
       exit(1);
   }
 
@@ -162,19 +162,48 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     } else if (0 == strcmp(args->pix_fmt, "yuv444p")) {
       vc->pix_fmt = AV_PIX_FMT_YUV444P;
     } else {
-      capsule_log("Unknown pix_fmt specified: %s - using default", args->pix_fmt)
+      capsule_log("Unknown pix_fmt specified: %s - using default", args->pix_fmt);
     }
   }
 
+  int divider = 1;
+  if (args->divider != 0) {
+    if (args->divider == 2 || args->divider == 4) {
+      divider = args->divider;
+    } else {
+      capsule_log("Invalid size divider %d: must be 2 or 4. Ignoring...", args->divider);
+    }
+  }
+
+  int out_width = width / divider;
+  int out_height = height / divider;
+
   // resolution must be a multiple of two
-  vc->width = (int) width;
-  vc->height = (int) height;
+  if (out_width % 2 != 0) {
+    out_width++;
+  }
+  if (out_height % 2 != 0) {
+    out_height++;
+  }
+
+  capsule_log("output resolution: %dx%d", out_width, out_height);
+
+  vc->width = out_width;
+  vc->height = out_height;
   // frames per second - pts is in microseconds
   video_st->time_base = AVRational{1,1000000};
   vc->time_base = video_st->time_base;
 
   vc->gop_size = 120;
+  if (args->gop_size) {
+    vc->gop_size = args->gop_size;
+  }
+
   vc->max_b_frames = 16;
+  if (args->max_b_frames) {
+    vc->max_b_frames = args->max_b_frames;
+  }
+
   vc->rc_buffer_size = 0;
 
   // H264
@@ -186,7 +215,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
       }
       crf = args->crf;
     } else {
-      capsule_log("Invalid crf value %d (must be in the 0-51 range), ignoring")
+      capsule_log("Invalid crf value %d (must be in the 0-51 range), ignoring", args->crf)
     }
   }
 
@@ -194,7 +223,19 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   vc->qmax = crf;
 
   // multithreading
-  // vc->thread_count = 4;
+  vc->thread_count = 1;
+  if (args->threads) {
+    if (args->threads > 0 && args->threads <= 32) {
+      vc->thread_count = args->threads;
+    } else {
+      capsule_log("Invalid threads parameter %d, ignoring", args->threads)
+    }
+  }
+
+  if (vc->thread_count > 1) {
+    capsule_log("Activating frame-level threading with %d threads", vc->thread_count);
+    vc->thread_type = FF_THREAD_FRAME;
+  }
 
   vc->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
@@ -209,13 +250,13 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
 
   ret = avcodec_open2(vc, vcodec, NULL);
   if (ret < 0) {
-    printf("could not open video codec\n");
+    capsule_log("could not open video codec");
     exit(1);
   }
 
   ret = avcodec_parameters_from_context(video_st->codecpar, vc);
   if (ret < 0) {
-    printf("could not copy video codec parameters\n");
+    capsule_log("could not copy video codec parameters");
     exit(1);
   }
 
@@ -223,15 +264,15 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   if (params->has_audio) {
     acodec = avcodec_find_encoder(acodec_id);
     if (!acodec) {
-      printf("could not find audio codec\n");
+      capsule_log("could not find audio codec");
       exit(1);
     }
 
-    printf("found audio codec\n");
+    capsule_log("found audio codec");
 
     ac = avcodec_alloc_context3(acodec);
     if (!ac) {
-        printf("could not allocate audio codec context\n");
+        capsule_log("could not allocate audio codec context");
         exit(1);
     }
 
@@ -246,13 +287,13 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
 
     ret = avcodec_open2(ac, acodec, NULL);
     if (ret < 0) {
-      printf("could not open audio codec\n");
+      capsule_log("could not open audio codec");
       exit(1);
     }
 
     ret = avcodec_parameters_from_context(audio_st->codecpar, ac);
     if (ret < 0) {
-      printf("could not copy audio codec parameters\n");
+      capsule_log("could not copy audio codec parameters");
       exit(1);
     }
   }
@@ -260,7 +301,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   // video frame
   vframe = av_frame_alloc();
   if (!vframe) {
-    printf("could not allocate video frame\n");
+    capsule_log("could not allocate video frame");
     exit(1);
   }
   vframe->format = vc->pix_fmt;
@@ -305,7 +346,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   // initialize swscale context
   sws = sws_getContext(
     // input
-    vframe->width, vframe->height, vpix_fmt,
+    width, height, vpix_fmt,
     // output
     vframe->width, vframe->height, vc->pix_fmt,
     // ???
@@ -423,7 +464,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     } else {
       {
         MICROPROFILE_SCOPE(EncoderScale);
-        sws_scale(sws, sws_in, sws_linesize, 0, vc->height, vframe->data, vframe->linesize);
+        sws_scale(sws, sws_in, sws_linesize, 0, height, vframe->data, vframe->linesize);
       }
 
       vnext_pts = timestamp;

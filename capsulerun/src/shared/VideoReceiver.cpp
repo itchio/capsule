@@ -20,15 +20,16 @@ MICROPROFILE_DEFINE(VideoReceiverWait, "VideoReceiver", "VWait", MP_CHOCOLATE3);
 MICROPROFILE_DEFINE(VideoReceiverCopy1, "VideoReceiver", "VCopy1", MP_CORNSILK3);
 MICROPROFILE_DEFINE(VideoReceiverCopy2, "VideoReceiver", "VCopy2", MP_PINK3);
 
-VideoReceiver::VideoReceiver (Connection *conn_in, video_format_t vfmt_in, ShmemRead *shm_in) {
-  capsule_log("Initializing videoreceiver");
+VideoReceiver::VideoReceiver (Connection *conn_in, video_format_t vfmt_in, ShmemRead *shm_in, int num_frames_in) {
+  capsule_log("Initializing VideoReceiver, buffered frames = %d", num_frames_in);
   conn = conn_in;
   vfmt = vfmt_in;
   shm = shm_in;
   stopped = false;
 
-  num_frames = 60;
+  num_frames = num_frames_in;
   frame_size = vfmt.pitch * vfmt.height;
+  capsule_log("VideoReceiver: total buffer size in RAM: %.2f MB", (float) (frame_size * num_frames) / 1024.0f / 1024.0f);
   buffer = (char *) calloc(num_frames, frame_size);
 
   buffer_state = (int *) calloc(num_frames, sizeof(int));
@@ -98,7 +99,8 @@ int VideoReceiver::receive_frame(uint8_t *buffer_out, size_t buffer_size_out, in
           committed_frames++;
         }
       }
-      fprintf(stderr, "buffer fill: %d/%d", committed_frames, num_frames);
+      fprintf(stderr, "buffer fill: %d/%d, skipped %d\n", committed_frames, num_frames, overrun);
+      fflush(stderr);
     }
     /////////////////////////////////
     // </poor man's profiling>
@@ -117,6 +119,8 @@ void VideoReceiver::frame_committed(int index, int64_t timestamp) {
     }
   }
 
+  int commit = 0;
+
   {
     lock_guard<mutex> lock(buffer_mutex);
 
@@ -124,11 +128,11 @@ void VideoReceiver::frame_committed(int index, int64_t timestamp) {
       // no room, just skip it
       overrun++;
     } else {
-      if (overrun > 0) {
-        fprintf(stderr, "VideoReceiver: skipped %d frames because of buffer overrun", overrun);
-      }
-      overrun = 0;
+      commit = 1;
+    }
+  }
 
+  if (commit) {
       // got room, copy it
       char *src = shm->mapped + (frame_size * index);
       char *dst = buffer + (frame_size * commit_index);
@@ -140,9 +144,12 @@ void VideoReceiver::frame_committed(int index, int64_t timestamp) {
       FrameInfo info {commit_index, timestamp};
       queue.push(info);
 
-      buffer_state[commit_index] = VIDEO_FRAME_COMMITTED;
-      commit_index = (commit_index + 1) % num_frames;
-    }
+      {
+        lock_guard<mutex> lock(buffer_mutex);
+
+        buffer_state[commit_index] = VIDEO_FRAME_COMMITTED;
+        commit_index = (commit_index + 1) % num_frames;
+      }
   }
 
   // in both cases, free up that index for the sender

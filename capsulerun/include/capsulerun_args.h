@@ -14,4 +14,10 @@ typedef struct capsule_args_s {
   char *pix_fmt;
   int crf;
   int no_audio;
+  int divider;
+  int threads;
+  int debug_av;
+  int gop_size;
+  int max_b_frames;
+  int buffered_frames;
 } capsule_args_t;

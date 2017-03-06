@@ -132,7 +132,12 @@ void MainLoop::start_session (const VideoSetup *vs) {
     vs->shmem()->size()
   );
 
-  auto video = new VideoReceiver(conn, vfmt, shm);
+  int num_buffered_frames = 60;
+  if (args->buffered_frames) {
+    num_buffered_frames = args->buffered_frames;
+  }
+
+  auto video = new VideoReceiver(conn, vfmt, shm, num_buffered_frames);
   AudioReceiver *audio = nullptr;
   if (audio_receiver_factory && !args->no_audio) {
     audio = audio_receiver_factory();

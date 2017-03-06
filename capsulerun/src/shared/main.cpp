@@ -57,10 +57,17 @@ int main (int argc, char **argv) {
     OPT_GROUP("Basic options"),
     OPT_STRING('d', "dir", &args.dir, "where to output .mp4 videos (defaults to current directory)"),
     OPT_GROUP("Video options"),
-    OPT_STRING(0, "pix_fmt", &args.pix_fmt, "pixel format: yuv420p (default, compatible), or yuv444p"),
     OPT_INTEGER(0, "crf", &args.crf, "output quality. sane values range from 18 (~visually lossless) to 28 (fast but looks bad)"),
+    OPT_INTEGER(0, "divider", &args.divider, "size divider: default 1, accepted values 2 or 4"),
     OPT_GROUP("Audio options"),
     OPT_BOOLEAN(0, "no-audio", &args.no_audio, "don't record audio'"),
+    OPT_GROUP("Advanced options"),
+    OPT_STRING(0, "pix_fmt", &args.pix_fmt, "pixel format: yuv420p (default, compatible), or yuv444p"),
+    OPT_INTEGER(0, "threads", &args.threads, "number of threads used to encode video"),
+    OPT_BOOLEAN(0, "debug-av", &args.debug_av, "let video encoder be verbose"),
+    OPT_INTEGER(0, "gop-size", &args.gop_size, "default: 120"),
+    OPT_INTEGER(0, "max-b-frames", &args.max_b_frames, "default: 16"),
+    OPT_INTEGER(0, "buffered-frames", &args.buffered_frames, "default: 60"),
     OPT_END(),
   };
   struct argparse argparse;

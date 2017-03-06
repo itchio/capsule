@@ -16,7 +16,7 @@ struct FrameInfo {
 
 class VideoReceiver {
   public:
-    VideoReceiver(Connection *conn, video_format_t vfmt, ShmemRead *shm);
+    VideoReceiver(Connection *conn, video_format_t vfmt, ShmemRead *shm, int num_frames);
     ~VideoReceiver();
     void frame_committed(int index, int64_t timestamp);
     int receive_format(video_format_t *vfmt);
@@ -41,5 +41,5 @@ class VideoReceiver {
     bool stopped;
     std::mutex stopped_mutex;
 
-    bool overrun = false;
+    int overrun = 0;
 };
