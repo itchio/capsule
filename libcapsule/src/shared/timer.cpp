@@ -2,6 +2,7 @@
 #include <capsule.h>
 
 #include <chrono>
+#include <thread>
 #include <mutex>
 
 #define FPS 60
