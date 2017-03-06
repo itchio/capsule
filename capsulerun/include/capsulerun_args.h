@@ -20,4 +20,5 @@ typedef struct capsule_args_s {
   int gop_size;
   int max_b_frames;
   int buffered_frames;
+  char *priority;
 } capsule_args_t;

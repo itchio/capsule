@@ -5,6 +5,7 @@
 #include <mutex>
 
 #define FPS 60
+static int cur_fps = FPS;
 static auto frame_interval = std::chrono::microseconds(1000000 / FPS);
 
 static bool first_frame = true;
@@ -63,7 +64,10 @@ static inline bool capsule_frame_ready () {
   auto elapsed = t - last_ts;
 
   if (elapsed < interval) {
-    return false;
+    std::this_thread::sleep_for(interval - elapsed);
+    elapsed = interval;
+    t = std::chrono::steady_clock::now();
+    // return false;
   }
 
   // logic taken from libobs  

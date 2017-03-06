@@ -68,6 +68,7 @@ int main (int argc, char **argv) {
     OPT_INTEGER(0, "gop-size", &args.gop_size, "default: 120"),
     OPT_INTEGER(0, "max-b-frames", &args.max_b_frames, "default: 16"),
     OPT_INTEGER(0, "buffered-frames", &args.buffered_frames, "default: 60"),
+    OPT_STRING(0, "priority", &args.priority, "above-normal or high (windows only)"),
     OPT_END(),
   };
   struct argparse argparse;
@@ -111,6 +112,27 @@ int main (int argc, char **argv) {
 #endif // !CAPSULE_WINDOWS
 
   capsule_log("thanks for flying capsule on %s", CAPSULE_PLATFORM);
+
+  if (args.priority) {
+#if defined(CAPSULE_WINDOWS)
+    HANDLE hProcess = GetCurrentProcess();
+    HRESULT hr = 0;
+
+    if (0 == strcmp(args.priority, "above-normal")) {
+      hr = SetPriorityClass(hProcess, ABOVE_NORMAL_PRIORITY_CLASS);
+    } else if (0 == strcmp(args.priority, "high")) {
+      hr = SetPriorityClass(hProcess, HIGH_PRIORITY_CLASS);
+    } else {
+      capsule_log("Invalid priority parameter %s, expected above-normal or high", args.priority);
+    }
+
+    if (FAILED(hr)) {
+      capsule_log("Failed to set process priority")
+    }
+#else
+    capsule_log("priority parameter not yet supported");
+#endif
+  }
 
   {
     MICROPROFILE_SCOPE(MAIN);
