@@ -168,6 +168,8 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
 
   // FIXME: just testing
   vc->pix_fmt = AV_PIX_FMT_YUV444P;
+  vc->color_range = AVCOL_RANGE_JPEG;
+  vc->colorspace = AVCOL_SPC_SMPTE170M;
 
   int divider = 1;
   if (args->divider != 0) {

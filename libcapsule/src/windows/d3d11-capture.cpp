@@ -99,10 +99,10 @@ float rgbToY(float3 rgb) { \
   return 0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b; \
 } \
 float rgbToU(float3 rgb) { \
-  return -0.147 * rgb.r - 0.289 * rgb.g + 0.436 * rgb.b; \
+  return -0.169 * rgb.r - 0.331 * rgb.g + 0.499 * rgb.b + 0.5; \
 } \
 float rgbToV(float3 rgb) { \
-  return 0.612 * rgb.r - 0.515 * rgb.g - 0.100 * rgb.b; \
+  return 0.499 * rgb.r - 0.418 * rgb.g - 0.0813 * rgb.b + 0.5; \
 } \
 float4 main(VertData input) : SV_Target \
 { \
@@ -127,17 +127,17 @@ float4 main(VertData input) : SV_Target \
     return float4(0, 0, 0, 1); \
   } else if (x > x_v_plane) { \
     return float4( \
-      rgbToV(samples[0]) + 0.5, \
-      rgbToV(samples[1]) + 0.5, \
-      rgbToV(samples[2]) + 0.5, \
-      rgbToV(samples[3]) + 0.5 \
+      rgbToV(samples[0]), \
+      rgbToV(samples[1]), \
+      rgbToV(samples[2]), \
+      rgbToV(samples[3]) \
     ); \
   } else if (x > x_u_plane) { \
     return float4( \
-      rgbToU(samples[0]) + 0.5, \
-      rgbToU(samples[1]) + 0.5, \
-      rgbToU(samples[2]) + 0.5, \
-      rgbToU(samples[3]) + 0.5 \
+      rgbToU(samples[0]), \
+      rgbToU(samples[1]), \
+      rgbToU(samples[2]), \
+      rgbToU(samples[3]) \
     ); \
   } else { \
     return float4( \

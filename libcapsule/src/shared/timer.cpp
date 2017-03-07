@@ -65,10 +65,7 @@ static inline bool capsule_frame_ready () {
   auto elapsed = t - last_ts;
 
   if (elapsed < interval) {
-    std::this_thread::sleep_for(interval - elapsed);
-    elapsed = interval;
-    t = std::chrono::steady_clock::now();
-    // return false;
+    return false;
   }
 
   // logic taken from libobs  
