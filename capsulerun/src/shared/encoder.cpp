@@ -166,6 +166,9 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     }
   }
 
+  // FIXME: just testing
+  vc->pix_fmt = AV_PIX_FMT_YUV444P;
+
   int divider = 1;
   if (args->divider != 0) {
     if (args->divider == 2 || args->divider == 4) {
@@ -464,7 +467,13 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     } else {
       {
         MICROPROFILE_SCOPE(EncoderScale);
-        sws_scale(sws, sws_in, sws_linesize, 0, height, vframe->data, vframe->linesize);
+        vframe->data[0] = buffer;
+        vframe->data[1] = buffer + 1280;
+        vframe->data[2] = buffer + 1280 * 2;
+        vframe->linesize[0] = 1280 * 4;
+        vframe->linesize[1] = 1280 * 4;
+        vframe->linesize[2] = 1280 * 4;
+        // sws_scale(sws, sws_in, sws_linesize, 0, height, vframe->data, vframe->linesize);
       }
 
       vnext_pts = timestamp;
@@ -704,7 +713,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   }
 
   avcodec_close(vc);
-  av_freep(&vframe->data[0]);
+  // av_freep(&vframe->data[0]);
   av_frame_free(&vframe);
 
   if (params->has_audio) {

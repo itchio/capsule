@@ -127,17 +127,17 @@ float4 main(VertData input) : SV_Target \
     return float4(0, 0, 0, 1); \
   } else if (x > x_v_plane) { \
     return float4( \
-      rgbToV(samples[0]), \
-      rgbToV(samples[1]), \
-      rgbToV(samples[2]), \
-      rgbToV(samples[3]) \
+      rgbToV(samples[0]) + 0.5, \
+      rgbToV(samples[1]) + 0.5, \
+      rgbToV(samples[2]) + 0.5, \
+      rgbToV(samples[3]) + 0.5 \
     ); \
   } else if (x > x_u_plane) { \
     return float4( \
-      rgbToU(samples[0]), \
-      rgbToU(samples[1]), \
-      rgbToU(samples[2]), \
-      rgbToU(samples[3]) \
+      rgbToU(samples[0]) + 0.5, \
+      rgbToU(samples[1]) + 0.5, \
+      rgbToU(samples[2]) + 0.5, \
+      rgbToU(samples[3]) + 0.5 \
     ); \
   } else { \
     return float4( \
@@ -147,9 +147,6 @@ float4 main(VertData input) : SV_Target \
       rgbToY(samples[3]) \
     ); \
   } \
-  float3 rgb = diffuseTexture.Sample(textureSampler, input.texCoord); \
-  float y = rgbToY(rgb); \
-  return float4(y, y, y, 1.0); \
 }";
 
 /**
