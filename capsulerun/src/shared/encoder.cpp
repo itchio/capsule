@@ -168,8 +168,6 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
 
   // FIXME: just testing
   vc->pix_fmt = AV_PIX_FMT_YUV444P;
-  vc->color_range = AVCOL_RANGE_JPEG;
-  vc->colorspace = AVCOL_SPC_SMPTE170M;
 
   int divider = 1;
   if (args->divider != 0) {
@@ -250,7 +248,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     vc->profile = FF_PROFILE_H264_BASELINE;
   }
 
-  // see also "placebo" and "ultrafast" presets
+  // av_opt_set(vc->priv_data, "preset", "veryfast", AV_OPT_SEARCH_CHILDREN);
   av_opt_set(vc->priv_data, "preset", "ultrafast", AV_OPT_SEARCH_CHILDREN);
 
   ret = avcodec_open2(vc, vcodec, NULL);
@@ -470,11 +468,11 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
       {
         MICROPROFILE_SCOPE(EncoderScale);
         vframe->data[0] = buffer;
-        vframe->data[1] = buffer + 1280;
-        vframe->data[2] = buffer + 1280 * 2;
-        vframe->linesize[0] = 1280 * 4;
-        vframe->linesize[1] = 1280 * 4;
-        vframe->linesize[2] = 1280 * 4;
+        vframe->data[1] = buffer + width;
+        vframe->data[2] = buffer + width * 2;
+        vframe->linesize[0] = width * 4;
+        vframe->linesize[1] = width * 4;
+        vframe->linesize[2] = width * 4;
         // sws_scale(sws, sws_in, sws_linesize, 0, height, vframe->data, vframe->linesize);
       }
 
