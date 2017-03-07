@@ -96,7 +96,7 @@ struct VertData \
   float2 texCoord : TexCoord0; \
 }; \
 float rgbToY(float3 rgb) { \
-  return 0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b; \
+  return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) * (1 - 0.0625) + 0.0625; \
 } \
 float rgbToU(float3 rgb) { \
   return -0.169 * rgb.r - 0.331 * rgb.g + 0.499 * rgb.b + 0.5; \
@@ -106,7 +106,7 @@ float rgbToV(float3 rgb) { \
 } \
 float4 main(VertData input) : SV_Target \
 { \
-  float width = 1280.0; \
+  float width = 1280.0 / 2.0; \
   float width_i = 1.0 / width; \
   float x_u_plane = width / 4.0; \
   float x_v_plane = (width / 4.0) * 2.0; \
@@ -168,8 +168,8 @@ static bool d3d11_init_format(IDXGISwapChain *swap, HWND *window) {
   *window = desc.OutputWindow;
   data.cx = desc.BufferDesc.Width;
   data.cy = desc.BufferDesc.Height;
-  // data.size_divider = 2; // testing
-  data.size_divider = 1;
+  data.size_divider = 2; // testing
+  // data.size_divider = 1;
 
   capsule_log("Backbuffer: %ux%u (%s) format = %s",
     data.cx, data.cy,
@@ -702,7 +702,7 @@ static inline void d3d11_shmem_queue_copy() {
 			if (SUCCEEDED(hr)) {
 				data.texture_mapped[i] = true;
         auto timestamp = data.timestamps[i];
-        capsule_write_video_frame(timestamp, (char *) map.pData, data.cy * data.pitch);
+        capsule_write_video_frame(timestamp, (char *) map.pData, (data.cy / data.size_divider) * data.pitch);
 			}
 			break;
 		}
