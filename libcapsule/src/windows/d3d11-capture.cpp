@@ -64,7 +64,7 @@ VertData main(VertData input) \
   return output; \
 }";
 
-static const char pixel_shader_string[] =
+static const char pixel_shader_string_old[] =
 "uniform Texture2D diffuseTexture; \
 SamplerState textureSampler \
 { \
@@ -80,6 +80,29 @@ struct VertData \
 float4 main(VertData input) : SV_Target \
 { \
   return diffuseTexture.Sample(textureSampler, input.texCoord); \
+}";
+
+static const char pixel_shader_string[] =
+"uniform Texture2D diffuseTexture; \
+SamplerState textureSampler \
+{ \
+  AddressU = Clamp; \
+  AddressV = Clamp; \
+  Filter   = Linear; \
+}; \
+struct VertData \
+{ \
+  float4 pos      : SV_Position; \
+  float2 texCoord : TexCoord0; \
+}; \
+float rgbToY(float3 rgb) { \
+  return 0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b; \
+} \
+float4 main(VertData input) : SV_Target \
+{ \
+  float3 rgb = diffuseTexture.Sample(textureSampler, input.texCoord); \
+  float y = rgbToY(rgb);\
+  return float4(y, y, y, 1.0); \
 }";
 
 /**
@@ -664,7 +687,6 @@ static inline void d3d11_shmem_capture (ID3D11Resource* backbuffer) {
     data.texture_mapped[next_tex] = false;
 
     d3d11_copy_texture(dst, src);
-    // data.context->CopyResource(data.copy_surfaces[data.cur_tex], data.textures[data.cur_tex]);
     data.texture_ready[next_tex] = true;
   }
 
