@@ -166,17 +166,21 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     }
   }
 
-  // FIXME: just testing
-  vc->pix_fmt = AV_PIX_FMT_YUV444P;
-
-  int divider = 1;
-  if (args->divider != 0) {
-    if (args->divider == 2 || args->divider == 4) {
-      divider = args->divider;
-    } else {
-      capsule_log("Invalid size divider %d: must be 2 or 4. Ignoring...", args->divider);
-    }
+  bool do_swscale = 1;
+  if (vfmt_in.format == CAPSULE_PIX_FMT_YUV444P) {
+    capsule_log("GPU color conversion enabled, ignoring user output settings and picking yuv444p");
+    vc->pix_fmt = AV_PIX_FMT_YUV444P;
   }
+
+  // temporarily disabled codepath as we're going to try gpu scalign or nothing
+  int divider = 1;
+  // if (args->divider != 0) {
+  //   if (args->divider == 2 || args->divider == 4) {
+  //     divider = args->divider;
+  //   } else {
+  //     capsule_log("Invalid size divider %d: must be 2 or 4. Ignoring...", args->divider);
+  //   }
+  // }
 
   int out_width = width / divider;
   int out_height = height / divider;
@@ -322,6 +326,10 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     case CAPSULE_PIX_FMT_RGB10_A2:
       vpix_fmt = AV_PIX_FMT_RGBA;
       break;
+    case CAPSULE_PIX_FMT_YUV444P:
+      // no conversion actually required
+      vpix_fmt = AV_PIX_FMT_YUV444P;
+      break;
     default:
       printf("Unknown video format %d, bailing out\n", vfmt_in.format);
   }
@@ -346,46 +354,50 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     }
   }
 
-  // initialize swscale context
-  sws = sws_getContext(
-    // input
-    width, height, vpix_fmt,
-    // output
-    vframe->width, vframe->height, vc->pix_fmt,
-    // ???
-    0, 0, 0, 0
-  );
-
+  // TODO: just use vfmt specs instead of handling vflip here
   int sws_linesize[1];
   uint8_t *sws_in[1];
 
-  int vflip = vfmt_in.vflip;
+  if (do_swscale) {
+    // initialize swscale context
+    sws = sws_getContext(
+      // input
+      width, height, vpix_fmt,
+      // output
+      vframe->width, vframe->height, vc->pix_fmt,
+      // ???
+      0, 0, 0, 0
+    );
 
-  if (vflip) {
-    sws_in[0] = buffer + linesize*(height-1);
-    sws_linesize[0] = -linesize;
-  } else {
-    // specify negative stride to flip
-    sws_in[0] = buffer;
-    sws_linesize[0] = linesize;
-  }
+    int vflip = vfmt_in.vflip;
 
-  /* the image can be allocated by any means and av_image_alloc() is
-   * just the most convenient way if av_malloc() is to be used */
-  ret = av_image_alloc(
-      vframe->data,
-      vframe->linesize,
-      vc->width,
-      vc->height,
-      vc->pix_fmt,
-      32 /* alignment */
-  );
-  if (ret < 0) {
-    fprintf(stderr, "Could not allocate raw picture buffer\n");
-    exit(1);
+    if (vflip) {
+      sws_in[0] = buffer + linesize*(height-1);
+      sws_linesize[0] = -linesize;
+    } else {
+      // specify negative stride to flip
+      sws_in[0] = buffer;
+      sws_linesize[0] = linesize;
+    }
+
+    /* the image can be allocated by any means and av_image_alloc() is
+    * just the most convenient way if av_malloc() is to be used */
+    ret = av_image_alloc(
+        vframe->data,
+        vframe->linesize,
+        vc->width,
+        vc->height,
+        vc->pix_fmt,
+        32 /* alignment */
+    );
+    if (ret < 0) {
+      fprintf(stderr, "Could not allocate raw picture buffer\n");
+      exit(1);
+    }
   }
 
   // initialize swrescale context
+  // FIXME: we're actually never using that for now
   if (params->has_audio) {
     swr = swr_alloc();
     if (!swr) {
@@ -467,13 +479,18 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     } else {
       {
         MICROPROFILE_SCOPE(EncoderScale);
-        vframe->data[0] = buffer;
-        vframe->data[1] = buffer + width;
-        vframe->data[2] = buffer + width * 2;
-        vframe->linesize[0] = width * 4;
-        vframe->linesize[1] = width * 4;
-        vframe->linesize[2] = width * 4;
-        // sws_scale(sws, sws_in, sws_linesize, 0, height, vframe->data, vframe->linesize);
+        if (do_swscale) {
+          sws_scale(sws, sws_in, sws_linesize, 0, height, vframe->data, vframe->linesize);
+        } else {
+          // FIXME: use vfmt offsets & linesizes instead of computing them here
+          // this assumes a horizontal format, see https://twitter.com/fasterthanlime/status/839086194919161857
+          vframe->data[0] = buffer;
+          vframe->data[1] = buffer + width;
+          vframe->data[2] = buffer + width * 2;
+          vframe->linesize[0] = width * 4;
+          vframe->linesize[1] = width * 4;
+          vframe->linesize[2] = width * 4;
+        }
       }
 
       vnext_pts = timestamp;
@@ -713,7 +730,11 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   }
 
   avcodec_close(vc);
-  // av_freep(&vframe->data[0]);
+  if (do_swscale) {
+    av_freep(&vframe->data[0]);
+  } else {
+    // don't free, we're just messing with avframe buffers
+  }
   av_frame_free(&vframe);
 
   if (params->has_audio) {

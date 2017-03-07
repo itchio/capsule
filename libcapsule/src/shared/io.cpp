@@ -93,11 +93,11 @@ static void unlock_frame(int i) {
 }
 
 #if defined(CAPSULE_WINDOWS)
-static void capsule_capture_start () {
+static void capsule_capture_start (capture_data_settings *settings) {
     capsule_log("capsule_capture_start: enumerating our options");
     if (capdata.saw_dxgi || capdata.saw_d3d9 || capdata.saw_opengl) {
         // cool, these will initialize on next present/swapbuffers
-        if (capsule_capture_try_start()) {
+        if (capsule_capture_try_start(settings)) {
             capsule_log("capsule_capture_start: success! (dxgi/d3d9/opengl)");
         }
     } else {
@@ -108,7 +108,7 @@ static void capsule_capture_start () {
             return;
         }
 
-        if (capsule_capture_try_start()) {
+        if (capsule_capture_try_start(settings)) {
             capsule_log("capsule_capture_start: success! (dxgi/d3d9/opengl)");
         } else {
             capsule_log("capsule_capture_start: should tear down dc capture: stub");
@@ -116,10 +116,10 @@ static void capsule_capture_start () {
     }
 }
 #else // CAPSULE_WINDOWS
-static void capsule_capture_start () {
+static void capsule_capture_start (capture_data_settings *settings) {
     if (capdata.saw_opengl) {
         // cool, it'll initialize on next swapbuffers
-        if (capsule_capture_try_start()) {
+        if (capsule_capture_try_start(settings)) {
             capsule_log("capsule_capture_start: success! (opengl)");
         }
     } else {
@@ -145,8 +145,14 @@ static void poll_infile() {
         auto pkt = GetPacket(buf);
         switch (pkt->message_type()) {
             case Message_CaptureStart: {
+                auto cps = static_cast<const CaptureStart *>(pkt->message());
                 capsule_log("poll_infile: received CaptureStart");
-                capsule_capture_start();
+                struct capture_data_settings settings;
+                settings.fps = cps->fps();
+                settings.size_divider = cps->size_divider();
+                settings.gpu_color_conv = cps->gpu_color_conv();
+                capsule_log("poll_infile: capture settings: %d fps, %d divider, %d gpu_color_conv", settings.fps, settings.size_divider, settings.gpu_color_conv);
+                capsule_capture_start(&settings);
                 break;
             }
             case Message_CaptureStop: {
@@ -242,12 +248,25 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     shmem_builder.add_size(shmem_size);
     auto shmem = shmem_builder.Finish();
 
+    // TODO: support multiple linesizes (for planar formats)
+    uint32_t linesize[1];
+    linesize[0] = pitch;
+    auto linesize_vec = builder.CreateVector(linesize, 1);
+
+    // TODO: support multiple offsets (for planar formats)
+    uint32_t offset[1];
+    offset[0] = 0;
+    auto offset_vec = builder.CreateVector(offset, 1);
+
     VideoSetupBuilder vs_builder(builder);
     vs_builder.add_width(width);
     vs_builder.add_height(height);
     vs_builder.add_pix_fmt((PixFmt) format);
     vs_builder.add_vflip(vflip);
-    vs_builder.add_pitch(pitch);
+
+    vs_builder.add_offset(offset_vec);
+    vs_builder.add_linesize(linesize_vec);
+
     vs_builder.add_shmem(shmem);
     auto vs = vs_builder.Finish();
 

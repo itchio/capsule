@@ -6,6 +6,7 @@ enum PixFmt:int {
     RGBA        = 40069, // R8,  G8,  B8,  A8
     BGRA        = 40070, // B8,  G8,  R8,  A8
     RGB10_A2    = 40071, // R10, G10, B10, A2
+    YUV444P     = 60021, // planar Y4 U4 B4
 }
 
 union Message {
@@ -20,7 +21,11 @@ table Packet {
     message: Message;
 }
 
-table CaptureStart {}
+table CaptureStart {
+    fps: uint;
+    size_divider: uint;
+    gpu_color_conv: bool;
+}
 table CaptureStop {}
 
 table VideoSetup {
@@ -28,7 +33,8 @@ table VideoSetup {
     height: uint;
     pix_fmt: PixFmt;
     vflip: bool;
-    pitch: uint;
+    offset: [uint];
+    linesize: [uint];
     shmem: Shmem;
 }
 

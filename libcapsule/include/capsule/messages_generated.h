@@ -28,8 +28,9 @@ enum PixFmt {
   PixFmt_RGBA = 40069,
   PixFmt_BGRA = 40070,
   PixFmt_RGB10_A2 = 40071,
+  PixFmt_YUV444 = 60021,
   PixFmt_MIN = PixFmt_UNKNOWN,
-  PixFmt_MAX = PixFmt_RGB10_A2
+  PixFmt_MAX = PixFmt_YUV444
 };
 
 enum Message {
@@ -140,8 +141,25 @@ inline flatbuffers::Offset<Packet> CreatePacket(
 }
 
 struct CaptureStart FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  enum {
+    VT_FPS = 4,
+    VT_SIZE_DIVIDER = 6,
+    VT_GPU_COLOR_CONV = 8
+  };
+  uint32_t fps() const {
+    return GetField<uint32_t>(VT_FPS, 0);
+  }
+  uint32_t size_divider() const {
+    return GetField<uint32_t>(VT_SIZE_DIVIDER, 0);
+  }
+  bool gpu_color_conv() const {
+    return GetField<uint8_t>(VT_GPU_COLOR_CONV, 0) != 0;
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_FPS) &&
+           VerifyField<uint32_t>(verifier, VT_SIZE_DIVIDER) &&
+           VerifyField<uint8_t>(verifier, VT_GPU_COLOR_CONV) &&
            verifier.EndTable();
   }
 };
@@ -149,21 +167,36 @@ struct CaptureStart FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 struct CaptureStartBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
+  void add_fps(uint32_t fps) {
+    fbb_.AddElement<uint32_t>(CaptureStart::VT_FPS, fps, 0);
+  }
+  void add_size_divider(uint32_t size_divider) {
+    fbb_.AddElement<uint32_t>(CaptureStart::VT_SIZE_DIVIDER, size_divider, 0);
+  }
+  void add_gpu_color_conv(bool gpu_color_conv) {
+    fbb_.AddElement<uint8_t>(CaptureStart::VT_GPU_COLOR_CONV, static_cast<uint8_t>(gpu_color_conv), 0);
+  }
   CaptureStartBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
   CaptureStartBuilder &operator=(const CaptureStartBuilder &);
   flatbuffers::Offset<CaptureStart> Finish() {
-    const auto end = fbb_.EndTable(start_, 0);
+    const auto end = fbb_.EndTable(start_, 3);
     auto o = flatbuffers::Offset<CaptureStart>(end);
     return o;
   }
 };
 
 inline flatbuffers::Offset<CaptureStart> CreateCaptureStart(
-    flatbuffers::FlatBufferBuilder &_fbb) {
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t fps = 0,
+    uint32_t size_divider = 0,
+    bool gpu_color_conv = false) {
   CaptureStartBuilder builder_(_fbb);
+  builder_.add_size_divider(size_divider);
+  builder_.add_fps(fps);
+  builder_.add_gpu_color_conv(gpu_color_conv);
   return builder_.Finish();
 }
 
@@ -201,8 +234,9 @@ struct VideoSetup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_HEIGHT = 6,
     VT_PIX_FMT = 8,
     VT_VFLIP = 10,
-    VT_PITCH = 12,
-    VT_SHMEM = 14
+    VT_OFFSET = 12,
+    VT_LINESIZE = 14,
+    VT_SHMEM = 16
   };
   uint32_t width() const {
     return GetField<uint32_t>(VT_WIDTH, 0);
@@ -216,8 +250,11 @@ struct VideoSetup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool vflip() const {
     return GetField<uint8_t>(VT_VFLIP, 0) != 0;
   }
-  uint32_t pitch() const {
-    return GetField<uint32_t>(VT_PITCH, 0);
+  const flatbuffers::Vector<uint32_t> *offset() const {
+    return GetPointer<const flatbuffers::Vector<uint32_t> *>(VT_OFFSET);
+  }
+  const flatbuffers::Vector<uint32_t> *linesize() const {
+    return GetPointer<const flatbuffers::Vector<uint32_t> *>(VT_LINESIZE);
   }
   const Shmem *shmem() const {
     return GetPointer<const Shmem *>(VT_SHMEM);
@@ -228,7 +265,10 @@ struct VideoSetup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            VerifyField<uint32_t>(verifier, VT_HEIGHT) &&
            VerifyField<int32_t>(verifier, VT_PIX_FMT) &&
            VerifyField<uint8_t>(verifier, VT_VFLIP) &&
-           VerifyField<uint32_t>(verifier, VT_PITCH) &&
+           VerifyField<flatbuffers::uoffset_t>(verifier, VT_OFFSET) &&
+           verifier.Verify(offset()) &&
+           VerifyField<flatbuffers::uoffset_t>(verifier, VT_LINESIZE) &&
+           verifier.Verify(linesize()) &&
            VerifyField<flatbuffers::uoffset_t>(verifier, VT_SHMEM) &&
            verifier.VerifyTable(shmem()) &&
            verifier.EndTable();
@@ -250,8 +290,11 @@ struct VideoSetupBuilder {
   void add_vflip(bool vflip) {
     fbb_.AddElement<uint8_t>(VideoSetup::VT_VFLIP, static_cast<uint8_t>(vflip), 0);
   }
-  void add_pitch(uint32_t pitch) {
-    fbb_.AddElement<uint32_t>(VideoSetup::VT_PITCH, pitch, 0);
+  void add_offset(flatbuffers::Offset<flatbuffers::Vector<uint32_t>> offset) {
+    fbb_.AddOffset(VideoSetup::VT_OFFSET, offset);
+  }
+  void add_linesize(flatbuffers::Offset<flatbuffers::Vector<uint32_t>> linesize) {
+    fbb_.AddOffset(VideoSetup::VT_LINESIZE, linesize);
   }
   void add_shmem(flatbuffers::Offset<Shmem> shmem) {
     fbb_.AddOffset(VideoSetup::VT_SHMEM, shmem);
@@ -262,7 +305,7 @@ struct VideoSetupBuilder {
   }
   VideoSetupBuilder &operator=(const VideoSetupBuilder &);
   flatbuffers::Offset<VideoSetup> Finish() {
-    const auto end = fbb_.EndTable(start_, 6);
+    const auto end = fbb_.EndTable(start_, 7);
     auto o = flatbuffers::Offset<VideoSetup>(end);
     return o;
   }
@@ -274,16 +317,38 @@ inline flatbuffers::Offset<VideoSetup> CreateVideoSetup(
     uint32_t height = 0,
     PixFmt pix_fmt = PixFmt_UNKNOWN,
     bool vflip = false,
-    uint32_t pitch = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint32_t>> offset = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint32_t>> linesize = 0,
     flatbuffers::Offset<Shmem> shmem = 0) {
   VideoSetupBuilder builder_(_fbb);
   builder_.add_shmem(shmem);
-  builder_.add_pitch(pitch);
+  builder_.add_linesize(linesize);
+  builder_.add_offset(offset);
   builder_.add_pix_fmt(pix_fmt);
   builder_.add_height(height);
   builder_.add_width(width);
   builder_.add_vflip(vflip);
   return builder_.Finish();
+}
+
+inline flatbuffers::Offset<VideoSetup> CreateVideoSetupDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t width = 0,
+    uint32_t height = 0,
+    PixFmt pix_fmt = PixFmt_UNKNOWN,
+    bool vflip = false,
+    const std::vector<uint32_t> *offset = nullptr,
+    const std::vector<uint32_t> *linesize = nullptr,
+    flatbuffers::Offset<Shmem> shmem = 0) {
+  return Capsule::Messages::CreateVideoSetup(
+      _fbb,
+      width,
+      height,
+      pix_fmt,
+      vflip,
+      offset ? _fbb.CreateVector<uint32_t>(*offset) : 0,
+      linesize ? _fbb.CreateVector<uint32_t>(*linesize) : 0,
+      shmem);
 }
 
 struct Shmem FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {

@@ -14,7 +14,9 @@ typedef struct capsule_args_s {
   char *pix_fmt;
   int crf;
   int no_audio;
-  int divider;
+  int size_divider;
+  int fps;
+  bool gpu_color_conv;
   int threads;
   int debug_av;
   int gop_size;

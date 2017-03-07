@@ -76,7 +76,7 @@ void MainLoop::capture_flip () {
 
 void MainLoop::capture_start () {
   flatbuffers::FlatBufferBuilder builder(1024);
-  auto cps = CreateCaptureStart(builder);
+  auto cps = CreateCaptureStart(builder, args->fps, args->size_divider, args->gpu_color_conv);
   auto opkt = CreatePacket(builder, Message_CaptureStart, cps.Union());
   builder.Finish(opkt);
   conn->write(builder);
@@ -124,7 +124,12 @@ void MainLoop::start_session (const VideoSetup *vs) {
   vfmt.height = vs->height();
   vfmt.format = (capsule_pix_fmt_t) vs->pix_fmt();
   vfmt.vflip = vs->vflip();
-  vfmt.pitch = vs->pitch();
+  
+  // TODO: support offset (for planar formats)
+
+  // TODO: support multiple linesizes (for planar formats)
+  auto linesize_vec = vs->linesize();
+  vfmt.pitch = linesize_vec->Get(0);
 
   auto shm_path = vs->shmem()->path()->str();  
   auto shm = new ShmemRead(

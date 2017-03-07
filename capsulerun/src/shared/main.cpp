@@ -49,6 +49,8 @@ int main (int argc, char **argv) {
   args.dir = ".";
   args.pix_fmt = "yuv420p";
   args.crf = -1;
+  args.size_divider = 1;
+  args.fps = 60;
 
   struct argparse_option options[] = {
     OPT_HELP(),
@@ -58,7 +60,8 @@ int main (int argc, char **argv) {
     OPT_STRING('d', "dir", &args.dir, "where to output .mp4 videos (defaults to current directory)"),
     OPT_GROUP("Video options"),
     OPT_INTEGER(0, "crf", &args.crf, "output quality. sane values range from 18 (~visually lossless) to 28 (fast but looks bad)"),
-    OPT_INTEGER(0, "divider", &args.divider, "size divider: default 1, accepted values 2 or 4"),
+    OPT_INTEGER(0, "size_divider", &args.size_divider, "size divider: default 1, accepted values 2 or 4"),
+    OPT_INTEGER('r', "fps", &args.fps, "maximum frames per second (default: 60)"),
     OPT_GROUP("Audio options"),
     OPT_BOOLEAN(0, "no-audio", &args.no_audio, "don't record audio'"),
     OPT_GROUP("Advanced options"),
@@ -68,6 +71,7 @@ int main (int argc, char **argv) {
     OPT_INTEGER(0, "gop-size", &args.gop_size, "default: 120"),
     OPT_INTEGER(0, "max-b-frames", &args.max_b_frames, "default: 16"),
     OPT_INTEGER(0, "buffered-frames", &args.buffered_frames, "default: 60"),
+    OPT_BOOLEAN(0, "gpu-color-conv", &args.gpu_color_conv, "do color conversion on the GPU (experimental)"),
     OPT_STRING(0, "priority", &args.priority, "above-normal or high (windows only)"),
     OPT_END(),
   };

@@ -5,9 +5,10 @@
 #include <thread>
 #include <mutex>
 
-#define FPS 60
-static int cur_fps = FPS;
-static auto frame_interval = std::chrono::microseconds(1000000 / FPS);
+#include <string.h>
+
+static int cur_fps = 60;
+static auto frame_interval = std::chrono::microseconds(1000000 / cur_fps);
 
 static bool first_frame = true;
 static int frame_count = 0;
@@ -22,13 +23,17 @@ bool CAPSULE_STDCALL capsule_capture_active () {
   return capdata.active;
 }
 
-bool CAPSULE_STDCALL capsule_capture_try_start () {
+bool CAPSULE_STDCALL capsule_capture_try_start (struct capture_data_settings *settings) {
   lock_guard<mutex> lock(capdata_mutex);
   if (capdata.active) {
     capsule_log("capsule_capture_try_start: already active, ignoring start");
     return false;
   }
 
+  memcpy(&capdata.settings, settings, sizeof(struct capture_data_settings));
+  capsule_log("Setting FPS to %d", capdata.settings.fps);
+  cur_fps = capdata.settings.fps;
+  frame_interval = std::chrono::microseconds(1000000 / cur_fps);
   capdata.active = true;
   return true;
 }

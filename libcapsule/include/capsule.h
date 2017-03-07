@@ -69,6 +69,12 @@ bool dc_capture_init();
 
 #endif // CAPSULE_WINDOWS
 
+struct capture_data_settings {
+  int fps;
+  int size_divider;
+  bool gpu_color_conv;
+};
+
 struct capture_data {
   bool saw_opengl;
 #if defined(CAPSULE_WINDOWS)
@@ -76,12 +82,13 @@ struct capture_data {
   bool saw_d3d9;
 #endif // CAPSULE_WINDOWS
   bool active;
+  capture_data_settings settings;
 };
 extern struct capture_data capdata;
 
 bool CAPSULE_STDCALL capsule_capture_ready();
 bool CAPSULE_STDCALL capsule_capture_active();
-bool CAPSULE_STDCALL capsule_capture_try_start();
+bool CAPSULE_STDCALL capsule_capture_try_start(struct capture_data_settings* settings);
 bool CAPSULE_STDCALL capsule_capture_try_stop();
 int64_t CAPSULE_STDCALL capsule_frame_timestamp();
 

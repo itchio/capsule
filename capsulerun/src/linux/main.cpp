@@ -2,7 +2,6 @@
 #include "capsulerun.h"
 
 #include "../shared/env.h" // merge_envs
-#include "../shared/io.h" // create_fifo, receive stuff
 
 #include "../shared/MainLoop.h"
 #include "./PulseReceiver.h"

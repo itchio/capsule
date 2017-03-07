@@ -19,6 +19,8 @@ struct d3d11_data {
   DXGI_FORMAT               out_format; // pixel format
   bool                      multisampled; // if true, subresource needs to be resolved on GPU before downloading
 
+  bool                      gpu_color_conv; // whether to do color conversion on the GPU
+
   ID3D11Texture2D                *scale_tex; // texture & resource used for in-GPU scaling
   ID3D11ShaderResourceView       *scale_resource;
 
@@ -65,7 +67,7 @@ VertData main(VertData input) \
   return output; \
 }";
 
-static const char pixel_shader_string_old[] =
+static const char pixel_shader_string_noconv[] =
 "uniform Texture2D diffuseTexture; \
 SamplerState textureSampler \
 { \
@@ -83,7 +85,7 @@ float4 main(VertData input) : SV_Target \
   return diffuseTexture.Sample(textureSampler, input.texCoord); \
 }";
 
-static const char pixel_shader_string[] =
+static const char pixel_shader_string_conv[] =
 "\
 uniform float width; \
 uniform float width_i; \
@@ -568,6 +570,8 @@ static void d3d11_init(IDXGISwapChain *swap) {
 
   data.device->GetImmediateContext(&data.context);
   data.context->Release();
+
+  data.gpu_color_conv = capdata.gpu_color_conv;
 
   d3d11_init_format(swap, &window);
 

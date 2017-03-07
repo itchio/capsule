@@ -1,7 +1,6 @@
 #pragma once
 
 #include <capsulerun.h>
-#include "./io.h"
 
 #include "LockingQueue.h"
 #include "ShmemRead.h"
