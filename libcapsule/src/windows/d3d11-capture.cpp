@@ -98,10 +98,57 @@ struct VertData \
 float rgbToY(float3 rgb) { \
   return 0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b; \
 } \
+float rgbToU(float3 rgb) { \
+  return -0.147 * rgb.r - 0.289 * rgb.g + 0.436 * rgb.b; \
+} \
+float rgbToV(float3 rgb) { \
+  return 0.612 * rgb.r - 0.515 * rgb.g - 0.100 * rgb.b; \
+} \
 float4 main(VertData input) : SV_Target \
 { \
+  float width = 1280.0; \
+  float width_i = 1.0 / width; \
+  float x_u_plane = width / 4.0; \
+  float x_v_plane = (width / 4.0) * 2.0; \
+  float x_end = (width / 4.0) * 3.0; \
+  float x = input.texCoord.x * width; \
+  float2 sample_pos[4]; \
+  float ustart = fmod(input.texCoord.x * 4.0, 1.0); \
+  sample_pos[0] = float2(ustart + 0*width_i, input.texCoord.y); \
+  sample_pos[1] = float2(ustart + 1*width_i, input.texCoord.y); \
+  sample_pos[2] = float2(ustart + 2*width_i, input.texCoord.y); \
+  sample_pos[3] = float2(ustart + 3*width_i, input.texCoord.y); \
+  float3 samples[4]; \
+  samples[0] = diffuseTexture.Sample(textureSampler, sample_pos[0]); \
+  samples[1] = diffuseTexture.Sample(textureSampler, sample_pos[1]); \
+  samples[2] = diffuseTexture.Sample(textureSampler, sample_pos[2]); \
+  samples[3] = diffuseTexture.Sample(textureSampler, sample_pos[3]); \
+  if (x > x_end) { \
+    return float4(0, 0, 0, 1); \
+  } else if (x > x_v_plane) { \
+    return float4( \
+      rgbToV(samples[0]), \
+      rgbToV(samples[1]), \
+      rgbToV(samples[2]), \
+      rgbToV(samples[3]) \
+    ); \
+  } else if (x > x_u_plane) { \
+    return float4( \
+      rgbToU(samples[0]), \
+      rgbToU(samples[1]), \
+      rgbToU(samples[2]), \
+      rgbToU(samples[3]) \
+    ); \
+  } else { \
+    return float4( \
+      rgbToY(samples[0]), \
+      rgbToY(samples[1]), \
+      rgbToY(samples[2]), \
+      rgbToY(samples[3]) \
+    ); \
+  } \
   float3 rgb = diffuseTexture.Sample(textureSampler, input.texCoord); \
-  float y = rgbToY(rgb);\
+  float y = rgbToY(rgb); \
   return float4(y, y, y, 1.0); \
 }";
 
@@ -295,7 +342,7 @@ static bool d3d11_load_shaders() {
 
   // Set up vertex shader
 
-  uint8_t vertex_shader_data[1024];
+  uint8_t vertex_shader_data[4096];
   size_t vertex_shader_size = 0;
   D3D11_INPUT_ELEMENT_DESC input_desc[2];
 
@@ -344,15 +391,17 @@ static bool d3d11_load_shaders() {
 
   // Set up pixel shader
 
-  uint8_t pixel_shader_data[1024];
+  uint8_t pixel_shader_data[16384];
   size_t pixel_shader_size = 0;
+  ID3D10Blob *error_msg = nullptr;
 
   hr = pD3DCompileFunc(pixel_shader_string, sizeof(pixel_shader_string),
     "pixel_shader_string", nullptr, nullptr, "main",
-    "ps_4_0", D3D10_SHADER_OPTIMIZATION_LEVEL1, 0, &blob, nullptr);
+    "ps_4_0", D3D10_SHADER_OPTIMIZATION_LEVEL1, 0, &blob, &error_msg);
 
   if (FAILED(hr)) {
     capsule_log("d3d11_load_shaders: failed to compile pixel shader (%x)", hr);
+    capsule_log("d3d11_load_shaders: %s", (char*) error_msg->GetBufferPointer());
     return false;
   }
 
