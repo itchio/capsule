@@ -86,6 +86,7 @@ float4 main(VertData input) : SV_Target \
 static const char pixel_shader_string[] =
 "\
 uniform float width; \
+uniform float width_i; \
 uniform Texture2D diffuseTexture; \
 SamplerState textureSampler \
 { \
@@ -109,19 +110,18 @@ float rgbToV(float3 rgb) { \
 } \
 float4 main(VertData input) : SV_Target \
 { \
-  float width_i = 1.0 / width; \
   float u = input.texCoord.x; \
-  float2 sample_pos[4]; \
+  float v = input.texCoord.y; \
   float uwrap = fmod(u * 4.0, 1.0); \
-  sample_pos[0] = float2(uwrap + 0*width_i, input.texCoord.y); \
-  sample_pos[1] = float2(uwrap + 1*width_i, input.texCoord.y); \
-  sample_pos[2] = float2(uwrap + 2*width_i, input.texCoord.y); \
-  sample_pos[3] = float2(uwrap + 3*width_i, input.texCoord.y); \
+  float2 sample_pos = float2(uwrap, v); \
   float3 samples[4]; \
-  samples[0] = diffuseTexture.Sample(textureSampler, sample_pos[0]); \
-  samples[1] = diffuseTexture.Sample(textureSampler, sample_pos[1]); \
-  samples[2] = diffuseTexture.Sample(textureSampler, sample_pos[2]); \
-  samples[3] = diffuseTexture.Sample(textureSampler, sample_pos[3]); \
+  samples[0] = diffuseTexture.Sample(textureSampler, sample_pos); \
+  sample_pos.x += width_i; \
+  samples[1] = diffuseTexture.Sample(textureSampler, sample_pos); \
+  sample_pos.x += width_i; \
+  samples[2] = diffuseTexture.Sample(textureSampler, sample_pos); \
+  sample_pos.x += width_i; \
+  samples[3] = diffuseTexture.Sample(textureSampler, sample_pos); \
   if (u > 0.75) { \
     return float4(0, 0, 0, 1); \
   } else if (u > 0.5) { \
@@ -431,13 +431,17 @@ static bool d3d11_load_shaders() {
     return false;
   }
 
+  float width = (float) (data.cx / data.size_divider);
+  float width_i = 1.0f / width;
   struct {
-    float size;
+    float width;
+    float width_i;
     int64_t pad1;
     int64_t pad2;
     int64_t pad3;
   } initial_data = {
-    data.cx / data.size_divider,
+    width,
+    width_i,
     0,
     0,
     0
