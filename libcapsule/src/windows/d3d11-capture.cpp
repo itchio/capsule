@@ -32,6 +32,7 @@ struct d3d11_data {
   ID3D11RasterizerState          *raster_state;
 
   ID3D11Buffer                   *vertex_buffer;
+  ID3D11Buffer                   *constants;
 
   ID3D11Texture2D                *copy_surfaces[NUM_BUFFERS]; // staging, CPU_READ_ACCESS
   ID3D11Texture2D                *textures[NUM_BUFFERS]; // default (in-GPU), useful to resolve multisampled backbuffers
@@ -83,7 +84,9 @@ float4 main(VertData input) : SV_Target \
 }";
 
 static const char pixel_shader_string[] =
-"uniform Texture2D diffuseTexture; \
+"\
+uniform float width; \
+uniform Texture2D diffuseTexture; \
 SamplerState textureSampler \
 { \
   AddressU = Clamp; \
@@ -106,33 +109,29 @@ float rgbToV(float3 rgb) { \
 } \
 float4 main(VertData input) : SV_Target \
 { \
-  float width = 1280.0 / 2.0; \
   float width_i = 1.0 / width; \
-  float x_u_plane = width / 4.0; \
-  float x_v_plane = (width / 4.0) * 2.0; \
-  float x_end = (width / 4.0) * 3.0; \
-  float x = input.texCoord.x * width; \
+  float u = input.texCoord.x; \
   float2 sample_pos[4]; \
-  float ustart = fmod(input.texCoord.x * 4.0, 1.0); \
-  sample_pos[0] = float2(ustart + 0*width_i, input.texCoord.y); \
-  sample_pos[1] = float2(ustart + 1*width_i, input.texCoord.y); \
-  sample_pos[2] = float2(ustart + 2*width_i, input.texCoord.y); \
-  sample_pos[3] = float2(ustart + 3*width_i, input.texCoord.y); \
+  float uwrap = fmod(u * 4.0, 1.0); \
+  sample_pos[0] = float2(uwrap + 0*width_i, input.texCoord.y); \
+  sample_pos[1] = float2(uwrap + 1*width_i, input.texCoord.y); \
+  sample_pos[2] = float2(uwrap + 2*width_i, input.texCoord.y); \
+  sample_pos[3] = float2(uwrap + 3*width_i, input.texCoord.y); \
   float3 samples[4]; \
   samples[0] = diffuseTexture.Sample(textureSampler, sample_pos[0]); \
   samples[1] = diffuseTexture.Sample(textureSampler, sample_pos[1]); \
   samples[2] = diffuseTexture.Sample(textureSampler, sample_pos[2]); \
   samples[3] = diffuseTexture.Sample(textureSampler, sample_pos[3]); \
-  if (x > x_end) { \
+  if (u > 0.75) { \
     return float4(0, 0, 0, 1); \
-  } else if (x > x_v_plane) { \
+  } else if (u > 0.5) { \
     return float4( \
       rgbToV(samples[0]), \
       rgbToV(samples[1]), \
       rgbToV(samples[2]), \
       rgbToV(samples[3]) \
     ); \
-  } else if (x > x_u_plane) { \
+  } else if (u > 0.25) { \
     return float4( \
       rgbToU(samples[0]), \
       rgbToU(samples[1]), \
@@ -413,6 +412,51 @@ static bool d3d11_load_shaders() {
     return false;
   }
 
+  D3D11_BUFFER_DESC bd;
+  memset(&bd, 0, sizeof(bd));
+
+  // keep in sync with shader string
+  int constant_size = sizeof(float);
+
+  capsule_log("d3d11_load_shaders: constant size = %d", constant_size);
+
+  bd.ByteWidth = (constant_size+15) & 0xFFFFFFF0; // align
+  bd.Usage = D3D11_USAGE_DYNAMIC;
+  bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+  bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+  hr = data.device->CreateBuffer(&bd, nullptr, &data.constants);
+  if (FAILED(hr)) {
+    capsule_log("d3d11_load_shaders: failed to create constant buffer (%x)", hr);
+    return false;
+  }
+
+  struct {
+    float size;
+    int64_t pad1;
+    int64_t pad2;
+    int64_t pad3;
+  } initial_data = {
+    data.cx / data.size_divider,
+    0,
+    0,
+    0
+  };
+
+  {
+    D3D11_MAPPED_SUBRESOURCE map;
+    HRESULT hr;
+
+    hr = data.context->Map(data.constants, 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
+    if (FAILED(hr)) {
+      capsule_log("d3d11_load_shaders: could not lock constants buffer (%x)", hr);
+      return false;
+    }
+
+    memcpy(map.pData, &initial_data, bd.ByteWidth);
+    data.context->Unmap(data.constants, 0);
+  }
+
   return true;
 }
 
@@ -577,6 +621,7 @@ struct d3d11_state {
   UINT                           vs_class_inst_count;
 };
 
+// TODO: save PSSetConstantBuffers ?
 static void d3d11_save_state(struct d3d11_state *state) {
   state->gs_class_inst_count = MAX_CLASS_INSTS;
   state->ps_class_inst_count = MAX_CLASS_INSTS;
@@ -673,6 +718,7 @@ static void d3d11_setup_pipeline(ID3D11RenderTargetView *target, ID3D11ShaderRes
   data.context->PSSetSamplers(0, 1, &data.sampler_state);
   data.context->PSSetShader(data.pixel_shader, nullptr, 0);
   data.context->PSSetShaderResources(0, 1, &resource);
+  data.context->PSSetConstantBuffers(0, 1, &data.constants);
   data.context->RSSetState(data.raster_state);
   data.context->RSSetViewports(1, &viewport);
   data.context->SOSetTargets(1, (ID3D11Buffer**)&emptyptr, &zero);
@@ -797,13 +843,13 @@ void d3d11_free() {
   SAFE_RELEASE(data.zstencil_state);
   SAFE_RELEASE(data.raster_state);
   SAFE_RELEASE(data.vertex_buffer);
+  SAFE_RELEASE(data.constants);
 
   for (size_t i = 0; i < NUM_BUFFERS; i++) {
     if (data.copy_surfaces[i]) {
-      if (data.texture_mapped[i])
-        data.context->Unmap(
-            data.copy_surfaces[i],
-            0);
+      if (data.texture_mapped[i]) {
+        data.context->Unmap(data.copy_surfaces[i], 0);
+      }
       data.copy_surfaces[i]->Release();
     }
 
