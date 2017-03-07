@@ -82,7 +82,7 @@ WasapiReceiver::WasapiReceiver() {
   afmt.samplerate = pwfx->nSamplesPerSec;
   afmt.samplewidth = pwfx->wBitsPerSample;
 
-  REFERENCE_TIME hns_requested_duration = REFTIMES_PER_SEC;
+  REFERENCE_TIME hns_requested_duration = REFTIMES_PER_SEC * 4;
   hr = audio_client->Initialize(
       AUDCLNT_SHAREMODE_SHARED, // we don't need exclusive access
       AUDCLNT_STREAMFLAGS_LOOPBACK, // we want to capture output, not an input
