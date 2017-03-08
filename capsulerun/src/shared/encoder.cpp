@@ -166,10 +166,11 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     }
   }
 
-  bool do_swscale = 1;
+  bool do_swscale = true;
   if (vfmt_in.format == CAPSULE_PIX_FMT_YUV444P) {
     capsule_log("GPU color conversion enabled, ignoring user output settings and picking yuv444p");
     vc->pix_fmt = AV_PIX_FMT_YUV444P;
+    do_swscale = false;
   }
 
   // temporarily disabled codepath as we're going to try gpu scalign or nothing
@@ -394,6 +395,37 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
       fprintf(stderr, "Could not allocate raw picture buffer\n");
       exit(1);
     }
+
+    capsule_log("offsets: %p %p (%d from first) %p (%d from first), linesize: %d %d %d",
+      vframe->data[0],
+      vframe->data[1], vframe->data[1] - vframe->data[0],
+      vframe->data[2], vframe->data[2] - vframe->data[0],
+      vframe->linesize[0],
+      vframe->linesize[1],
+      vframe->linesize[2]
+    );
+  } else {
+    // FIXME: use vfmt offsets & linesizes instead of computing them here
+    // this assumes a horizontal format, see https://twitter.com/fasterthanlime/status/839086194919161857
+    vframe->data[0] = buffer;
+    vframe->data[1] = buffer + width;
+    vframe->data[2] = buffer + width * 2;
+    vframe->linesize[0] = width * 4;
+    vframe->linesize[1] = width * 4;
+    vframe->linesize[2] = width * 4;
+
+    capsule_log("offsets: %d %d %d, linesize: %d",
+      vframe->data[0] - buffer,
+      vframe->data[1] - buffer,
+      vframe->data[2] - buffer,
+      vframe->linesize[0]
+    );
+    capsule_log("aligned: %d %d %d, linesize: %d",
+      FFALIGN(vframe->data[0] - buffer, 64),
+      FFALIGN(vframe->data[1] - buffer, 64),
+      FFALIGN(vframe->data[2] - buffer, 64),
+      FFALIGN(vframe->linesize[0], 64)
+    );
   }
 
   // initialize swrescale context
@@ -452,6 +484,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   }
 
   int samples_filled = 0;
+  int frame_count = 0;
 
   while (true) {
     MICROPROFILE_SCOPE(EncoderCycle);
@@ -482,14 +515,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
         if (do_swscale) {
           sws_scale(sws, sws_in, sws_linesize, 0, height, vframe->data, vframe->linesize);
         } else {
-          // FIXME: use vfmt offsets & linesizes instead of computing them here
-          // this assumes a horizontal format, see https://twitter.com/fasterthanlime/status/839086194919161857
-          vframe->data[0] = buffer;
-          vframe->data[1] = buffer + width;
-          vframe->data[2] = buffer + width * 2;
-          vframe->linesize[0] = width * 4;
-          vframe->linesize[1] = width * 4;
-          vframe->linesize[2] = width * 4;
+          // muffin
         }
       }
 
@@ -662,6 +688,8 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     if (last_frame) {
       break;
     }
+
+    frame_count++;
   }
 
   // delayed video frames

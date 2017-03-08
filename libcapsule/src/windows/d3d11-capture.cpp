@@ -3,6 +3,8 @@
 #include "win-capture.h"
 #include "dxgi-util.h"
 
+#include "./d3d11-shaders.h"
+
 #include <d3d11.h>
 #include <d3dcompiler.h>
 
@@ -53,103 +55,6 @@ static struct d3d11_data data = {};
 HINSTANCE hD3DCompiler = NULL;
 pD3DCompile pD3DCompileFunc = NULL;
 
-static const char vertex_shader_string[] =
-"struct VertData \
-{ \
-  float4 pos : SV_Position; \
-  float2 texCoord : TexCoord0; \
-}; \
-VertData main(VertData input) \
-{ \
-  VertData output; \
-  output.pos = input.pos; \
-  output.texCoord = input.texCoord; \
-  return output; \
-}";
-
-static const char pixel_shader_string_noconv[] =
-"uniform Texture2D diffuseTexture; \
-SamplerState textureSampler \
-{ \
-  AddressU = Clamp; \
-  AddressV = Clamp; \
-  Filter   = Linear; \
-}; \
-struct VertData \
-{ \
-  float4 pos      : SV_Position; \
-  float2 texCoord : TexCoord0; \
-}; \
-float4 main(VertData input) : SV_Target \
-{ \
-  return diffuseTexture.Sample(textureSampler, input.texCoord); \
-}";
-
-static const char pixel_shader_string_conv[] =
-"\
-uniform float width; \
-uniform float width_i; \
-uniform Texture2D diffuseTexture; \
-SamplerState textureSampler \
-{ \
-  AddressU = Clamp; \
-  AddressV = Clamp; \
-  Filter   = Linear; \
-}; \
-struct VertData \
-{ \
-  float4 pos      : SV_Position; \
-  float2 texCoord : TexCoord0; \
-}; \
-float rgbToY(float3 rgb) { \
-  return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) * (1 - 0.0625) + 0.0625; \
-} \
-float rgbToU(float3 rgb) { \
-  return -0.169 * rgb.r - 0.331 * rgb.g + 0.499 * rgb.b + 0.5; \
-} \
-float rgbToV(float3 rgb) { \
-  return 0.499 * rgb.r - 0.418 * rgb.g - 0.0813 * rgb.b + 0.5; \
-} \
-float4 main(VertData input) : SV_Target \
-{ \
-  float u = input.texCoord.x; \
-  float v = input.texCoord.y; \
-  float uwrap = fmod(u * 4.0, 1.0); \
-  float2 sample_pos = float2(uwrap, v); \
-  float3 samples[4]; \
-  samples[0] = diffuseTexture.Sample(textureSampler, sample_pos); \
-  sample_pos.x += width_i; \
-  samples[1] = diffuseTexture.Sample(textureSampler, sample_pos); \
-  sample_pos.x += width_i; \
-  samples[2] = diffuseTexture.Sample(textureSampler, sample_pos); \
-  sample_pos.x += width_i; \
-  samples[3] = diffuseTexture.Sample(textureSampler, sample_pos); \
-  if (u > 0.75) { \
-    return float4(0, 0, 0, 1); \
-  } else if (u > 0.5) { \
-    return float4( \
-      rgbToV(samples[0]), \
-      rgbToV(samples[1]), \
-      rgbToV(samples[2]), \
-      rgbToV(samples[3]) \
-    ); \
-  } else if (u > 0.25) { \
-    return float4( \
-      rgbToU(samples[0]), \
-      rgbToU(samples[1]), \
-      rgbToU(samples[2]), \
-      rgbToU(samples[3]) \
-    ); \
-  } else { \
-    return float4( \
-      rgbToY(samples[0]), \
-      rgbToY(samples[1]), \
-      rgbToY(samples[2]), \
-      rgbToY(samples[3]) \
-    ); \
-  } \
-}";
-
 /**
  * Copy the format, size, and multisampling information of the
  * D3D11 backbuffer to our internal state
@@ -169,8 +74,7 @@ static bool d3d11_init_format(IDXGISwapChain *swap, HWND *window) {
   *window = desc.OutputWindow;
   data.cx = desc.BufferDesc.Width;
   data.cy = desc.BufferDesc.Height;
-  data.size_divider = 2; // testing
-  // data.size_divider = 1;
+  data.size_divider = capdata.settings.size_divider;
 
   capsule_log("Backbuffer: %ux%u (%s) format = %s",
     data.cx, data.cy,
@@ -317,6 +221,57 @@ static bool d3d11_shmem_init(HWND window) {
   return true;
 }
 
+static bool d3d11_init_colorconv_shader() {
+  HRESULT hr;
+
+  D3D11_BUFFER_DESC bd;
+  memset(&bd, 0, sizeof(bd));
+
+  // keep in sync with pixel_shader_string_conv
+  int constant_size = sizeof(float) * 2;
+
+  float width = (float) (data.cx / data.size_divider);
+  float width_i = 1.0f / width;
+  struct {
+    float width;
+    float width_i;
+    int64_t pad1;
+    int64_t pad2;
+  } initial_data = {
+    width,
+    width_i,
+    0,
+    0,
+  };
+
+  capsule_log("d3d11_init_colorconv_shader: constant size = %d", constant_size);
+
+  bd.ByteWidth = (constant_size+15) & 0xFFFFFFF0; // align
+  bd.Usage = D3D11_USAGE_DYNAMIC;
+  bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+  bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+  hr = data.device->CreateBuffer(&bd, nullptr, &data.constants);
+  if (FAILED(hr)) {
+    capsule_log("d3d11_init_colorconv_shader: failed to create constant buffer (%x)", hr);
+    return false;
+  }
+
+  {
+    D3D11_MAPPED_SUBRESOURCE map;
+    HRESULT hr;
+
+    hr = data.context->Map(data.constants, 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
+    if (FAILED(hr)) {
+      capsule_log("d3d11_init_colorconv_shader: could not lock constants buffer (%x)", hr);
+      return false;
+    }
+
+    memcpy(map.pData, &initial_data, bd.ByteWidth);
+    data.context->Unmap(data.constants, 0);
+  }
+}
+
 static bool d3d11_load_shaders() {
   hD3DCompiler = LoadLibraryA(D3DCOMPILER_DLL_A);
 
@@ -393,7 +348,18 @@ static bool d3d11_load_shaders() {
   size_t pixel_shader_size = 0;
   ID3D10Blob *error_msg = nullptr;
 
-  hr = pD3DCompileFunc(pixel_shader_string, sizeof(pixel_shader_string),
+  const char *pixel_shader_string;
+  size_t pixel_shader_string_size;
+
+  if (data.gpu_color_conv) {
+    pixel_shader_string = pixel_shader_string_conv;
+    pixel_shader_string_size = sizeof(pixel_shader_string_conv);
+  } else {
+    pixel_shader_string = pixel_shader_string_noconv;
+    pixel_shader_string_size = sizeof(pixel_shader_string_noconv);
+  }
+
+  hr = pD3DCompileFunc(pixel_shader_string, pixel_shader_string_size,
     "pixel_shader_string", nullptr, nullptr, "main",
     "ps_4_0", D3D10_SHADER_OPTIMIZATION_LEVEL1, 0, &blob, &error_msg);
 
@@ -414,53 +380,10 @@ static bool d3d11_load_shaders() {
     return false;
   }
 
-  D3D11_BUFFER_DESC bd;
-  memset(&bd, 0, sizeof(bd));
-
-  // keep in sync with shader string
-  int constant_size = sizeof(float);
-
-  capsule_log("d3d11_load_shaders: constant size = %d", constant_size);
-
-  bd.ByteWidth = (constant_size+15) & 0xFFFFFFF0; // align
-  bd.Usage = D3D11_USAGE_DYNAMIC;
-  bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-  bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-  hr = data.device->CreateBuffer(&bd, nullptr, &data.constants);
-  if (FAILED(hr)) {
-    capsule_log("d3d11_load_shaders: failed to create constant buffer (%x)", hr);
-    return false;
-  }
-
-  float width = (float) (data.cx / data.size_divider);
-  float width_i = 1.0f / width;
-  struct {
-    float width;
-    float width_i;
-    int64_t pad1;
-    int64_t pad2;
-    int64_t pad3;
-  } initial_data = {
-    width,
-    width_i,
-    0,
-    0,
-    0
-  };
-
-  {
-    D3D11_MAPPED_SUBRESOURCE map;
-    HRESULT hr;
-
-    hr = data.context->Map(data.constants, 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
-    if (FAILED(hr)) {
-      capsule_log("d3d11_load_shaders: could not lock constants buffer (%x)", hr);
+  if (data.gpu_color_conv) {
+    if (!d3d11_init_colorconv_shader()) {
       return false;
     }
-
-    memcpy(map.pData, &initial_data, bd.ByteWidth);
-    data.context->Unmap(data.constants, 0);
   }
 
   return true;
@@ -571,7 +494,7 @@ static void d3d11_init(IDXGISwapChain *swap) {
   data.device->GetImmediateContext(&data.context);
   data.context->Release();
 
-  data.gpu_color_conv = capdata.gpu_color_conv;
+  data.gpu_color_conv = capdata.settings.gpu_color_conv;
 
   d3d11_init_format(swap, &window);
 
@@ -726,7 +649,9 @@ static void d3d11_setup_pipeline(ID3D11RenderTargetView *target, ID3D11ShaderRes
   data.context->PSSetSamplers(0, 1, &data.sampler_state);
   data.context->PSSetShader(data.pixel_shader, nullptr, 0);
   data.context->PSSetShaderResources(0, 1, &resource);
-  data.context->PSSetConstantBuffers(0, 1, &data.constants);
+  if (data.gpu_color_conv) {
+    data.context->PSSetConstantBuffers(0, 1, &data.constants);
+  }
   data.context->RSSetState(data.raster_state);
   data.context->RSSetViewports(1, &viewport);
   data.context->SOSetTargets(1, (ID3D11Buffer**)&emptyptr, &zero);
@@ -823,7 +748,12 @@ void d3d11_capture(void *swap_ptr, void *backbuffer_ptr) {
   }
 
   if (first_frame) {
-    auto pix_fmt = dxgi_format_to_pix_fmt(data.format);
+    capsule_pix_fmt_t pix_fmt;
+    if (data.gpu_color_conv) {
+      pix_fmt = CAPSULE_PIX_FMT_YUV444P;
+    } else {
+      pix_fmt = dxgi_format_to_pix_fmt(data.format);
+    }
     capsule_write_video_format(
       data.cx / data.size_divider,
       data.cy / data.size_divider,
