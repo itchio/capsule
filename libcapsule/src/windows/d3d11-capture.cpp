@@ -232,14 +232,20 @@ static bool d3d11_init_colorconv_shader() {
 
   float width = (float) (data.cx / data.size_divider);
   float width_i = 1.0f / width;
+  float height = (float) (data.cy / data.size_divider);
+  float height_i = 1.0f / height;
   struct {
     float width;
     float width_i;
+    float height;
+    float height_i;
     int64_t pad1;
     int64_t pad2;
   } initial_data = {
     width,
     width_i,
+    height,
+    height_i,
     0,
     0,
   };

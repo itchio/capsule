@@ -34,8 +34,12 @@ float4 main(VertData input) : SV_Target \
 
 static const char pixel_shader_string_conv[] =
 "\
+static const float PRECISION_OFFSET = 0.2; \
+\
 uniform float width; \
 uniform float width_i; \
+uniform float height; \
+uniform float height_i; \
 uniform Texture2D diffuseTexture; \
 SamplerState textureSampler \
 { \
@@ -49,7 +53,7 @@ struct VertData \
   float2 texCoord : TexCoord0; \
 }; \
 float rgbToY(float3 rgb) { \
-  return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) * (1 - 0.0625) + 0.0625; \
+  return (0.299 * rgb.r + 0.587 * rgb.g + 0.114 * rgb.b) * ((236.0 - 16.0) / 256.0) + (16.0 / 256.0); \
 } \
 float rgbToU(float3 rgb) { \
   return -0.169 * rgb.r - 0.331 * rgb.g + 0.499 * rgb.b + 0.5; \
@@ -61,8 +65,11 @@ float4 main(VertData input) : SV_Target \
 { \
   float u = input.texCoord.x; \
   float v = input.texCoord.y; \
-  float uwrap = fmod(u * 4.0, 1.0); \
-  float2 sample_pos = float2(uwrap, v); \
+  float u_val = floor(fmod(u * width * 4.0 + PRECISION_OFFSET, width)) * width_i; \
+  float v_val = floor(v * height + PRECISION_OFFSET) * height_i; \
+  float2 sample_pos = float2(u_val, v_val); \
+  sample_pos.x -= width_i * 1.5; \
+  sample_pos.y += height_i * 0.5; \
   float3 samples[4]; \
   samples[0] = diffuseTexture.Sample(textureSampler, sample_pos); \
   sample_pos.x += width_i; \

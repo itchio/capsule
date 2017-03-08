@@ -381,29 +381,34 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
       sws_linesize[0] = linesize;
     }
 
-    /* the image can be allocated by any means and av_image_alloc() is
-    * just the most convenient way if av_malloc() is to be used */
-    ret = av_image_alloc(
-        vframe->data,
-        vframe->linesize,
-        vc->width,
-        vc->height,
-        vc->pix_fmt,
-        32 /* alignment */
-    );
-    if (ret < 0) {
-      fprintf(stderr, "Could not allocate raw picture buffer\n");
-      exit(1);
+    // FIXME: just messing around
+    bool misalign_planes = !!getenv("MISALIGN_PLANES");
+    if (misalign_planes) {
+      capsule_log("Purposefully misaligning planes to confirm suspicions about x264 performance");
+      size_t frame_buffer_size = vc->width * 4 * vc->height;
+      uint8_t *frame_buffer = (uint8_t *) malloc(frame_buffer_size);
+      vframe->data[0] = frame_buffer;
+      vframe->data[1] = frame_buffer + vc->width;
+      vframe->data[2] = frame_buffer + vc->width * 2;
+      vframe->linesize[0] = vc->width * 4;
+      vframe->linesize[1] = vc->width * 4;
+      vframe->linesize[2] = vc->width * 4;
+    } else {
+      /* the image can be allocated by any means and av_image_alloc() is
+      * just the most convenient way if av_malloc() is to be used */
+      ret = av_image_alloc(
+          vframe->data,
+          vframe->linesize,
+          vc->width,
+          vc->height,
+          vc->pix_fmt,
+          32 /* alignment */
+      );
+      if (ret < 0) {
+        fprintf(stderr, "Could not allocate raw picture buffer\n");
+        exit(1);
+      }
     }
-
-    capsule_log("offsets: %p %p (%d from first) %p (%d from first), linesize: %d %d %d",
-      vframe->data[0],
-      vframe->data[1], vframe->data[1] - vframe->data[0],
-      vframe->data[2], vframe->data[2] - vframe->data[0],
-      vframe->linesize[0],
-      vframe->linesize[1],
-      vframe->linesize[2]
-    );
   } else {
     // FIXME: use vfmt offsets & linesizes instead of computing them here
     // this assumes a horizontal format, see https://twitter.com/fasterthanlime/status/839086194919161857
@@ -413,20 +418,16 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     vframe->linesize[0] = width * 4;
     vframe->linesize[1] = width * 4;
     vframe->linesize[2] = width * 4;
-
-    capsule_log("offsets: %d %d %d, linesize: %d",
-      vframe->data[0] - buffer,
-      vframe->data[1] - buffer,
-      vframe->data[2] - buffer,
-      vframe->linesize[0]
-    );
-    capsule_log("aligned: %d %d %d, linesize: %d",
-      FFALIGN(vframe->data[0] - buffer, 64),
-      FFALIGN(vframe->data[1] - buffer, 64),
-      FFALIGN(vframe->data[2] - buffer, 64),
-      FFALIGN(vframe->linesize[0], 64)
-    );
   }
+
+  capsule_log("initial offsets: %p %p (%d from first) %p (%d from first), linesize: %d %d %d",
+    vframe->data[0],
+    vframe->data[1], vframe->data[1] - vframe->data[0],
+    vframe->data[2], vframe->data[2] - vframe->data[0],
+    vframe->linesize[0],
+    vframe->linesize[1],
+    vframe->linesize[2]
+  );
 
   // initialize swrescale context
   // FIXME: we're actually never using that for now
@@ -521,6 +522,17 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
 
       vnext_pts = timestamp;
       vframe->pts = vnext_pts;
+
+      if (frame_count < 3) {
+        capsule_log("initial offsets: %p %p (%d from first) %p (%d from first), linesize: %d %d %d",
+          vframe->data[0],
+          vframe->data[1], vframe->data[1] - vframe->data[0],
+          vframe->data[2], vframe->data[2] - vframe->data[0],
+          vframe->linesize[0],
+          vframe->linesize[1],
+          vframe->linesize[2]
+        );
+      }
 
       // write video frame
       {
