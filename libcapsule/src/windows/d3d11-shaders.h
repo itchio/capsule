@@ -16,6 +16,10 @@ VertData main(VertData input) \
 
 static const char pixel_shader_string_overlay[] =
 "uniform Texture2D diffuseTexture; \
+uniform float overlay_width; \
+uniform float overlay_height; \
+uniform float width; \
+uniform float height; \
 SamplerState textureSampler \
 { \
   AddressU = Clamp; \
@@ -30,10 +34,12 @@ struct VertData \
 float4 main(VertData input) : SV_Target \
 { \
   float2 sample_pos = float2( \
-    input.texCoord.x * 640.0 / 256.0, \
-    input.texCoord.y * 480.0 / 128.0 \
+    (input.texCoord.x * width / overlay_width) - ((width - overlay_width) / overlay_width), \
+    (input.texCoord.y * height / overlay_height) - ((height - overlay_height) / overlay_height) \
   ); \
-  return diffuseTexture.Sample(textureSampler, sample_pos); \
+  float4 res = diffuseTexture.Sample(textureSampler, sample_pos); \
+  res.a *= 0.7; \
+  return res; \
 }";
 
 static const char pixel_shader_string_noconv[] =
