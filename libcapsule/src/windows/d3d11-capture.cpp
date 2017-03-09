@@ -51,9 +51,14 @@ struct d3d11_data {
   int                            cur_tex;
   int                            copy_wait;
 
+  uint32_t                       overlay_width;  
+  uint32_t                       overlay_height;  
   ID3D11Texture2D                *overlay_tex;
   ID3D11ShaderResourceView       *overlay_resource;
   ID3D11PixelShader              *overlay_pixel_shader;
+  ID3D11BlendState               *overlay_blend_state;
+  ID3D11Buffer                   *overlay_vertex_buffer;
+  ID3D11Buffer                   *overlay_constants;
 
   uint32_t                       pitch; // linesize, may not be (width * components) because of alignemnt
 };
@@ -213,6 +218,7 @@ static bool d3d11_shmem_init_buffers(size_t idx) {
   hr = data.device->CreateShaderResourceView(data.scale_tex, &res_desc, &data.scale_resource);
   if (FAILED(hr)) {
     capsule_log("d3d11_shmem_init_buffers: failed to create rendertarget view (%x)", hr);
+    return false;
   }
 
   return true;
@@ -284,6 +290,54 @@ static bool d3d11_init_colorconv_shader() {
     memcpy(map.pData, &initial_data, bd.ByteWidth);
     data.context->Unmap(data.constants, 0);
   }
+}
+
+static bool d3d11_init_overlay_shader() {
+  HRESULT hr;
+
+  D3D11_BUFFER_DESC bd;
+  memset(&bd, 0, sizeof(bd));
+
+  // keep in sync with pixel_shader_string_overlay
+  int constant_size = sizeof(float) * 2;
+
+  float overlay_width = (float) data.overlay_width;
+  float overlay_height = (float) data.overlay_height;
+  float width = (float) data.cx;
+  float height = (float) data.cy;
+  struct {
+    float overlay_width;
+    float overlay_height;
+    float width;
+    float height;
+    int64_t pad1;
+    int64_t pad2;
+  } initial_data = {
+    overlay_width,
+    overlay_height,
+    width,
+    height,
+    0,
+    0,
+  };
+
+  capsule_log("d3d11_init_overlay_shader: constant size = %d", constant_size);
+
+  bd.ByteWidth = (constant_size+15) & 0xFFFFFFF0; // align
+  bd.Usage = D3D11_USAGE_DYNAMIC;
+  bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+  bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+  D3D11_SUBRESOURCE_DATA srd = {};
+  srd.pSysMem = &initial_data;
+
+  hr = data.device->CreateBuffer(&bd, &srd, &data.overlay_constants);
+  if (FAILED(hr)) {
+    capsule_log("d3d11_init_overlay_shader: failed to create constant buffer (%x)", hr);
+    return false;
+  }
+
+  capsule_log("created overlay_constants");
 }
 
 static bool d3d11_load_shaders() {
@@ -434,6 +488,10 @@ static bool d3d11_load_shaders() {
       capsule_log("d3d11_load_shaders: failed to create pixel shader (%x)", hr);
       return false;
     }
+
+    if (!d3d11_init_overlay_shader()) {
+      return false;
+    }
   }
 
   return true;
@@ -455,29 +513,41 @@ static bool d3d11_init_draw_states(void)
     return false;
   }
 
-  D3D11_BLEND_DESC blend_desc = {};
+  {
+    D3D11_BLEND_DESC blend_desc = {};
 
-  for (size_t i = 0; i < 8; i++) {
-    // FIXME: just testing for overlay shader
-    if (i == 0) {
-      blend_desc.RenderTarget[i].BlendEnable = TRUE;
-      blend_desc.RenderTarget[i].SrcBlend = D3D11_BLEND_SRC_ALPHA;
-      blend_desc.RenderTarget[i].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
-      blend_desc.RenderTarget[i].BlendOp = D3D11_BLEND_OP_ADD;
-      blend_desc.RenderTarget[i].SrcBlendAlpha = D3D11_BLEND_ONE;
-      blend_desc.RenderTarget[i].DestBlendAlpha = D3D11_BLEND_ZERO;
-      blend_desc.RenderTarget[i].BlendOpAlpha = D3D11_BLEND_OP_ADD;
-      // blend_desc.RenderTarget[i].RenderTargetWriteMask = 0x0;
+    for (size_t i = 0; i < 8; i++) {
+      if (i == 0) {
+        blend_desc.RenderTarget[i].BlendEnable = TRUE;
+        blend_desc.RenderTarget[i].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+        blend_desc.RenderTarget[i].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+        blend_desc.RenderTarget[i].BlendOp = D3D11_BLEND_OP_ADD;
+        blend_desc.RenderTarget[i].SrcBlendAlpha = D3D11_BLEND_ONE;
+        blend_desc.RenderTarget[i].DestBlendAlpha = D3D11_BLEND_ZERO;
+        blend_desc.RenderTarget[i].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+      }
       blend_desc.RenderTarget[i].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
-    } else {
-      blend_desc.RenderTarget[i].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    }
+
+    hr = data.device->CreateBlendState(&blend_desc, &data.overlay_blend_state);
+    if (FAILED(hr)) {
+      capsule_log("d3d11_init_blend_state: failed to create overlay blend state (%x)", hr);
+      return false;
     }
   }
 
-  hr = data.device->CreateBlendState(&blend_desc, &data.blend_state);
-  if (FAILED(hr)) {
-    capsule_log("d3d11_init_blend_state: failed to create blend state (%x)", hr);
-    return false;
+  {
+    D3D11_BLEND_DESC blend_desc = {};
+
+    for (size_t i = 0; i < 8; i++) {
+      blend_desc.RenderTarget[i].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    }
+
+    hr = data.device->CreateBlendState(&blend_desc, &data.blend_state);
+    if (FAILED(hr)) {
+      capsule_log("d3d11_init_blend_state: failed to create blend state (%x)", hr);
+      return false;
+    }
   }
 
   D3D11_DEPTH_STENCIL_DESC zstencil_desc = {};
@@ -533,7 +603,7 @@ static bool d3d11_init_quad_vbo(void)
 
   hr = data.device->CreateBuffer(&desc, &srd, &data.vertex_buffer);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init_vertex_buffer: failed to create vertex buffer (%x)", hr);
+    capsule_log("d3d11_init_quad_vbo: failed to create vertex buffer (%x)", hr);
     return false;
   }
 
@@ -542,12 +612,56 @@ static bool d3d11_init_quad_vbo(void)
 
 static bool d3d11_init_overlay_vbo(void)
 {
+  // d3d11 coordinate system: (0, 0) = bottom-left
+  float cx = (float) data.cx;
+  float cy = (float) data.cy;
+  float width = (float) data.overlay_width;
+  float height = (float) data.overlay_height;
+  float x = cx - width;
+  float y = 0;
+
+  float l = x / cx * 2.0f - 1.0f;
+  float r = (x + width) / cx * 2.0f - 1.0f;
+  float b = y / cy * 2.0f - 1.0f;
+  float t = (y + height) / cy * 2.0f - 1.0f;
+
+  capsule_log("Overlay vbo: left = %.2f, right = %.2f, top = %.2f, bottom = %.2f", l, r, t, b);
+
+  HRESULT hr;
+  const vertex verts[4] = {
+    { { l, t, 0.0f, 1.0f }, { 0.0f, 0.0f } },
+    { { l, b, 0.0f, 1.0f }, { 0.0f, 1.0f } },
+    { { r, t, 0.0f, 1.0f }, { 1.0f, 0.0f } },
+    { { r, b, 0.0f, 1.0f }, { 1.0f, 1.0f } }
+  };
+
+  D3D11_BUFFER_DESC desc;
+  desc.ByteWidth = sizeof(vertex) * 4;
+  desc.Usage = D3D11_USAGE_DEFAULT;
+  desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+  desc.CPUAccessFlags = 0;
+  desc.MiscFlags = 0;
+
+  D3D11_SUBRESOURCE_DATA srd = {};
+  srd.pSysMem = (const void*) verts;
+
+  hr = data.device->CreateBuffer(&desc, &srd, &data.overlay_vertex_buffer);
+  if (FAILED(hr)) {
+    capsule_log("d3d11_init_overlay_vbo: failed to create vertex buffer (%x)", hr);
+    return false;
+  }
+
+  return true;
+}
+
+static bool d3d11_init_overlay_texture(void)
+{
   wchar_t libcapsule_path_w[MAX_PATH];
   libcapsule_path_w[0] = '\0';
 
   DWORD envErr = GetEnvironmentVariableW(L"CAPSULE_LIBRARY_PATH", libcapsule_path_w, MAX_PATH);
   if (FAILED(envErr)) {
-    capsule_log("d3d11_init_overlay_vbo: could not get CAPSULE_LIBRARY_PATH")
+    capsule_log("d3d11_init_overlay_texture: could not get CAPSULE_LIBRARY_PATH")
     return false;
   }
 
@@ -557,7 +671,7 @@ static bool d3d11_init_overlay_vbo(void)
   rec_path = rec_path.substr(0, dll_index);
   rec_path.append(L"rec.png");
   // TODO: you can look again
-  capsule_log("d3d11_init_overlay_vbo: should load rec.png from '%S'", rec_path.c_str());
+  capsule_log("d3d11_init_overlay_texture: should load rec.png from '%S'", rec_path.c_str());
 
   FILE *f = _wfopen(rec_path.c_str(), L"rb");
   int x, y, channels_in_file;
@@ -566,11 +680,14 @@ static bool d3d11_init_overlay_vbo(void)
   fclose(f);
 
   if (!pixels) {
-    capsule_log("d3d11_init_overlay_vbo: could not load rec.png: %s", stbi_failure_reason());
+    capsule_log("d3d11_init_overlay_texture: could not load rec.png: %s", stbi_failure_reason());
     return false;
   }
 
-  capsule_log("d3d11_init_overlay_vbo: loaded image, %dx%d, %d channels", x, y, channels_in_file);
+  data.overlay_width = x;
+  data.overlay_height = y;
+
+  capsule_log("d3d11_init_overlay_texture: loaded image, %dx%d, %d channels", x, y, channels_in_file);
 
   HRESULT hr;
   D3D11_TEXTURE2D_DESC desc = {};
@@ -590,7 +707,7 @@ static bool d3d11_init_overlay_vbo(void)
 
   hr = data.device->CreateTexture2D(&desc, &srd, &data.overlay_tex);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init_overlay_vbo: failed to create texture (%x)", hr);
+    capsule_log("d3d11_init_overlay_texture: failed to create texture (%x)", hr);
     return false;
   }
 
@@ -601,7 +718,8 @@ static bool d3d11_init_overlay_vbo(void)
 
   hr = data.device->CreateShaderResourceView(data.overlay_tex, &res_desc, &data.overlay_resource);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init_overlay_vbo: failed to create rendertarget view (%x)", hr);
+    capsule_log("d3d11_init_overlay_texture: failed to create rendertarget view (%x)", hr);
+    return false;
   }
 
   return true;
@@ -628,12 +746,12 @@ static void d3d11_init(IDXGISwapChain *swap) {
 
   d3d11_init_format(swap, &window);
 
-  if (!d3d11_load_shaders() || !d3d11_init_draw_states() || !d3d11_init_quad_vbo()) {
+  if (!d3d11_init_overlay_texture() || !d3d11_init_overlay_vbo()) {
     exit(1337);
     return;
   }
 
-  if (!d3d11_init_overlay_vbo()) {
+  if (!d3d11_load_shaders() || !d3d11_init_draw_states() || !d3d11_init_quad_vbo()) {
     exit(1337);
     return;
   }
@@ -807,16 +925,14 @@ static void d3d11_setup_overlay_pipeline(ID3D11ShaderResourceView *resource) {
   data.context->GSSetShader(nullptr, nullptr, 0);
   data.context->IASetInputLayout(data.vertex_layout);
   data.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
-  data.context->IASetVertexBuffers(0, 1, &data.vertex_buffer, &stride, &zero);
-  data.context->OMSetBlendState(data.blend_state, factor, 0xFFFFFFFF);
+  data.context->IASetVertexBuffers(0, 1, &data.overlay_vertex_buffer, &stride, &zero);
+  data.context->OMSetBlendState(data.overlay_blend_state, factor, 0xFFFFFFFF);
   data.context->OMSetDepthStencilState(data.zstencil_state, 0);
   // data.context->OMSetRenderTargets(1, &target, nullptr);
   data.context->PSSetSamplers(0, 1, &data.sampler_state);
   data.context->PSSetShader(data.overlay_pixel_shader, nullptr, 0);
   data.context->PSSetShaderResources(0, 1, &data.overlay_resource);
-  if (data.gpu_color_conv) {
-    data.context->PSSetConstantBuffers(0, 1, &data.constants);
-  }
+  data.context->PSSetConstantBuffers(0, 1, &data.overlay_constants);
   data.context->RSSetState(data.raster_state);
   data.context->RSSetViewports(1, &viewport);
   data.context->SOSetTargets(1, (ID3D11Buffer**)&emptyptr, &zero);

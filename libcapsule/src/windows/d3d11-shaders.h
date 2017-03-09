@@ -33,12 +33,8 @@ struct VertData \
 }; \
 float4 main(VertData input) : SV_Target \
 { \
-  float2 sample_pos = float2( \
-    (input.texCoord.x * width / overlay_width) - ((width - overlay_width) / overlay_width), \
-    (input.texCoord.y * height / overlay_height) - ((height - overlay_height) / overlay_height) \
-  ); \
-  float4 res = diffuseTexture.Sample(textureSampler, sample_pos); \
-  res.a *= 0.7; \
+  float4 res = diffuseTexture.Sample(textureSampler, input.texCoord); \
+  res.a *= 0.5; \
   return res; \
 }";
 
