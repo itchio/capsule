@@ -183,7 +183,11 @@ HRESULT CAPSULE_STDCALL D3D11CreateDeviceAndSwapChain_hook (
     return res;
   }
 
-  install_present_hook(*ppSwapChain);
+  // don't be fooled by the fact that this function is called D3D11CreateDeviceAndSwapChain.
+  // it is actually called (sometimes) by D3D11CreateDevice, where ppSwapChain is null.
+  if (ppSwapChain && *ppSwapChain) {
+    install_present_hook(*ppSwapChain);
+  }
 
   return res;
 }
