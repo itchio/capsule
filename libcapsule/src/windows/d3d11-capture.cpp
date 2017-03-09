@@ -52,6 +52,7 @@ struct d3d11_data {
   int                            copy_wait;
 
   ID3D11Texture2D                *overlay_tex;
+  ID3D11ShaderResourceView       *overlay_resource;
 
   uint32_t                       pitch; // linesize, may not be (width * components) because of alignemnt
 };
@@ -208,8 +209,7 @@ static bool d3d11_shmem_init_buffers(size_t idx) {
   res_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
   res_desc.Texture2D.MipLevels = 1;
 
-  hr = data.device->CreateShaderResourceView(data.overlay_tex, &res_desc, &data.scale_resource);
-  // hr = data.device->CreateShaderResourceView(data.scale_tex, &res_desc, &data.scale_resource);
+  hr = data.device->CreateShaderResourceView(data.scale_tex, &res_desc, &data.scale_resource);
   if (FAILED(hr)) {
     capsule_log("d3d11_shmem_init_buffers: failed to create rendertarget view (%x)", hr);
   }
@@ -544,6 +544,16 @@ static bool d3d11_init_overlay_vbo(void)
     return false;
   }
 
+  D3D11_SHADER_RESOURCE_VIEW_DESC res_desc = {};
+  res_desc.Format = desc.Format;
+  res_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
+  res_desc.Texture2D.MipLevels = 1;
+
+  hr = data.device->CreateShaderResourceView(data.overlay_tex, &res_desc, &data.overlay_resource);
+  if (FAILED(hr)) {
+    capsule_log("d3d11_init_overlay_vbo: failed to create rendertarget view (%x)", hr);
+  }
+
   return true;
 }
 
@@ -733,12 +743,53 @@ static void d3d11_setup_pipeline(ID3D11RenderTargetView *target, ID3D11ShaderRes
   data.context->VSSetShader(data.vertex_shader, nullptr, 0);
 }
 
+static void d3d11_setup_overlay_pipeline(ID3D11ShaderResourceView *resource) {
+  const float factor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+  D3D11_VIEWPORT viewport = { 0 };
+  UINT stride = sizeof(vertex);
+  void *emptyptr = nullptr;
+  UINT zero = 0;
+
+  viewport.Width = (float)data.cx;
+  viewport.Height = (float)data.cy;
+  viewport.MaxDepth = 1.0f;
+
+  data.context->GSSetShader(nullptr, nullptr, 0);
+  data.context->IASetInputLayout(data.vertex_layout);
+  data.context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+  data.context->IASetVertexBuffers(0, 1, &data.vertex_buffer, &stride, &zero);
+  data.context->OMSetBlendState(data.blend_state, factor, 0xFFFFFFFF);
+  data.context->OMSetDepthStencilState(data.zstencil_state, 0);
+  // data.context->OMSetRenderTargets(1, &target, nullptr);
+  data.context->PSSetSamplers(0, 1, &data.sampler_state);
+  // TODO: overlay shader
+  data.context->PSSetShader(data.pixel_shader, nullptr, 0);
+  data.context->PSSetShaderResources(0, 1, &data.overlay_resource);
+  if (data.gpu_color_conv) {
+    data.context->PSSetConstantBuffers(0, 1, &data.constants);
+  }
+  data.context->RSSetState(data.raster_state);
+  data.context->RSSetViewports(1, &viewport);
+  data.context->SOSetTargets(1, (ID3D11Buffer**)&emptyptr, &zero);
+  // TODO: overlay shader
+  data.context->VSSetShader(data.vertex_shader, nullptr, 0);
+}
+
 static inline void d3d11_scale_texture(ID3D11RenderTargetView *target,
 		ID3D11ShaderResourceView *resource) {
 	static struct d3d11_state old_state = {0};
 
 	d3d11_save_state(&old_state);
 	d3d11_setup_pipeline(target, resource);
+	data.context->Draw(4, 0);
+	d3d11_restore_state(&old_state);
+}
+
+static inline void d3d11_draw_overlay_internal() {
+	static struct d3d11_state old_state = {0};
+
+	d3d11_save_state(&old_state);
+	d3d11_setup_overlay_pipeline(data.overlay_resource);
 	data.context->Draw(4, 0);
 	d3d11_restore_state(&old_state);
 }
@@ -841,6 +892,14 @@ void d3d11_capture(void *swap_ptr, void *backbuffer_ptr) {
 
   d3d11_shmem_capture(backbuffer);
   backbuffer->Release();
+}
+
+void d3d11_draw_overlay () {
+  if (!data.device) {
+    return;
+  }
+
+  d3d11_draw_overlay_internal();
 }
 
 #define SAFE_RELEASE(x) if ((x)) { (x)->Release(); }

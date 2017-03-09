@@ -5,12 +5,14 @@
 #include "dxgi-vtable-helpers.h"
 #include "dxgi-util.h"
 
+typedef void (* dxgi_draw_overlay_func_t)(void);
 typedef void (* dxgi_capture_func_t)(void *swap_ptr, void *backbuffer_ptr);
 typedef void (* dxgi_free_func_t)(void);
 
 // inspired from libobs
 struct dxgi_swap_data {
   IDXGISwapChain *swap;
+  dxgi_draw_overlay_func_t draw_overlay;
   dxgi_capture_func_t capture;
   dxgi_free_func_t free;
 };
@@ -45,6 +47,7 @@ static bool setup_dxgi(IDXGISwapChain *swap) {
   if (SUCCEEDED(hr)) {
     capsule_log("Found D3D11 Device!");
     data.swap = swap;
+    data.draw_overlay = d3d11_draw_overlay;
     data.capture = d3d11_capture;
     data.free = d3d11_free;
     device->Release();
@@ -92,12 +95,17 @@ HRESULT CAPSULE_STDCALL Present_hook (
   // libobs has logic to capture *after* Present (if you want to capture
   // overlays). This isn't in capsule's scope, so we always capture before Present.
 
-  bool capture = (swap == data.swap) && !!data.capture;
-  if (capture) {
-    IUnknown *backbuffer = get_dxgi_backbuffer(data.swap);
-    if (!!backbuffer) {
-      data.capture(swap, backbuffer);
-      backbuffer->Release();
+  if (swap == data.swap) {
+    if (data.capture) {
+      IUnknown *backbuffer = get_dxgi_backbuffer(data.swap);
+      if (!!backbuffer) {
+        data.capture(swap, backbuffer);
+        backbuffer->Release();
+      }
+    }
+
+    if (data.draw_overlay) {
+      data.draw_overlay();
     }
   }
 
