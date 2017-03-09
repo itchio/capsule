@@ -253,8 +253,11 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     vc->profile = FF_PROFILE_H264_BASELINE;
   }
 
-  // av_opt_set(vc->priv_data, "preset", "veryfast", AV_OPT_SEARCH_CHILDREN);
-  av_opt_set(vc->priv_data, "preset", "ultrafast", AV_OPT_SEARCH_CHILDREN);
+  char *preset = (char*) "ultrafast";
+  if (args->x264_preset) {
+    preset = args->x264_preset;
+  }
+  av_opt_set(vc->priv_data, "preset", preset, AV_OPT_SEARCH_CHILDREN);
 
   ret = avcodec_open2(vc, vcodec, NULL);
   if (ret < 0) {

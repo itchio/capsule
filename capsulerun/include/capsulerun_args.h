@@ -23,4 +23,5 @@ typedef struct capsule_args_s {
   int max_b_frames;
   int buffered_frames;
   char *priority;
+  char *x264_preset;
 } capsule_args_t;

@@ -73,6 +73,7 @@ int main (int argc, char **argv) {
     OPT_INTEGER(0, "buffered-frames", &args.buffered_frames, "default: 60"),
     OPT_BOOLEAN(0, "gpu-color-conv", &args.gpu_color_conv, "do color conversion on the GPU (experimental)"),
     OPT_STRING(0, "priority", &args.priority, "above-normal or high (windows only)"),
+    OPT_STRING(0, "x264-preset", &args.x264_preset, "slower, slow, medium, fast, faster, veryfast, ultrafast (default ultrafast)"),
     OPT_END(),
   };
   struct argparse argparse;
