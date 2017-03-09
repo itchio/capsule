@@ -14,6 +14,24 @@ VertData main(VertData input) \
   return output; \
 }";
 
+static const char pixel_shader_string_overlay[] =
+"uniform Texture2D diffuseTexture; \
+SamplerState textureSampler \
+{ \
+  AddressU = Clamp; \
+  AddressV = Clamp; \
+  Filter   = Linear; \
+}; \
+struct VertData \
+{ \
+  float4 pos      : SV_Position; \
+  float2 texCoord : TexCoord0; \
+}; \
+float4 main(VertData input) : SV_Target \
+{ \
+  return diffuseTexture.Sample(textureSampler, input.texCoord); \
+}";
+
 static const char pixel_shader_string_noconv[] =
 "uniform Texture2D diffuseTexture; \
 SamplerState textureSampler \

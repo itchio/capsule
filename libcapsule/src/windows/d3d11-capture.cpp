@@ -53,6 +53,7 @@ struct d3d11_data {
 
   ID3D11Texture2D                *overlay_tex;
   ID3D11ShaderResourceView       *overlay_resource;
+  ID3D11PixelShader              *overlay_pixel_shader;
 
   uint32_t                       pitch; // linesize, may not be (width * components) because of alignemnt
 };
@@ -357,44 +358,80 @@ static bool d3d11_load_shaders() {
 
   // Set up pixel shader
 
-  uint8_t pixel_shader_data[16384];
-  size_t pixel_shader_size = 0;
-  ID3D10Blob *error_msg = nullptr;
+  {
+    uint8_t pixel_shader_data[16384];
+    size_t pixel_shader_size = 0;
+    ID3D10Blob *error_msg = nullptr;
 
-  const char *pixel_shader_string;
-  size_t pixel_shader_string_size;
+    const char *pixel_shader_string;
+    size_t pixel_shader_string_size;
 
-  if (data.gpu_color_conv) {
-    pixel_shader_string = pixel_shader_string_conv;
-    pixel_shader_string_size = sizeof(pixel_shader_string_conv);
-  } else {
-    pixel_shader_string = pixel_shader_string_noconv;
-    pixel_shader_string_size = sizeof(pixel_shader_string_noconv);
+    if (data.gpu_color_conv) {
+      pixel_shader_string = pixel_shader_string_conv;
+      pixel_shader_string_size = sizeof(pixel_shader_string_conv);
+    } else {
+      pixel_shader_string = pixel_shader_string_noconv;
+      pixel_shader_string_size = sizeof(pixel_shader_string_noconv);
+    }
+
+    hr = pD3DCompileFunc(pixel_shader_string, pixel_shader_string_size,
+      "pixel_shader_string", nullptr, nullptr, "main",
+      "ps_4_0", D3D10_SHADER_OPTIMIZATION_LEVEL1, 0, &blob, &error_msg);
+
+    if (FAILED(hr)) {
+      capsule_log("d3d11_load_shaders: failed to compile pixel shader (%x)", hr);
+      capsule_log("d3d11_load_shaders: %s", (char*) error_msg->GetBufferPointer());
+      return false;
+    }
+
+    pixel_shader_size = (size_t)blob->GetBufferSize();
+    memcpy(pixel_shader_data, blob->GetBufferPointer(), blob->GetBufferSize());
+    blob->Release();
+
+    hr = data.device->CreatePixelShader(pixel_shader_data, pixel_shader_size, nullptr, &data.pixel_shader);
+
+    if (FAILED(hr)) {
+      capsule_log("d3d11_load_shaders: failed to create pixel shader (%x)", hr);
+      return false;
+    }
+
+    if (data.gpu_color_conv) {
+      if (!d3d11_init_colorconv_shader()) {
+        return false;
+      }
+    }
   }
 
-  hr = pD3DCompileFunc(pixel_shader_string, pixel_shader_string_size,
-    "pixel_shader_string", nullptr, nullptr, "main",
-    "ps_4_0", D3D10_SHADER_OPTIMIZATION_LEVEL1, 0, &blob, &error_msg);
+  // Set up overlay pixel shader
+  {
+    uint8_t pixel_shader_data[16384];
+    size_t pixel_shader_size = 0;
+    ID3D10Blob *error_msg = nullptr;
 
-  if (FAILED(hr)) {
-    capsule_log("d3d11_load_shaders: failed to compile pixel shader (%x)", hr);
-    capsule_log("d3d11_load_shaders: %s", (char*) error_msg->GetBufferPointer());
-    return false;
-  }
+    const char *pixel_shader_string;
+    size_t pixel_shader_string_size;
 
-  pixel_shader_size = (size_t)blob->GetBufferSize();
-  memcpy(pixel_shader_data, blob->GetBufferPointer(), blob->GetBufferSize());
-  blob->Release();
+    pixel_shader_string = pixel_shader_string_overlay;
+    pixel_shader_string_size = sizeof(pixel_shader_string_overlay);
 
-  hr = data.device->CreatePixelShader(pixel_shader_data, pixel_shader_size, nullptr, &data.pixel_shader);
+    hr = pD3DCompileFunc(pixel_shader_string, pixel_shader_string_size,
+      "pixel_shader_string", nullptr, nullptr, "main",
+      "ps_4_0", D3D10_SHADER_OPTIMIZATION_LEVEL1, 0, &blob, &error_msg);
 
-  if (FAILED(hr)) {
-    capsule_log("d3d11_load_shaders: failed to create pixel shader (%x)", hr);
-    return false;
-  }
+    if (FAILED(hr)) {
+      capsule_log("d3d11_load_shaders: failed to compile pixel shader (%x)", hr);
+      capsule_log("d3d11_load_shaders: %s", (char*) error_msg->GetBufferPointer());
+      return false;
+    }
 
-  if (data.gpu_color_conv) {
-    if (!d3d11_init_colorconv_shader()) {
+    pixel_shader_size = (size_t)blob->GetBufferSize();
+    memcpy(pixel_shader_data, blob->GetBufferPointer(), blob->GetBufferSize());
+    blob->Release();
+
+    hr = data.device->CreatePixelShader(pixel_shader_data, pixel_shader_size, nullptr, &data.overlay_pixel_shader);
+
+    if (FAILED(hr)) {
+      capsule_log("d3d11_load_shaders: failed to create pixel shader (%x)", hr);
       return false;
     }
   }
@@ -421,7 +458,20 @@ static bool d3d11_init_draw_states(void)
   D3D11_BLEND_DESC blend_desc = {};
 
   for (size_t i = 0; i < 8; i++) {
-    blend_desc.RenderTarget[i].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    // FIXME: just testing for overlay shader
+    if (i == 0) {
+      blend_desc.RenderTarget[i].BlendEnable = TRUE;
+      blend_desc.RenderTarget[i].SrcBlend = D3D11_BLEND_SRC_ALPHA;
+      blend_desc.RenderTarget[i].DestBlend = D3D11_BLEND_INV_SRC_ALPHA;
+      blend_desc.RenderTarget[i].BlendOp = D3D11_BLEND_OP_ADD;
+      blend_desc.RenderTarget[i].SrcBlendAlpha = D3D11_BLEND_ONE;
+      blend_desc.RenderTarget[i].DestBlendAlpha = D3D11_BLEND_ZERO;
+      blend_desc.RenderTarget[i].BlendOpAlpha = D3D11_BLEND_OP_ADD;
+      // blend_desc.RenderTarget[i].RenderTargetWriteMask = 0x0;
+      blend_desc.RenderTarget[i].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    } else {
+      blend_desc.RenderTarget[i].RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+    }
   }
 
   hr = data.device->CreateBlendState(&blend_desc, &data.blend_state);
@@ -763,7 +813,7 @@ static void d3d11_setup_overlay_pipeline(ID3D11ShaderResourceView *resource) {
   // data.context->OMSetRenderTargets(1, &target, nullptr);
   data.context->PSSetSamplers(0, 1, &data.sampler_state);
   // TODO: overlay shader
-  data.context->PSSetShader(data.pixel_shader, nullptr, 0);
+  data.context->PSSetShader(data.overlay_pixel_shader, nullptr, 0);
   data.context->PSSetShaderResources(0, 1, &data.overlay_resource);
   if (data.gpu_color_conv) {
     data.context->PSSetConstantBuffers(0, 1, &data.constants);
