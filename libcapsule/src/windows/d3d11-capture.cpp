@@ -5,10 +5,14 @@
 
 #include "./d3d11-shaders.h"
 
+#include "../shared/stb_image.h"
+
 #include <d3d11.h>
 #include <d3dcompiler.h>
 
 #include <dxgi.h>
+
+#include <string>
 
 // inspired by libobs
 struct d3d11_data {
@@ -483,6 +487,37 @@ static bool d3d11_init_quad_vbo(void)
   return true;
 }
 
+static bool d3d11_init_overlay_vbo(void)
+{
+  wchar_t libcapsule_path_w[MAX_PATH];
+  libcapsule_path_w[0] = '\0';
+
+  DWORD envErr = GetEnvironmentVariableW(L"CAPSULE_LIBRARY_PATH", libcapsule_path_w, MAX_PATH);
+  if (FAILED(envErr)) {
+    capsule_log("d3d11_init_overlay_vbo: could not get CAPSULE_LIBRARY_PATH")
+    return false;
+  }
+
+  std::wstring rec_path = std::wstring(libcapsule_path_w);
+  rec_path += L"\\rec.png";
+  capsule_log("d3d11_init_overlay_vbo: should load rec.png from '%S'", rec_path.c_str());
+
+  FILE *f = _wfopen(rec_path.c_str(), L"rb");
+  int x, y, channels_in_file;
+  unsigned char *data = stbi_load_from_file(f, &x, &y, &channels_in_file, 4);
+
+  if (!data) {
+    capsule_log("d3d11_init_overlay_vbo: could not load rec.png: %s", stbi_failure_reason());
+    return false;
+  }
+
+  capsule_log("d3d11_init_overlay_vbo: loaded image, %dx%d, %d channels", x, y, channels_in_file);
+
+  fclose(f);
+
+  return true;
+}
+
 static void d3d11_init(IDXGISwapChain *swap) {
   capsule_log("Initializing D3D11 capture");
 
@@ -505,6 +540,11 @@ static void d3d11_init(IDXGISwapChain *swap) {
   d3d11_init_format(swap, &window);
 
   if (!d3d11_load_shaders() || !d3d11_init_draw_states() || !d3d11_init_quad_vbo()) {
+    exit(1337);
+    return;
+  }
+
+  if (!d3d11_init_overlay_vbo()) {
     exit(1337);
     return;
   }

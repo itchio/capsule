@@ -13,3 +13,4 @@ xcopy /y /i build64\capsulerun\Debug\*.exe build\
 xcopy /y /i build64\capsulerun\Debug\*.dll build\
 copy /y build32\libcapsule\Debug\capsule.dll build\capsule32.dll
 copy /y build64\libcapsule\Debug\capsule.dll build\capsule64.dll
+copy /y res\*.png build\
