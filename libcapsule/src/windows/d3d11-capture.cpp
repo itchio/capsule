@@ -53,6 +53,7 @@ struct d3d11_data {
 
   uint32_t                       overlay_width;  
   uint32_t                       overlay_height;  
+  unsigned char                  *overlay_pixels;
   ID3D11Texture2D                *overlay_tex;
   ID3D11ShaderResourceView       *overlay_resource;
   ID3D11PixelShader              *overlay_pixel_shader;
@@ -633,6 +634,7 @@ static bool d3d11_init_overlay_texture(void)
 
   data.overlay_width = x;
   data.overlay_height = y;
+  data.overlay_pixels = pixels;
 
   capsule_log("d3d11_init_overlay_texture: loaded image, %dx%d, %d channels", x, y, channels_in_file);
 
@@ -642,11 +644,12 @@ static bool d3d11_init_overlay_texture(void)
   desc.Height = y;
   desc.MipLevels = 1;
   desc.ArraySize = 1;
-  desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+  desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
   desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
   desc.SampleDesc.Count = 1;
-  desc.Usage = D3D11_USAGE_DEFAULT;
+  desc.Usage = D3D11_USAGE_DYNAMIC;
   desc.MiscFlags = 0;
+  desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
   D3D11_SUBRESOURCE_DATA srd = {};
   srd.SysMemPitch = x * components;
@@ -896,7 +899,36 @@ static inline void d3d11_scale_texture(ID3D11RenderTargetView *target,
 	d3d11_restore_state(&old_state);
 }
 
+static inline void d3d11_update_overlay_texture() {
+  D3D11_MAPPED_SUBRESOURCE map;
+  HRESULT hr;
+
+  hr = data.context->Map(data.overlay_tex, 0,
+    D3D11_MAP_WRITE_DISCARD, 0, &map);
+
+  if (FAILED(hr)) {
+    capsule_log("Could not map overlay tex");
+    return;
+  }
+
+  size_t pixels_size = data.overlay_width * 4 * data.overlay_height;
+  for (int y = 0; y < data.overlay_height; y++) {
+    for (int x = 0; x < data.overlay_width; x++) {
+      int i = (y * data.overlay_width + x) * 4;
+      data.overlay_pixels[i]     = (data.overlay_pixels[i]     + 1) % 256;
+      data.overlay_pixels[i + 1] = (data.overlay_pixels[i + 1] + 1) % 256;
+      data.overlay_pixels[i + 2] = (data.overlay_pixels[i + 2] + 1) % 256;
+      // data.overlay_pixels[i + 3] = (data.overlay_pixels[i + 3] + 1) % 256;
+    }
+  }
+  memcpy(map.pData, data.overlay_pixels, pixels_size);
+
+  data.context->Unmap(data.overlay_tex, 0);
+}
+
 static inline void d3d11_draw_overlay_internal() {
+  d3d11_update_overlay_texture();
+
 	static struct d3d11_state old_state = {0};
 
 	d3d11_save_state(&old_state);
