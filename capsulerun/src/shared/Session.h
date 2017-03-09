@@ -2,6 +2,7 @@
 
 #include "AudioReceiver.h"
 #include "VideoReceiver.h"
+#include "OverlayRenderer.h"
 
 #include <thread>
 
@@ -26,4 +27,5 @@ class Session {
   private:
     std::thread *encoder_thread;
     capsule_args_t *args;
+    OverlayRenderer *overlay_renderer;
 };

@@ -10,8 +10,26 @@ set(capsulerun_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(capsulerun_INCLUDE_DIRS SYSTEM)
 
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/include)
+set(cairo_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/cairo/src)
+set(cairo_INCLUDE_DIR2 ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/projects/cairo/src)
 
-include_directories(${capsulerun_INCLUDE_DIRS} ${capsulerun_INCLUDE_DIR} ${libcapsule_INCLUDE_DIR} ${microprofile_INCLUDE_DIR})
+if(${CMAKE_GENERATOR} MATCHES "Win64$")
+set(cairo_LIBPATH ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/projects/x64/Release)
+else()
+set(cairo_LIBPATH ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/projects/Release)
+endif()
+
+set(pixman_LIBRARY ${cairo_LIBPATH}/pixman.lib)
+set(cairo_LIBRARY ${cairo_LIBPATH}/cairo.lib)
+
+include_directories(
+  ${capsulerun_INCLUDE_DIRS}
+  ${capsulerun_INCLUDE_DIR}
+  ${libcapsule_INCLUDE_DIR}
+  ${microprofile_INCLUDE_DIR}
+  ${cairo_INCLUDE_DIR}
+  ${cairo_INCLUDE_DIR2}
+)
 
 set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/shared/main.cpp
@@ -23,6 +41,7 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/shared/ShmemRead.cpp
   ${capsulerun_SOURCE_DIR}/shared/Connection.cpp
   ${capsulerun_SOURCE_DIR}/shared/FPSCounter.cpp
+  ${capsulerun_SOURCE_DIR}/shared/OverlayRenderer.cpp
   ${microprofile_SOURCE_DIR}/microprofile.cpp
 )
 
@@ -34,6 +53,7 @@ if(WIN32)
     ${capsulerun_SOURCE_DIR}/windows/hotkey.cpp
     ${capsulerun_SOURCE_DIR}/windows/main.cpp
   )
+  add_definitions(-DCAIRO_WIN32_STATIC_BUILD)
 endif()
 
 if(APPLE)
@@ -75,6 +95,8 @@ if(WIN32)
 
   # needed for microprofile
   target_link_libraries(capsulerun ws2_32.lib)
+
+  target_link_libraries(capsulerun ${pixman_LIBRARY} ${cairo_LIBRARY})
 endif()
 
 if(APPLE)

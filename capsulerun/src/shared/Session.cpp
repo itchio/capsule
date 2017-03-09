@@ -39,6 +39,9 @@ void Session::start () {
   }
 
   encoder_thread = new thread(encoder_run, args, &encoder_params);
+
+  capsule_log("Initializing overlay renderer...");
+  overlay_renderer = new OverlayRenderer();
 }
 
 void Session::stop () {
