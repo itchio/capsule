@@ -499,7 +499,11 @@ static bool d3d11_init_overlay_vbo(void)
   }
 
   std::wstring rec_path = std::wstring(libcapsule_path_w);
-  rec_path += L"\\rec.png";
+  // TODO: look away for one second
+  int dll_index = rec_path.find(L"capsule32.dll");
+  rec_path = rec_path.substr(0, dll_index);
+  rec_path.append(L"rec.png");
+  // TODO: you can look again
   capsule_log("d3d11_init_overlay_vbo: should load rec.png from '%S'", rec_path.c_str());
 
   FILE *f = _wfopen(rec_path.c_str(), L"rb");
