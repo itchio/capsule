@@ -58,7 +58,6 @@ struct d3d11_data {
   ID3D11PixelShader              *overlay_pixel_shader;
   ID3D11BlendState               *overlay_blend_state;
   ID3D11Buffer                   *overlay_vertex_buffer;
-  ID3D11Buffer                   *overlay_constants;
 
   uint32_t                       pitch; // linesize, may not be (width * components) because of alignemnt
 };
@@ -292,54 +291,6 @@ static bool d3d11_init_colorconv_shader() {
   }
 }
 
-static bool d3d11_init_overlay_shader() {
-  HRESULT hr;
-
-  D3D11_BUFFER_DESC bd;
-  memset(&bd, 0, sizeof(bd));
-
-  // keep in sync with pixel_shader_string_overlay
-  int constant_size = sizeof(float) * 2;
-
-  float overlay_width = (float) data.overlay_width;
-  float overlay_height = (float) data.overlay_height;
-  float width = (float) data.cx;
-  float height = (float) data.cy;
-  struct {
-    float overlay_width;
-    float overlay_height;
-    float width;
-    float height;
-    int64_t pad1;
-    int64_t pad2;
-  } initial_data = {
-    overlay_width,
-    overlay_height,
-    width,
-    height,
-    0,
-    0,
-  };
-
-  capsule_log("d3d11_init_overlay_shader: constant size = %d", constant_size);
-
-  bd.ByteWidth = (constant_size+15) & 0xFFFFFFF0; // align
-  bd.Usage = D3D11_USAGE_DYNAMIC;
-  bd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
-  bd.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-
-  D3D11_SUBRESOURCE_DATA srd = {};
-  srd.pSysMem = &initial_data;
-
-  hr = data.device->CreateBuffer(&bd, &srd, &data.overlay_constants);
-  if (FAILED(hr)) {
-    capsule_log("d3d11_init_overlay_shader: failed to create constant buffer (%x)", hr);
-    return false;
-  }
-
-  capsule_log("created overlay_constants");
-}
-
 static bool d3d11_load_shaders() {
   hD3DCompiler = LoadLibraryA(D3DCOMPILER_DLL_A);
 
@@ -486,10 +437,6 @@ static bool d3d11_load_shaders() {
 
     if (FAILED(hr)) {
       capsule_log("d3d11_load_shaders: failed to create pixel shader (%x)", hr);
-      return false;
-    }
-
-    if (!d3d11_init_overlay_shader()) {
       return false;
     }
   }
@@ -932,7 +879,6 @@ static void d3d11_setup_overlay_pipeline(ID3D11ShaderResourceView *resource) {
   data.context->PSSetSamplers(0, 1, &data.sampler_state);
   data.context->PSSetShader(data.overlay_pixel_shader, nullptr, 0);
   data.context->PSSetShaderResources(0, 1, &data.overlay_resource);
-  data.context->PSSetConstantBuffers(0, 1, &data.overlay_constants);
   data.context->RSSetState(data.raster_state);
   data.context->RSSetViewports(1, &viewport);
   data.context->SOSetTargets(1, (ID3D11Buffer**)&emptyptr, &zero);

@@ -16,10 +16,6 @@ VertData main(VertData input) \
 
 static const char pixel_shader_string_overlay[] =
 "uniform Texture2D diffuseTexture; \
-uniform float overlay_width; \
-uniform float overlay_height; \
-uniform float width; \
-uniform float height; \
 SamplerState textureSampler \
 { \
   AddressU = Clamp; \
@@ -34,7 +30,7 @@ struct VertData \
 float4 main(VertData input) : SV_Target \
 { \
   float4 res = diffuseTexture.Sample(textureSampler, input.texCoord); \
-  res.a *= 0.5; \
+  res.a *= 0.4; \
   return res; \
 }";
 
