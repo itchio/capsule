@@ -51,6 +51,8 @@ struct d3d11_data {
   int                            cur_tex;
   int                            copy_wait;
 
+  ID3D11Texture2D                *overlay_tex;
+
   uint32_t                       pitch; // linesize, may not be (width * components) because of alignemnt
 };
 
@@ -206,7 +208,8 @@ static bool d3d11_shmem_init_buffers(size_t idx) {
   res_desc.ViewDimension = D3D11_SRV_DIMENSION_TEXTURE2D;
   res_desc.Texture2D.MipLevels = 1;
 
-  hr = data.device->CreateShaderResourceView(data.scale_tex, &res_desc, &data.scale_resource);
+  hr = data.device->CreateShaderResourceView(data.overlay_tex, &res_desc, &data.scale_resource);
+  // hr = data.device->CreateShaderResourceView(data.scale_tex, &res_desc, &data.scale_resource);
   if (FAILED(hr)) {
     capsule_log("d3d11_shmem_init_buffers: failed to create rendertarget view (%x)", hr);
   }
@@ -508,16 +511,38 @@ static bool d3d11_init_overlay_vbo(void)
 
   FILE *f = _wfopen(rec_path.c_str(), L"rb");
   int x, y, channels_in_file;
-  unsigned char *data = stbi_load_from_file(f, &x, &y, &channels_in_file, 4);
+  int components = 4;
+  unsigned char *pixels = stbi_load_from_file(f, &x, &y, &channels_in_file, components);
+  fclose(f);
 
-  if (!data) {
+  if (!pixels) {
     capsule_log("d3d11_init_overlay_vbo: could not load rec.png: %s", stbi_failure_reason());
     return false;
   }
 
   capsule_log("d3d11_init_overlay_vbo: loaded image, %dx%d, %d channels", x, y, channels_in_file);
 
-  fclose(f);
+  HRESULT hr;
+  D3D11_TEXTURE2D_DESC desc = {};
+  desc.Width = x;
+  desc.Height = y;
+  desc.MipLevels = 1;
+  desc.ArraySize = 1;
+  desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_RENDER_TARGET;
+  desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+  desc.SampleDesc.Count = 1;
+  desc.Usage = D3D11_USAGE_DEFAULT;
+  desc.MiscFlags = 0;
+
+  D3D11_SUBRESOURCE_DATA srd = {};
+  srd.SysMemPitch = x * components;
+  srd.pSysMem = (const void *) pixels;
+
+  hr = data.device->CreateTexture2D(&desc, &srd, &data.overlay_tex);
+  if (FAILED(hr)) {
+    capsule_log("d3d11_init_overlay_vbo: failed to create texture (%x)", hr);
+    return false;
+  }
 
   return true;
 }
