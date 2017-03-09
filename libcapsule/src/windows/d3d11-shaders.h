@@ -29,7 +29,11 @@ struct VertData \
 }; \
 float4 main(VertData input) : SV_Target \
 { \
-  return diffuseTexture.Sample(textureSampler, input.texCoord); \
+  float2 sample_pos = float2( \
+    input.texCoord.x * 640.0 / 256.0, \
+    input.texCoord.y * 480.0 / 128.0 \
+  ); \
+  return diffuseTexture.Sample(textureSampler, sample_pos); \
 }";
 
 static const char pixel_shader_string_noconv[] =

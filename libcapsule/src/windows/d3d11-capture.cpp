@@ -812,7 +812,6 @@ static void d3d11_setup_overlay_pipeline(ID3D11ShaderResourceView *resource) {
   data.context->OMSetDepthStencilState(data.zstencil_state, 0);
   // data.context->OMSetRenderTargets(1, &target, nullptr);
   data.context->PSSetSamplers(0, 1, &data.sampler_state);
-  // TODO: overlay shader
   data.context->PSSetShader(data.overlay_pixel_shader, nullptr, 0);
   data.context->PSSetShaderResources(0, 1, &data.overlay_resource);
   if (data.gpu_color_conv) {
