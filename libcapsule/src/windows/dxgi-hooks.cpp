@@ -127,6 +127,60 @@ void install_present_hook (IDXGISwapChain *swap) {
 }
 
 ///////////////////////////////////////////////
+// D3D11CreateDeviceAndSwapChain 
+///////////////////////////////////////////////
+
+typedef HRESULT (CAPSULE_STDCALL *D3D11CreateDeviceAndSwapChain_t)(
+        IDXGIAdapter         *pAdapter,
+        D3D_DRIVER_TYPE      DriverType,
+        HMODULE              Software,
+        UINT                 Flags,
+  const D3D_FEATURE_LEVEL    *pFeatureLevels,
+        UINT                 FeatureLevels,
+        UINT                 SDKVersion,
+  const DXGI_SWAP_CHAIN_DESC *pSwapChainDesc,
+        IDXGISwapChain       **ppSwapChain,
+        ID3D11Device         **ppDevice,
+        D3D_FEATURE_LEVEL    *pFeatureLevel,
+        ID3D11DeviceContext  **ppImmediateContext 
+);
+static D3D11CreateDeviceAndSwapChain_t D3D11CreateDeviceAndSwapChain_real;
+static SIZE_T D3D11CreateDeviceAndSwapChain_hookId = 0;
+
+HRESULT CAPSULE_STDCALL D3D11CreateDeviceAndSwapChain_hook (
+        IDXGIAdapter         *pAdapter,
+        D3D_DRIVER_TYPE      DriverType,
+        HMODULE              Software,
+        UINT                 Flags,
+  const D3D_FEATURE_LEVEL    *pFeatureLevels,
+        UINT                 FeatureLevels,
+        UINT                 SDKVersion,
+  const DXGI_SWAP_CHAIN_DESC *pSwapChainDesc,
+        IDXGISwapChain       **ppSwapChain,
+        ID3D11Device         **ppDevice,
+        D3D_FEATURE_LEVEL    *pFeatureLevel,
+        ID3D11DeviceContext  **ppImmediateContext 
+) {
+  capsule_log("Before D3D11CreateDeviceAndSwapChain!");
+
+  HRESULT res = D3D11CreateDeviceAndSwapChain_real(
+    pAdapter, DriverType, Software, Flags,
+    pFeatureLevels, FeatureLevels, SDKVersion,
+    pSwapChainDesc, ppSwapChain, ppDevice, pFeatureLevel,
+    ppImmediateContext
+  );
+
+  if (FAILED(res)) {
+    capsule_log("Swap chain creation failed, bailing out");
+    return res;
+  }
+
+  install_present_hook(*ppSwapChain);
+
+  return res;
+}
+
+///////////////////////////////////////////////
 // IDXGIFactory::CreateSwapChainForHwnd
 // Example users: Unity 5.x
 ///////////////////////////////////////////////
@@ -298,6 +352,40 @@ HRESULT CAPSULE_STDCALL CreateDXGIFactory1_hook (REFIID riid, void** ppFactory) 
   return res;
 }
 
+static void capsule_install_d3d11_hooks () {
+  DWORD err;
+
+  // d3d11
+
+  HMODULE d3d11 = LoadLibrary(L"d3d11.dll");
+  if (!d3d11) {
+    capsule_log("Could not load d3d11.dll, disabling D3D10/11 capture");
+    return;
+  }
+
+  // D3D11CreateDeviceAndSwapChain
+  {
+    LPVOID D3D11CreateDeviceAndSwapChain_addr = NktHookLibHelpers::GetProcedureAddress(d3d11, "D3D11CreateDeviceAndSwapChain");
+    if (!D3D11CreateDeviceAndSwapChain_addr) {
+      capsule_log("Could not find D3D11CreateDeviceAndSwapChain");
+      return;
+    }
+
+    err = cHookMgr.Hook(
+      &D3D11CreateDeviceAndSwapChain_hookId,
+      (LPVOID *) &D3D11CreateDeviceAndSwapChain_real,
+      D3D11CreateDeviceAndSwapChain_addr,
+      D3D11CreateDeviceAndSwapChain_hook,
+      0
+    );
+    if (err != ERROR_SUCCESS) {
+      capsule_log("Hooking D3D11CreateDeviceAndSwapChain derped with error %d (%x)", err, err);
+      return;
+    }
+    capsule_log("Installed D3D11CreateDeviceAndSwapChain hook");
+  }
+}
+
 void capsule_install_dxgi_hooks () {
   DWORD err;
 
@@ -352,4 +440,6 @@ void capsule_install_dxgi_hooks () {
     }
     capsule_log("Installed CreateDXGIFactory1 hook");
   }
+
+  capsule_install_d3d11_hooks();
 }
