@@ -8,8 +8,14 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-OverlayRenderer::OverlayRenderer() {
+#include <string>
+
+using namespace std;
+
+OverlayRenderer::OverlayRenderer(capsule_args_t *args_in) {
   capsule_log("Hello from OverlayRenderer!");
+
+  args = args_in;
 
   FT_Library ftlib;
   FT_Error ftstatus;
@@ -20,14 +26,22 @@ OverlayRenderer::OverlayRenderer() {
   cairo_t *cr;
   cairo_status_t status;
 
-  const char *filename = "C:\\msys64\\home\\amos\\Dev\\capsule\\res\\Lato-Regular.ttf";
+  capsule_log("libpath: %s", args->libpath);
+  string filename = string(args->libpath);
+#ifdef WIN32
+  filename.append("\\");
+#else
+  filename.append("/");
+#endif
+  filename.append("Lato-Regular.ttf");
+  capsule_log("filename: %s", filename.c_str());
 
   ftstatus = FT_Init_FreeType(&ftlib);
   if (ftstatus != 0) {
     capsule_log("Could not open freetype: %d", ftstatus);
   }
 
-  ftstatus = FT_New_Face(ftlib, filename, 0, &ftface);
+  ftstatus = FT_New_Face(ftlib, filename.c_str(), 0, &ftface);
   if (ftstatus != 0) {
     capsule_log("Could not open font face: %d", ftstatus);
   }
