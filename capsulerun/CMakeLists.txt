@@ -12,15 +12,19 @@ set(capsulerun_INCLUDE_DIRS SYSTEM)
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/include)
 set(cairo_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/cairo/src)
 set(cairo_INCLUDE_DIR2 ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/projects/cairo/src)
+set(freetype_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/freetype/include)
 
 if(${CMAKE_GENERATOR} MATCHES "Win64$")
 set(cairo_LIBPATH ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/projects/x64/Release)
+set(freetype_LIBPATH ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/freetype/objs/vc2010/x64)
 else()
 set(cairo_LIBPATH ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/projects/Release)
+set(freetype_LIBPATH ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/freetype/objs/vc2010/Win32)
 endif()
 
 set(pixman_LIBRARY ${cairo_LIBPATH}/pixman.lib)
 set(cairo_LIBRARY ${cairo_LIBPATH}/cairo.lib)
+set(freetype_LIBRARY ${freetype_LIBPATH}/freetype271.lib)
 
 include_directories(
   ${capsulerun_INCLUDE_DIRS}
@@ -29,6 +33,7 @@ include_directories(
   ${microprofile_INCLUDE_DIR}
   ${cairo_INCLUDE_DIR}
   ${cairo_INCLUDE_DIR2}
+  ${freetype_INCLUDE_DIR}
 )
 
 set(capsulerun_SRC
@@ -96,7 +101,7 @@ if(WIN32)
   # needed for microprofile
   target_link_libraries(capsulerun ws2_32.lib)
 
-  target_link_libraries(capsulerun ${pixman_LIBRARY} ${cairo_LIBRARY})
+  target_link_libraries(capsulerun ${pixman_LIBRARY} ${cairo_LIBRARY} ${freetype_LIBRARY})
 endif()
 
 if(APPLE)
