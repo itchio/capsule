@@ -6,10 +6,12 @@ if(APPLE)
 endif()
 
 set(capsulerun_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(libcapsule_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/src)
 set(capsulerun_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(capsulerun_INCLUDE_DIRS SYSTEM)
 
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/include)
+set(libcapsule_INCLUDE_DIR2 ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/src/shared)
 set(cairo_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/cairo/src)
 set(cairo_INCLUDE_DIR2 ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/projects/cairo/src)
 set(freetype_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/freetype/include)
@@ -30,6 +32,7 @@ include_directories(
   ${capsulerun_INCLUDE_DIRS}
   ${capsulerun_INCLUDE_DIR}
   ${libcapsule_INCLUDE_DIR}
+  ${libcapsule_INCLUDE_DIR2}
   ${microprofile_INCLUDE_DIR}
   ${cairo_INCLUDE_DIR}
   ${cairo_INCLUDE_DIR2}
@@ -37,13 +40,13 @@ include_directories(
 )
 
 set(capsulerun_SRC
+  ${libcapsule_SOURCE_DIR}/shared/Shm.cpp
   ${capsulerun_SOURCE_DIR}/shared/main.cpp
   ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
   ${capsulerun_SOURCE_DIR}/shared/argparse.c
   ${capsulerun_SOURCE_DIR}/shared/MainLoop.cpp
   ${capsulerun_SOURCE_DIR}/shared/VideoReceiver.cpp
   ${capsulerun_SOURCE_DIR}/shared/Session.cpp
-  ${capsulerun_SOURCE_DIR}/shared/ShmemRead.cpp
   ${capsulerun_SOURCE_DIR}/shared/Connection.cpp
   ${capsulerun_SOURCE_DIR}/shared/FPSCounter.cpp
   ${capsulerun_SOURCE_DIR}/shared/OverlayRenderer.cpp

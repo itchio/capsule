@@ -20,6 +20,7 @@ include_directories(${libcapsule_INCLUDE_DIRS} ${libcapsule_INCLUDE_DIR})
 add_definitions(-DBUILD_CAPSULE_DLL)
 
 set(libcapsule_SRC
+    ${libcapsule_SOURCE_DIR}/shared/Shm.cpp
     ${libcapsule_SOURCE_DIR}/shared/capsule.cpp
     ${libcapsule_SOURCE_DIR}/shared/gl-capture.cpp
     ${libcapsule_SOURCE_DIR}/shared/io.cpp

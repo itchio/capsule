@@ -132,9 +132,10 @@ void MainLoop::start_session (const VideoSetup *vs) {
   vfmt.pitch = linesize_vec->Get(0);
 
   auto shm_path = vs->shmem()->path()->str();  
-  auto shm = new ShmemRead(
+  auto shm = new Shm(
     shm_path,
-    vs->shmem()->size()
+    vs->shmem()->size(),
+    SHM_OPEN
   );
 
   int num_buffered_frames = 60;

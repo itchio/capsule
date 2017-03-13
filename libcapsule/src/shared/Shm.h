@@ -9,10 +9,13 @@
 #undef WIN32_LEAN_AND_MEAN
 #endif // CAPSULE_WINDOWS
 
-class ShmemRead {
+#define SHM_CREATE true
+#define SHM_OPEN false
+
+class Shm {
   public:
-    ShmemRead(const std::string &path, uint64_t size);
-    ~ShmemRead();
+    Shm(const std::string &path, uint64_t size, bool create);
+    ~Shm();
     char *mapped;
 
   private:

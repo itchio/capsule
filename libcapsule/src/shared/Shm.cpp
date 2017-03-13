@@ -1,4 +1,4 @@
-#include "ShmemRead.h"
+#include "Shm.h"
 
 #include <stdexcept>
 
@@ -19,21 +19,35 @@
 
 using namespace std;
 
-ShmemRead::ShmemRead (const std::string &path, uint64_t size): size(size) {
+Shm::Shm (const std::string &path, uint64_t size, bool create): size(size) {
 #if defined(CAPSULE_WINDOWS)
-  handle = OpenFileMappingA(
-    FILE_MAP_READ, // read access
-    FALSE, // do not inherit the name
-    path.c_str() // name of mapping object
-  );
+  if (create) {
+    handle = OpenFileMappingA(
+      FILE_MAP_READ, // read access
+      FALSE, // do not inherit the name
+      path.c_str() // name of mapping object
+    );
 
-  if (!handle) {
-    throw runtime_error("OpenFileMappingA failed");
+    if (!handle) {
+      throw runtime_error("OpenFileMappingA failed");
+    }
+  } else {
+    handle = OpenFileMappingA(
+      FILE_MAP_READ, // read access
+      FALSE, // do not inherit the name
+      path.c_str() // name of mapping object
+    );
+
+    if (!handle) {
+      throw runtime_error("OpenFileMappingA failed");
+    }
   }
+
+  DWORD dwAccess = create ? FILE_MAP_ALL_ACCESS : FILE_MAP_READ;
 
   mapped = (char*) MapViewOfFile(
     handle,
-    FILE_MAP_READ, // read access
+    dwAccess,
     0,
     0,
     size
@@ -43,7 +57,16 @@ ShmemRead::ShmemRead (const std::string &path, uint64_t size): size(size) {
     throw runtime_error("MapViewOfFile failed");
   }
 #else // CAPSULE_WINDOWS
-  int handle = shm_open(path.c_str(), O_RDONLY, 0755);
+  if (create) {
+    // shm segments persist across runs, and macOS will refuse
+    // to ftruncate an existing shm segment, so to be on the safe
+    // side, we unlink it beforehand.
+    shm_unlink(path.c_str());
+  }
+
+  int flags = create ? O_CREATE|O_RDWR : O_RDONLY;
+
+  int handle = shm_open(path.c_str(), flags, 0755);
   if (!(handle > 0)) {
     throw runtime_error("shmem_open failed");
   }
@@ -63,7 +86,7 @@ ShmemRead::ShmemRead (const std::string &path, uint64_t size): size(size) {
 #endif // !CAPSULE_WINDOWS
 }
 
-ShmemRead::~ShmemRead () {
+Shm::~Shm () {
 #if defined(CAPSULE_WINDOWS)
   UnmapViewOfFile(mapped);
   CloseHandle(handle);
