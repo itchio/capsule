@@ -22,14 +22,17 @@ using namespace std;
 Shm::Shm (const std::string &path, uint64_t size, bool create): size(size) {
 #if defined(CAPSULE_WINDOWS)
   if (create) {
-    handle = OpenFileMappingA(
-      FILE_MAP_READ, // read access
-      FALSE, // do not inherit the name
-      path.c_str() // name of mapping object
+    handle = CreateFileMappingA(
+      INVALID_HANDLE_VALUE, // use paging file
+      NULL,                 // default security
+      PAGE_READWRITE,       // read/write access
+      0,                    // maximum object size (high-order DWORD)
+      size,                 // maximum object size (low-order DWORD)
+      path.c_str()          // name of mapping object
     );
 
     if (!handle) {
-      throw runtime_error("OpenFileMappingA failed");
+      throw runtime_error("CreateFileMappingA failed");
     }
   } else {
     handle = OpenFileMappingA(

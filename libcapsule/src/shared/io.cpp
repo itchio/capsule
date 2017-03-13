@@ -18,6 +18,8 @@
 #include <thread> // for making trouble double
 #include <mutex> // for trouble mitigation
 
+#include "Shm.h"
+
 using namespace std;
 using namespace Capsule::Messages;
 
@@ -75,7 +77,7 @@ bool frame_locked[NUM_BUFFERS];
 mutex frame_locked_mutex;
 int next_frame_index = 0;
 
-static char *mapped;
+Shm *shm;
 
 static bool is_frame_locked(int i) {
     lock_guard<mutex> lock(frame_locked_mutex);
@@ -189,56 +191,23 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
 
 #if defined(CAPSULE_WINDOWS)
     string shmem_path = "capsule.shm";
-
-    capsule_log("Creating file mapping");
-    HANDLE hMapFile = CreateFileMappingA(
-        INVALID_HANDLE_VALUE, // use paging file
-        NULL,                 // default security
-        PAGE_READWRITE,       // read/write access
-        0,                    // maximum object size (high-order DWORD)
-        shmem_size,           // maximum object size (low-order DWORD)
-        shmem_path.c_str()    // name of mapping object
-    );
-    if (hMapFile == NULL) {
-        capsule_log("File mapping didn't work");
-        DWORD err = GetLastError();
-        capsule_log("Could not create shmem area: %d (%x)", err, err);
-    }
-
-    capsule_log("Mapping view of file");
-    mapped = (char *) MapViewOfFile(
-        hMapFile,
-        FILE_MAP_ALL_ACCESS,
-        0,
-        0,
-        shmem_size
-    );
 #else
     string shmem_path = "/capsule.shm";
-
-    // shm segments persist across runs, and macOS will refuse
-    // to ftruncate an existing shm segment, so to be on the safe
-    // side, we unlink it beforehand.
-    shm_unlink(shmem_path.c_str());
-
-    int shmem_handle = shm_open(shmem_path.c_str(), O_CREAT|O_RDWR, 0755);
-    capsule_assert("Created shmem area", shmem_handle > 0);
-
-    int ret = ftruncate(shmem_handle, shmem_size);
-    capsule_assert("Truncated shmem area", ret == 0);
-
-    mapped = (char *) mmap(
-        nullptr, // addr
-        shmem_size, // length
-        PROT_READ | PROT_WRITE, // prot
-        MAP_SHARED, // flags
-        shmem_handle, // fd
-        0 // offset
-    );
 #endif // CAPSULE_WINDOWS
 
+    try {
+        shm = new Shm(
+            shmem_path,
+            shmem_size,
+            SHM_CREATE
+        );
+    } catch (runtime_error e) {
+        capsule_log("Could not create shm: %s", e.what())
+        return;
+    }
+
     capsule_log("Checking if mapping worked");
-    capsule_assert("Mapped shmem area", !!mapped);
+    capsule_assert("Mapped shmem area", !!shm->mapped);
 
     capsule_log("Creating flatbuffer");
     auto shmem_path_fbs = builder.CreateString(shmem_path);
@@ -296,7 +265,7 @@ void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_da
     flatbuffers::FlatBufferBuilder builder(1024);
 
     size_t offset = (frame_data_size * next_frame_index);
-    char *target = mapped + offset;
+    char *target = shm->mapped + offset;
     memcpy(target, frame_data, frame_data_size);
 
     VideoFrameCommittedBuilder vfc_builder(builder);
