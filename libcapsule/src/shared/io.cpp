@@ -209,7 +209,6 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     capsule_log("Checking if mapping worked");
     capsule_assert("Mapped shmem area", !!shm->mapped);
 
-    capsule_log("Creating flatbuffer");
     auto shmem_path_fbs = builder.CreateString(shmem_path);
 
     ShmemBuilder shmem_builder(builder);
@@ -245,9 +244,7 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     auto pkt = pkt_builder.Finish();
 
     builder.Finish(pkt);
-    capsule_log("writing flatbuffer for real");
     capsule_fwrite_packet(builder, out_file);
-    capsule_log("done video format");
 }
 
 int is_skipping;

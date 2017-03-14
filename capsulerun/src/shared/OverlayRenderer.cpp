@@ -2,6 +2,7 @@
 #include "OverlayRenderer.h"
 
 #include <stdio.h>
+#include <memory.h>
 #include <capsulerun_macros.h>
 
 #include <cairo-ft.h>
@@ -48,7 +49,11 @@ OverlayRenderer::OverlayRenderer(capsule_args_t *args_in) {
 
   ct = cairo_ft_font_face_create_for_ft_face(ftface, 0);
 
-  surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 256, 128);
+  width = 256;
+  height = 256;
+  components = 4;
+
+  surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, width, height);
   status = cairo_surface_status(surface);
   if (status != CAIRO_STATUS_SUCCESS) {
     capsule_log("Could not create cairo surface: error %d", status);
@@ -82,8 +87,23 @@ OverlayRenderer::OverlayRenderer(capsule_args_t *args_in) {
   cairo_surface_flush(surface);
   unsigned char *data = cairo_image_surface_get_data(surface);
 
-  FILE *f = fopen("cairo.rawimg", "wb");
-  fwrite(data, 256 * 4 * 128, 1, f);
-  capsule_log("Wrote raw surface to disk!");
-  fclose(f);
+#ifdef CAPSULE_WINDOWS
+  shm_path = "capsule-overlay.shm";
+#else
+  shm_path = "/capsule-overlay.shm";
+#endif
+  shm_size = width * components * height;
+
+  try {
+    shm = new Shm(
+      shm_path,
+      shm_size,
+      SHM_CREATE
+    );
+  } catch (runtime_error e) {
+    capsule_log("Could not create shm: %s", e.what());
+    return;
+  }
+
+  memcpy(shm->mapped, data, width * components * height);
 }

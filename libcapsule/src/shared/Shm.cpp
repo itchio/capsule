@@ -73,11 +73,13 @@ Shm::Shm (const std::string &path, uint64_t size, bool create): size(size) {
   if (!(handle > 0)) {
     throw runtime_error("shmem_open failed");
   }
+  
+  int prot = create ? (PROT_READ | PROT_WRITE) : PROT_READ;
 
   mapped = (char *) mmap(
       nullptr, // addr
       size, // length
-      PROT_READ, // prot
+      prot, // prot
       MAP_SHARED, // flags
       handle, // fd
       0 // offset
