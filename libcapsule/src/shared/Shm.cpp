@@ -67,11 +67,18 @@ Shm::Shm (const std::string &path, uint64_t size, bool create): size(size) {
     shm_unlink(path.c_str());
   }
 
-  int flags = create ? O_CREATE|O_RDWR : O_RDONLY;
+  int flags = create ? O_CREAT|O_RDWR : O_RDONLY;
 
   int handle = shm_open(path.c_str(), flags, 0755);
   if (!(handle > 0)) {
     throw runtime_error("shmem_open failed");
+  }
+
+  if (create) {
+    int ret = ftruncate(handle, size);
+    if (ret != 0) {
+      throw runtime_error("ftruncate failed");
+    }
   }
   
   int prot = create ? (PROT_READ | PROT_WRITE) : PROT_READ;

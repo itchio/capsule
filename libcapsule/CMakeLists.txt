@@ -95,4 +95,6 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   target_link_libraries(capsule -lpthread)
   # shm_open, etc.
   target_link_libraries(capsule -lrt)
+  # undefined symbol __cpu_model is your new best friend
+  target_link_libraries(capsule -lgcc)
 endif()

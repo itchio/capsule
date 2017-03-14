@@ -10,6 +10,7 @@
 #include FT_FREETYPE_H
 
 #include <string>
+#include <stdexcept>
 
 using namespace std;
 
