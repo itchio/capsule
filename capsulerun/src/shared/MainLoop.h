@@ -1,7 +1,11 @@
 #pragma once
 
-#include <capsule/messages.h>
+#include <thread>
+#include <vector>
 
+#include <shoom.h>
+
+#include <capsule/messages.h>
 #include <capsulerun.h>
 #include <capsulerun_args.h>
 
@@ -9,9 +13,6 @@
 #include "AudioReceiver.h"
 #include "Session.h"
 #include "Connection.h"
-
-#include <thread>
-#include <vector>
 
 typedef AudioReceiver * (*audio_receiver_factory_t)();
 

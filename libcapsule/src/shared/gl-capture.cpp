@@ -150,6 +150,8 @@ bool CAPSULE_STDCALL load_opengl (const char *opengl_path) {
 #elif defined(CAPSULE_MACOS)
   GLSYM(glGetProcAddress)
 #endif
+
+  return true;
 }
 
 #ifdef CAPSULE_LINUX

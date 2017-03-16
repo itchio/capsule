@@ -2,6 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 
 project(capsule)
 
+add_subdirectory(vendor/shoom)
+set(shoom_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/shoom/include)
+
 option(OSX_UNIVERSAL "Build an OSX universal binary" ON)
 
 set(CAPSULE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libcapsule/include)

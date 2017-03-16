@@ -1,24 +1,12 @@
 
+#include <string>
+#include <thread>
+#include <mutex>
+
+#include <shoom.h>
+
 #include <capsule/messages.h>
 #include <capsule.h>
-
-#include <string>
-
-#if defined(CAPSULE_WINDOWS)
-#include <io.h>
-#include <fcntl.h>
-#else // CAPSULE_WINDOWS
-#include <sys/mman.h>
-#include <sys/stat.h> // for mode constants
-#include <fcntl.h>    // for O_* constants
-
-#include <unistd.h>
-#endif // !CAPSULE_WINDOWS
-
-#include <thread> // for making trouble double
-#include <mutex> // for trouble mitigation
-
-#include "Shm.h"
 
 using namespace std;
 using namespace Capsule::Messages;
@@ -77,7 +65,7 @@ bool frame_locked[NUM_BUFFERS];
 mutex frame_locked_mutex;
 int next_frame_index = 0;
 
-Shm *shm;
+shoom::Shm *shm;
 
 static bool is_frame_locked(int i) {
     lock_guard<mutex> lock(frame_locked_mutex);
@@ -189,25 +177,12 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     size_t shmem_size = frame_size * NUM_BUFFERS;
     capsule_log("Should allocate %d bytes of shmem area", shmem_size);
 
-#if defined(CAPSULE_WINDOWS)
     string shmem_path = "capsule.shm";
-#else
-    string shmem_path = "/capsule.shm";
-#endif // CAPSULE_WINDOWS
-
-    try {
-        shm = new Shm(
-            shmem_path,
-            shmem_size,
-            SHM_CREATE
-        );
-    } catch (runtime_error e) {
-        capsule_log("Could not create shm: %s", e.what())
-        return;
+    shm = new shoom::Shm(shmem_path, shmem_size);
+    int ret = shm->Create();
+    if (ret != shoom::kOK) {
+        capsule_log("Could not create shared memory area: code %d", ret);
     }
-
-    capsule_log("Checking if mapping worked");
-    capsule_assert("Mapped shmem area", !!shm->mapped);
 
     auto shmem_path_fbs = builder.CreateString(shmem_path);
 
@@ -261,8 +236,8 @@ void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_da
 
     flatbuffers::FlatBufferBuilder builder(1024);
 
-    size_t offset = (frame_data_size * next_frame_index);
-    char *target = shm->mapped + offset;
+    ptrdiff_t offset = (frame_data_size * next_frame_index);
+    char *target = reinterpret_cast<char*>(shm->Data() + offset);
     memcpy(target, frame_data, frame_data_size);
 
     VideoFrameCommittedBuilder vfc_builder(builder);

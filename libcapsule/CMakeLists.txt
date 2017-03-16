@@ -15,12 +15,15 @@ endif()
 
 set(libcapsule_INCLUDE_DIRS SYSTEM)
 
-include_directories(${libcapsule_INCLUDE_DIRS} ${libcapsule_INCLUDE_DIR})
+include_directories(
+  ${shoom_INCLUDE_DIR}
+  ${libcapsule_INCLUDE_DIRS}
+  ${libcapsule_INCLUDE_DIR}
+)
 
 add_definitions(-DBUILD_CAPSULE_DLL)
 
 set(libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/shared/Shm.cpp
     ${libcapsule_SOURCE_DIR}/shared/capsule.cpp
     ${libcapsule_SOURCE_DIR}/shared/gl-capture.cpp
     ${libcapsule_SOURCE_DIR}/shared/io.cpp
@@ -64,6 +67,8 @@ endif()
 
 add_library(capsule SHARED ${libcapsule_SRC})
 
+target_link_libraries(capsule shoom)
+
 if(WIN32)
   add_dependencies(capsule capsule_deps)
   target_link_libraries(capsule ${DEVIARE_INPROC_LIBRARY})
@@ -93,8 +98,6 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   target_link_libraries(capsule -ldl)
   # needed by pulse-simple
   target_link_libraries(capsule -lpthread)
-  # shm_open, etc.
-  target_link_libraries(capsule -lrt)
   # undefined symbol __cpu_model is your new best friend
   target_link_libraries(capsule -lgcc)
 endif()

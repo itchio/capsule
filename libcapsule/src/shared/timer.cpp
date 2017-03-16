@@ -11,7 +11,6 @@ static int cur_fps = 60;
 static auto frame_interval = std::chrono::microseconds(1000000 / cur_fps);
 
 static bool first_frame = true;
-static int frame_count = 0;
 static std::chrono::time_point<std::chrono::steady_clock> first_ts;
 
 using namespace std;

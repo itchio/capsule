@@ -11,7 +11,6 @@ set(capsulerun_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(capsulerun_INCLUDE_DIRS SYSTEM)
 
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/include)
-set(libcapsule_INCLUDE_DIR2 ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/src/shared)
 set(cairo_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/cairo/src)
 set(cairo_INCLUDE_DIR2 ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/projects/cairo/src)
 set(freetype_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/freetype/include)
@@ -29,10 +28,10 @@ set(cairo_LIBRARY ${cairo_LIBPATH}/cairo.lib)
 set(freetype_LIBRARY ${freetype_LIBPATH}/freetype271.lib)
 
 include_directories(
+  ${shoom_INCLUDE_DIR}
   ${capsulerun_INCLUDE_DIRS}
   ${capsulerun_INCLUDE_DIR}
   ${libcapsule_INCLUDE_DIR}
-  ${libcapsule_INCLUDE_DIR2}
   ${microprofile_INCLUDE_DIR}
   ${cairo_INCLUDE_DIR}
   ${cairo_INCLUDE_DIR2}
@@ -40,7 +39,6 @@ include_directories(
 )
 
 set(capsulerun_SRC
-  ${libcapsule_SOURCE_DIR}/shared/Shm.cpp
   ${capsulerun_SOURCE_DIR}/shared/main.cpp
   ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
   ${capsulerun_SOURCE_DIR}/shared/argparse.c
@@ -85,6 +83,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
 endif()
 
 add_executable(capsulerun ${capsulerun_SRC})
+
+target_link_libraries(capsulerun shoom)
 
 if(WIN32)
   add_dependencies(capsulerun capsule_deps)
@@ -134,5 +134,4 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   # needed on old Debian for reasons? (probably because of libpulse-simple?)
   target_link_libraries(capsulerun -lpthread)
   target_link_libraries(capsulerun -lX11)
-  target_link_libraries(capsulerun -lrt)
 endif()

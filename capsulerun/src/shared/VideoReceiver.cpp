@@ -20,7 +20,7 @@ MICROPROFILE_DEFINE(VideoReceiverWait, "VideoReceiver", "VWait", MP_CHOCOLATE3);
 MICROPROFILE_DEFINE(VideoReceiverCopy1, "VideoReceiver", "VCopy1", MP_CORNSILK3);
 MICROPROFILE_DEFINE(VideoReceiverCopy2, "VideoReceiver", "VCopy2", MP_PINK3);
 
-VideoReceiver::VideoReceiver (Connection *conn_in, video_format_t vfmt_in, Shm *shm_in, int num_frames_in) {
+VideoReceiver::VideoReceiver (Connection *conn_in, video_format_t vfmt_in, shoom::Shm *shm_in, int num_frames_in) {
   capsule_log("Initializing VideoReceiver, buffered frames = %d", num_frames_in);
   conn = conn_in;
   vfmt = vfmt_in;
@@ -134,7 +134,7 @@ void VideoReceiver::frame_committed(int index, int64_t timestamp) {
 
   if (commit) {
       // got room, copy it
-      char *src = shm->mapped + (frame_size * index);
+      char *src = reinterpret_cast<char*>(shm->Data()) + (frame_size * index);
       char *dst = buffer + (frame_size * commit_index);
       {
         MICROPROFILE_SCOPE(VideoReceiverCopy1);

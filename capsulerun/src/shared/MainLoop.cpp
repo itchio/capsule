@@ -132,11 +132,12 @@ void MainLoop::start_session (const VideoSetup *vs) {
   vfmt.pitch = linesize_vec->Get(0);
 
   auto shm_path = vs->shmem()->path()->str();  
-  auto shm = new Shm(
-    shm_path,
-    vs->shmem()->size(),
-    SHM_OPEN
-  );
+  auto shm = new shoom::Shm(shm_path, vs->shmem()->size());
+  int ret = shm->Open();
+  if (ret != shoom::kOK) {
+    capsule_log("Could not open shared memory area: code %d", ret);
+    return;
+  }
 
   int num_buffered_frames = 60;
   if (args->buffered_frames) {

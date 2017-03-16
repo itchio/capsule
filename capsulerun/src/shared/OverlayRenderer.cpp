@@ -1,16 +1,16 @@
 
 #include "OverlayRenderer.h"
 
+#include <string>
+
 #include <stdio.h>
 #include <memory.h>
+
 #include <capsulerun_macros.h>
 
 #include <cairo-ft.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H
-
-#include <string>
-#include <stdexcept>
 
 using namespace std;
 
@@ -41,11 +41,13 @@ OverlayRenderer::OverlayRenderer(capsule_args_t *args_in) {
   ftstatus = FT_Init_FreeType(&ftlib);
   if (ftstatus != 0) {
     capsule_log("Could not open freetype: %d", ftstatus);
+    return;
   }
 
   ftstatus = FT_New_Face(ftlib, filename.c_str(), 0, &ftface);
   if (ftstatus != 0) {
     capsule_log("Could not open font face: %d", ftstatus);
+    return;
   }
 
   ct = cairo_ft_font_face_create_for_ft_face(ftface, 0);
@@ -95,16 +97,12 @@ OverlayRenderer::OverlayRenderer(capsule_args_t *args_in) {
 #endif
   shm_size = width * components * height;
 
-  try {
-    shm = new Shm(
-      shm_path,
-      shm_size,
-      SHM_CREATE
-    );
-  } catch (runtime_error e) {
-    capsule_log("Could not create shm: %s", e.what());
+  shm = new shoom::Shm(shm_path, shm_size)  ;
+  auto ret = shm->Create();
+  if (ret != shoom::kOK) {
+    capsule_log("Could not create shm: %d", ret);
     return;
   }
 
-  memcpy(shm->mapped, data, width * components * height);
+  memcpy(reinterpret_cast<char*>(shm->Data()), data, width * components * height);
 }

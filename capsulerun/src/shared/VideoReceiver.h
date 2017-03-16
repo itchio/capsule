@@ -1,12 +1,12 @@
 #pragma once
 
-#include <capsulerun.h>
+#include <mutex>
 
+#include <shoom.h>
+
+#include <capsulerun.h>
 #include "LockingQueue.h"
 #include "Connection.h"
-#include <Shm.h>
-
-#include <mutex>
 
 struct FrameInfo {
   int index;
@@ -15,7 +15,7 @@ struct FrameInfo {
 
 class VideoReceiver {
   public:
-    VideoReceiver(Connection *conn, video_format_t vfmt, Shm *shm, int num_frames);
+    VideoReceiver(Connection *conn, video_format_t vfmt, shoom::Shm *shm, int num_frames);
     ~VideoReceiver();
     void frame_committed(int index, int64_t timestamp);
     int receive_format(video_format_t *vfmt);
@@ -25,7 +25,7 @@ class VideoReceiver {
   private:
     Connection *conn;
     video_format_t vfmt;
-    Shm *shm;
+    shoom::Shm *shm;
 
     char *mapped;
     LockingQueue<FrameInfo> queue;

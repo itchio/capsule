@@ -1,11 +1,11 @@
 #pragma once
 
-#include <capsulerun_args.h>
-#include <cairo.h>
-
 #include <string>
 
-#include <Shm.h>
+#include <cairo.h>
+#include <shoom.h>
+
+#include <capsulerun_args.h>
 
 class OverlayRenderer {
   public:
@@ -18,7 +18,7 @@ class OverlayRenderer {
     int components;
     capsule_args_t *args;
 
-    Shm *shm;
+    shoom::Shm *shm;
     std::string shm_path;
     size_t shm_size;
 };
