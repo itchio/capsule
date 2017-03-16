@@ -7,11 +7,9 @@ add_executable(shoom_test shoom_test.cc)
 target_link_libraries(shoom_test shoom)
 
 if (${CMAKE_GENERATOR} MATCHES "Visual")
-    add_compile_options(-W3 -EHsc)
+    target_compile_options(shoom_test PUBLIC -W3 -EHsc)
 else()
-    add_compile_options(-Wall -Wno-missing-braces)
-
-    target_compile_options(shoom_test PUBLIC -std=c++11)
+    target_compile_options(shoom_test PUBLIC -Wall -Wno-missing-braces -std=c++11)
 endif()
 
 enable_testing()
