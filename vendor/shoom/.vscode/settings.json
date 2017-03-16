@@ -1,0 +1,10 @@
+// Place your settings in this file to overwrite default and user settings.
+{
+    "editor.tabSize": 2,
+    "clang-format.style": "Google",
+    "files.associations": {
+      "array": "cpp",
+      "initializer_list": "cpp",
+      "utility": "cpp"
+    }
+  }

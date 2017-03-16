@@ -1,0 +1,58 @@
+
+stages:
+  - test
+
+test-windows-amd64:
+  stage: test
+  tags:
+    - msbuild
+  script:
+    - mkdir build
+    - cd build
+    - cmake -G "Visual Studio 14 2015 Win64" ..
+    - msbuild ALL_BUILD.vcxproj
+    - ctest -C Debug
+
+test-windows-386:
+  stage: test
+  tags:
+    - msbuild
+  script:
+    - mkdir build
+    - cd build
+    - cmake -G "Visual Studio 14 2015" ..
+    - msbuild ALL_BUILD.vcxproj
+    - ctest -C Debug
+
+test-linux-amd64:
+  stage: test
+  tags:
+    - docker-capsule-64
+  script:
+    - mkdir build
+    - cd build
+    - cmake ..
+    - make
+    - make test
+
+test-linux-386:
+  stage: test
+  tags:
+    - docker-capsule-32
+  script:
+    - mkdir build
+    - cd build
+    - cmake ..
+    - make
+    - make test
+
+test-macos-amd64:
+  stage: test
+  tags:
+    - darwin
+  script:
+    - mkdir build
+    - cd build
+    - cmake ..
+    - make
+    - make test
