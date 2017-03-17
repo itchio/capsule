@@ -67,20 +67,25 @@ int capsulerun_main (capsule_args_t *args) {
 
   auto conn = new Connection(fifo_r_path, fifo_w_path);
 
-  // spawn game
-  int child_err = posix_spawn(
-    &child_pid,
-    args->exec,
-    NULL, // file_actions
-    NULL, // spawn_attrs
-    args->exec_argv,
-    child_environ // environment
-  );
-  if (child_err != 0) {
-    capsule_log("child spawn error %d: %s", child_err, strerror(child_err));
-  }
+  if (strcmp("headless", args->exec) == 0) {
+    capsule_log("Running in headless mode...");
+    conn->printDetails();
+  } else {
+    // spawn game
+    int child_err = posix_spawn(
+      &child_pid,
+      args->exec,
+      NULL, // file_actions
+      NULL, // spawn_attrs
+      args->exec_argv,
+      child_environ // environment
+    );
+    if (child_err != 0) {
+      capsule_log("child spawn error %d: %s", child_err, strerror(child_err));
+    }
 
-  capsule_log("pid %d given to child %s", child_pid, args->exec);
+    capsule_log("pid %d given to child %s", child_pid, args->exec);
+  }
 
   conn->connect();
   MainLoop ml {args, conn};

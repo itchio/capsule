@@ -88,20 +88,20 @@ static int open_fifo (
 
 #endif // !CAPSULE_WINDOWS
 
-Connection::Connection(std::string &r_path, std::string &w_path) {
+Connection::Connection(std::string &r_path_in, std::string &w_path_in) {
+  r_path = &r_path_in;
+  w_path = &w_path_in;
+
 #if defined(CAPSULE_WINDOWS)
-  pipe_r = create_pipe(r_path, PIPE_ACCESS_INBOUND);
-  pipe_w = create_pipe(w_path, PIPE_ACCESS_OUTBOUND);
+  pipe_r = create_pipe(*r_path, PIPE_ACCESS_INBOUND);
+  pipe_w = create_pipe(*w_path, PIPE_ACCESS_OUTBOUND);
 #else // CAPSULE_WINDOWS
   // ignore SIGPIPE - those will get disconnected when
   // the game shuts down, and that's okay.
   signal(SIGPIPE, SIG_IGN);
 
-  create_fifo(r_path);
-  fifo_r_path = &r_path;
-
-  create_fifo(w_path);
-  fifo_w_path = &w_path;
+  create_fifo(*r_path);
+  create_fifo(*w_path);
 #endif // !CAPSULE_WINDOWS
 }
 
@@ -118,8 +118,8 @@ void Connection::connect() {
     throw runtime_error("Could not connect to named pipe for writing");
   }
 #else // CAPSULE_WINDOWS
-  fifo_r = open_fifo(*fifo_r_path, "reading", O_RDONLY);
-  fifo_w = open_fifo(*fifo_w_path, "writing", O_WRONLY);
+  fifo_r = open_fifo(*r_path, "reading", O_RDONLY);
+  fifo_w = open_fifo(*w_path, "writing", O_WRONLY);
 #endif // !CAPSULE_WINDOWS
 }
 
@@ -137,4 +137,9 @@ char *Connection::read() {
 #else // CAPSULE_WINDOWS
   return capsule_read_packet(fifo_r);
 #endif // !CAPSULE_WINDOWS
+}
+
+void Connection::printDetails() {
+  fprintf(stderr, "<CAPS> {\"r_path\": \"%s\", \"w_path\": \"%s\"}\n",
+          w_path->c_str(), r_path->c_str());
 }
