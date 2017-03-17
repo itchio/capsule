@@ -90,11 +90,7 @@ OverlayRenderer::OverlayRenderer(capsule_args_t *args_in) {
   cairo_surface_flush(surface);
   unsigned char *data = cairo_image_surface_get_data(surface);
 
-#ifdef CAPSULE_WINDOWS
   shm_path = "capsule-overlay.shm";
-#else
-  shm_path = "/capsule-overlay.shm";
-#endif
   shm_size = width * components * height;
 
   shm = new shoom::Shm(shm_path, shm_size)  ;
