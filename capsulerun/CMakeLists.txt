@@ -75,13 +75,6 @@ if(WIN32)
     target_link_libraries(capsulerun ${FFMPEG_LIBRARY_DIR}/${NEEDED_LIB})
   endforeach(NEEDED_LIB)
 
-  foreach(NEEDED_DLL ${AVUTIL_DLL} ${AVCODEC_DLL} ${AVFORMAT_DLL} ${SWSCALE_DLL} ${SWRESAMPLE_DLL})
-    install(
-      FILES "${FFMPEG_LIBRARY_DIR}/${NEEDED_DLL}"
-      DESTINATION "${CMAKE_BINARY_DIR}/dist"
-    )
-  endforeach(NEEDED_DLL)
-
   # needed for microprofile
   target_link_libraries(capsulerun ws2_32.lib)
 endif()
@@ -118,3 +111,13 @@ endif()
 install(TARGETS capsulerun
   DESTINATION "${CMAKE_BINARY_DIR}/dist"
 )
+
+set(CAPSULERUN_BINARY_PATH "${CMAKE_BINARY_DIR}/dist/capsulerun${CMAKE_EXECUTABLE_SUFFIX}")
+set(CAPSULERUN_LIBRARY_DIRS "${FFMPEG_LIBRARY_DIR}")
+
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/dependencies.cmake.in"
+  "${CMAKE_CURRENT_BINARY_DIR}/dependencies.cmake"
+  @ONLY
+)
+install(SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/dependencies.cmake")

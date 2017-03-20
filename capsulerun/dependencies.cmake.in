@@ -1,0 +1,24 @@
+include(GetPrerequisites)
+get_prerequisites(
+  @CAPSULERUN_BINARY_PATH@
+  DEPENDENCIES
+  1 # exclude system
+  1 # recurse
+  "" # exepath
+  "@CAPSULERUN_LIBRARY_DIRS@" #dirs
+)
+
+foreach(DEPENDENCY ${DEPENDENCIES})
+gp_resolve_item(
+  @CAPSULERUN_BINARY_PATH@
+  "${DEPENDENCY}"
+  "" # exepath
+  "@CAPSULERUN_LIBRARY_DIRS@" # dirs
+  DEPENDENCY_ACTUAL
+)
+file(INSTALL
+  FILES "${DEPENDENCY_ACTUAL}"
+  DESTINATION "${CMAKE_BINARY_DIR}/dist"
+  RENAME "${DEPENDENCY}"
+)
+endforeach() # capsulerun_dependency
