@@ -2,7 +2,6 @@
 
 #include <string>
 
-#include <cairo.h>
 #include <shoom.h>
 
 #include <capsulerun_args.h>

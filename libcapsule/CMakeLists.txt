@@ -29,7 +29,6 @@ set(libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/shared/io.cpp
     ${libcapsule_SOURCE_DIR}/shared/timer.cpp
     ${libcapsule_SOURCE_DIR}/shared/logging.cpp
-    ${libcapsule_SOURCE_DIR}/shared/stb_image.cpp
 )
 
 if(APPLE)

@@ -11,21 +11,6 @@ set(capsulerun_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
 set(capsulerun_INCLUDE_DIRS SYSTEM)
 
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/include)
-set(cairo_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/cairo/src)
-set(cairo_INCLUDE_DIR2 ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/projects/cairo/src)
-set(freetype_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/freetype/include)
-
-if(${CMAKE_GENERATOR} MATCHES "Win64$")
-set(cairo_LIBPATH ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/projects/x64/Release)
-set(freetype_LIBPATH ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/freetype/objs/vc2010/x64)
-else()
-set(cairo_LIBPATH ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/projects/Release)
-set(freetype_LIBPATH ${CMAKE_CURRENT_SOURCE_DIR}/../../Cairo-VS/freetype/objs/vc2010/Win32)
-endif()
-
-set(pixman_LIBRARY ${cairo_LIBPATH}/pixman.lib)
-set(cairo_LIBRARY ${cairo_LIBPATH}/cairo.lib)
-set(freetype_LIBRARY ${freetype_LIBPATH}/freetype271.lib)
 
 include_directories(
   ${shoom_INCLUDE_DIR}
@@ -33,9 +18,6 @@ include_directories(
   ${capsulerun_INCLUDE_DIR}
   ${libcapsule_INCLUDE_DIR}
   ${microprofile_INCLUDE_DIR}
-  ${cairo_INCLUDE_DIR}
-  ${cairo_INCLUDE_DIR2}
-  ${freetype_INCLUDE_DIR}
 )
 
 set(capsulerun_SRC
@@ -59,7 +41,6 @@ if(WIN32)
     ${capsulerun_SOURCE_DIR}/windows/hotkey.cpp
     ${capsulerun_SOURCE_DIR}/windows/main.cpp
   )
-  add_definitions(-DCAIRO_WIN32_STATIC_BUILD)
 endif()
 
 if(APPLE)
@@ -103,13 +84,11 @@ if(WIN32)
 
   # needed for microprofile
   target_link_libraries(capsulerun ws2_32.lib)
-
-  target_link_libraries(capsulerun ${pixman_LIBRARY} ${cairo_LIBRARY} ${freetype_LIBRARY})
 endif()
 
 if(APPLE)
   include(FindPkgConfig)
-  foreach(NEEDED_LIB libavutil libavcodec libavformat libswscale libswresample x264 cairo freetype)
+  foreach(NEEDED_LIB libavutil libavcodec libavformat libswscale libswresample x264)
     PKG_CHECK_MODULES(${NEEDED_LIB}_PKG ${NEEDED_LIB})
     include_directories(${${NEEDED_LIB}_PKG_INCLUDE_DIRS})
     target_link_libraries(capsulerun ${${NEEDED_LIB}_PKG_LDFLAGS} ${${NEEDED_LIB}_PKG_LIBRARIES})
@@ -125,7 +104,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   include(FindPkgConfig)
   set(ENV{PKG_CONFIG_PATH} "$ENV{HOME}/Dev/ffmpeg-prefix/lib/pkgconfig:${CAPSULE_FFMPEG_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 
-  foreach(NEEDED_LIB libavutil libavcodec libavformat libswscale libswresample x264 libpulse libpulse-simple cairo freetype2)
+  foreach(NEEDED_LIB libavutil libavcodec libavformat libswscale libswresample x264 libpulse libpulse-simple)
     PKG_CHECK_MODULES(${NEEDED_LIB}_PKG ${NEEDED_LIB})
     include_directories(${${NEEDED_LIB}_PKG_INCLUDE_DIRS})
     target_link_libraries(capsulerun ${${NEEDED_LIB}_PKG_LDFLAGS} ${${NEEDED_LIB}_PKG_LIBRARIES})

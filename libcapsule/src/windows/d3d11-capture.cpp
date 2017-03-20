@@ -5,8 +5,6 @@
 
 #include "./d3d11-shaders.h"
 
-#include "../shared/stb_image.h"
-
 #include <d3d11.h>
 #include <d3dcompiler.h>
 
@@ -604,44 +602,14 @@ static bool d3d11_init_overlay_vbo(void)
 
 static bool d3d11_init_overlay_texture(void)
 {
-  wchar_t libcapsule_path_w[MAX_PATH];
-  libcapsule_path_w[0] = '\0';
-
-  DWORD envErr = GetEnvironmentVariableW(L"CAPSULE_LIBRARY_PATH", libcapsule_path_w, MAX_PATH);
-  if (FAILED(envErr)) {
-    capsule_log("d3d11_init_overlay_texture: could not get CAPSULE_LIBRARY_PATH")
-    return false;
-  }
-
-  std::wstring rec_path = std::wstring(libcapsule_path_w);
-  // TODO: look away for one second
-  int dll_index = rec_path.find(L"capsule32.dll");
-  rec_path = rec_path.substr(0, dll_index);
-  rec_path.append(L"rec.png");
-  // TODO: you can look again
-  capsule_log("d3d11_init_overlay_texture: should load rec.png from '%S'", rec_path.c_str());
-
-  FILE *f = _wfopen(rec_path.c_str(), L"rb");
-  int x, y, channels_in_file;
-  int components = 4;
-  unsigned char *pixels = stbi_load_from_file(f, &x, &y, &channels_in_file, components);
-  fclose(f);
-
-  if (!pixels) {
-    capsule_log("d3d11_init_overlay_texture: could not load rec.png: %s", stbi_failure_reason());
-    return false;
-  }
-
-  data.overlay_width = x;
-  data.overlay_height = y;
-  data.overlay_pixels = pixels;
-
-  capsule_log("d3d11_init_overlay_texture: loaded image, %dx%d, %d channels", x, y, channels_in_file);
+  data.overlay_width = 256;
+  data.overlay_height = 128;
+  data.overlay_pixels = (unsigned char*) malloc(data.overlay_width * 4 * data.overlay_height);
 
   HRESULT hr;
   D3D11_TEXTURE2D_DESC desc = {};
-  desc.Width = x;
-  desc.Height = y;
+  desc.Width = data.overlay_width;
+  desc.Height = data.overlay_height;
   desc.MipLevels = 1;
   desc.ArraySize = 1;
   desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
@@ -652,8 +620,8 @@ static bool d3d11_init_overlay_texture(void)
   desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
 
   D3D11_SUBRESOURCE_DATA srd = {};
-  srd.SysMemPitch = x * components;
-  srd.pSysMem = (const void *) pixels;
+  srd.SysMemPitch = data.overlay_width * 4;
+  srd.pSysMem = (const void *) data.overlay_pixels;
 
   hr = data.device->CreateTexture2D(&desc, &srd, &data.overlay_tex);
   if (FAILED(hr)) {

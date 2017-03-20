@@ -1,7 +1,8 @@
 {
     "files.associations": {
-        "thread": "cpp",
-        "chrono": "cpp"
+      "thread": "cpp",
+      "chrono": "cpp",
+      "string": "cpp"
     },
     "files.exclude": {
       "**/.git": true,
