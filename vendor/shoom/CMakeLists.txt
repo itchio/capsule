@@ -28,9 +28,9 @@ endif()
 add_library(shoom STATIC ${SOURCES})
 
 if (${CMAKE_GENERATOR} MATCHES "Visual")
-    target_compile_options(shoom PUBLIC -W3 -EHsc)
+    target_compile_options(shoom PRIVATE -W3 -EHsc)
 else()
-    target_compile_options(shoom PUBLIC -Wall -Wno-missing-braces -std=c++11 -fPIC)
+    target_compile_options(shoom PRIVATE -Wall -Wno-missing-braces -std=c++11 -fPIC)
 endif()
 
 if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
