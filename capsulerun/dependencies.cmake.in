@@ -2,7 +2,7 @@ include(GetPrerequisites)
 get_prerequisites(
   @CAPSULERUN_BINARY_PATH@
   DEPENDENCIES
-  0 # exclude system
+  1 # exclude system
   1 # recurse
   "" # exepath
   "@CAPSULERUN_LIBRARY_DIRS@" #dirs
