@@ -65,15 +65,10 @@ function ci_compile_windows () {
     $.cmd(['mkdir', spec.dir])
     $.cd(spec.dir, function () {
       $($.cmd(['cmake', '-G', spec.generator, '..']))
-      $($.cmd(['msbuild', 'capsule.sln', '/p:Configuration=Release']))
+      $($.cmd(['msbuild', 'INSTALL.vcxproj', '/p:Configuration=Release']))
     })
 
-    const libname = (spec.osarch === 'windows-386' ? 'capsule32.dll' : 'capsule64.dll')
-    for (const destSpec of specs) {
-      $($.cmd(['copy', '/y', spec.dir + '\\libcapsule\\Release\\capsule.dll', 'compile-artifacts\\' + destSpec.osarch + '\\' + libname]))
-    }
-    $($.cmd(['xcopy', '/y', '/i', spec.dir + '\\capsulerun\\Release\\*.dll', 'compile-artifacts\\' + spec.osarch]))
-    $($.cmd(['xcopy', '/y', '/i', spec.dir + '\\capsulerun\\Release\\*.exe', 'compile-artifacts\\' + spec.osarch]))
+    $($.cmd(['xcopy', '/y', '/i', spec.dir + '\\dist\\*', 'compile-artifacts\\' + spec.osarch]))
   }
 }
 
@@ -85,14 +80,11 @@ function ci_compile_darwin () {
   $.sh('mkdir -p build')
   $.cd('build', function () {
     $($.sh('cmake .. -DOSX_UNIVERSAL=OFF'))
-    $($.sh('make'))
+    $($.sh('make install'))
   })
 
-  $.sh(`mkdir -p compile-artifacts/libcapsule/${osarch}/`)
-  $($.sh(`cp -rf build/libcapsule/libcapsule.dylib compile-artifacts/libcapsule/${osarch}/`))
-
-  $.sh(`mkdir -p compile-artifacts/capsulerun/${osarch}/`)
-  $($.sh(`cp -rf build/capsulerun/capsulerun compile-artifacts/capsulerun/${osarch}/`))
+  $.sh(`mkdir -p compile-artifacts/${osarch}/`)
+  $($.sh(`cp -rf build/dist/* compile-artifacts/${osarch}/`))
 }
 
 function ci_compile_linux (arch) {
@@ -101,17 +93,13 @@ function ci_compile_linux (arch) {
   const specs = [
     {
       dir: 'build32',
-      cmake_extra: '-DCMAKE_TOOLCHAIN_FILE=../cmake/Toolchain-Linux32.cmake',
       os: 'linux',
-      arch: '386',
-      prefix: '/ffmpeg/32/prefix'
+      arch: '386'
     },
     {
       dir: 'build64',
-      cmake_extra: '',
       os: 'linux',
-      arch: 'amd64',
-      prefix: '/ffmpeg/64/prefix'
+      arch: 'amd64'
     }
   ]
 
@@ -131,20 +119,19 @@ function ci_compile_linux (arch) {
     $.sh(`rm -rf ${spec.dir}`)
     $.sh(`mkdir -p ${spec.dir}`)
     $.cd(spec.dir, function () {
-      $($.sh(`cmake .. ${spec.cmake_extra} -DCAPSULE_FFMPEG_PREFIX=${spec.prefix}`))
-      $($.sh(`make`))
+      $($.sh(`cmake ..`))
+      $($.sh(`make install`))
     })
-    $.sh(`mkdir -p compile-artifacts/libcapsule/${osarch}`)
-    $($.sh(`cp -rf ${spec.dir}/libcapsule/libcapsule.so compile-artifacts/libcapsule/${osarch}/`))
+    $.sh(`mkdir -p compile-artifacts/${osarch}`)
 
-    $.sh(`mkdir -p compile-artifacts/capsulerun/${osarch}`)
-    $($.sh(`cp -rf ${spec.dir}/capsulerun/capsulerun compile-artifacts/capsulerun/${osarch}/`))
+    $($.sh(`cp -rf ${spec.dir}/dist/* compile-artifacts/${osarch}/`))
+
     const libs = $.get_output('ldd build/capsulerun/capsulerun | grep -E "lib(av|sw)" | cut -d " " -f 1 | sed -E "s/^[[:space:]]*//g"').trim().split('\n')
     for (const lib of libs) {
       if (lib.length === 0) {
         continue
       }
-      $($.sh(`cp -f ${spec.prefix}/lib/${lib} compile-artifacts/capsulerun/${osarch}/`))
+      $($.sh(`cp -f ${spec.prefix}/lib/${lib} compile-artifacts/${osarch}/`))
     }
   }
 }

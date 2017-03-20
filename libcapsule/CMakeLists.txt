@@ -92,3 +92,15 @@ endif()
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   target_link_libraries(capsule -ldl -lX11 -lpthread -lrt)
 endif()
+
+if("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+set(LIBCAPSULE_ARCH_SUFFIX "64")
+else()
+set(LIBCAPSULE_ARCH_SUFFIX "32")
+endif() # 32/64-bit test
+
+install(
+  FILES $<TARGET_FILE:capsule>
+  RENAME "${CMAKE_SHARED_LIBRARY_PREFIX}capsule${LIBCAPSULE_ARCH_SUFFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}"
+  DESTINATION "${CMAKE_BINARY_DIR}/dist"
+)

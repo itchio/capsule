@@ -57,10 +57,10 @@ if(WIN32)
   endforeach(NEEDED_LIB)
 
   foreach(NEEDED_DLL ${AVUTIL_DLL} ${AVCODEC_DLL} ${AVFORMAT_DLL} ${SWSCALE_DLL} ${SWRESAMPLE_DLL})
-    add_custom_command(TARGET capsulerun POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      "${FFMPEG_LIBRARY_DIR}/${NEEDED_DLL}"
-      $<TARGET_FILE_DIR:capsulerun>)
+    install(
+      FILES "${FFMPEG_LIBRARY_DIR}/${NEEDED_DLL}"
+      DESTINATION "${CMAKE_BINARY_DIR}/dist"
+    )
   endforeach(NEEDED_DLL)
 endif()
 
@@ -87,3 +87,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   target_link_libraries(capsulerun -lpthread)
   target_link_libraries(capsulerun -lrt)
 endif()
+
+install(TARGETS capsulerun
+  DESTINATION "${CMAKE_BINARY_DIR}/dist"
+)
