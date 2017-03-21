@@ -8,6 +8,10 @@
 #include <limits.h> // realpath
 #endif
 
+#if defined(CAPSULE_MACOS)
+#include <mach-o/dyld.h> // _NSGetExecutablePath
+#endif
+
 #if defined(CAPSULE_WINDOWS)
 #include "../windows/strings.h"
 #define WIN32_LEAN_AND_MEAN
