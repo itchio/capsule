@@ -4,7 +4,7 @@
 #include "DDHotKeyCenter.h"
 #import <Carbon/Carbon.h>
 
-#include "../shared/MainLoop.h"
+#include "../shared/main_loop.h"
 
 namespace capsule {
 
@@ -15,15 +15,15 @@ void RunApp () {
 namespace hotkey {
 
 int Init(MainLoop *ml) {
-  CapsuleLog("CapsuleHotkeyInit: registering hotkey");
+  CapsuleLog("capsule::hotkey::Init: registering hotkey");
 
-  CapsuleLog("CapsuleHotkeyInit: kVK_F9 is %d", kVK_F9);
+  CapsuleLog("capsule::hotkey::Init: kVK_F9 is %d", kVK_F9);
   DDHotKey *hotKey = [[DDHotKeyCenter sharedHotKeyCenter] registerHotKeyWithKeyCode:kVK_F9 modifierFlags:0 task:^(NSEvent *ev) {
     ml->CaptureFlip();
   }];
 
   if (hotKey == nil) {
-    CapsuleLog("Hotkey registration failed.");
+    CapsuleLog("capsule::hotkey::init: registration failed");
     return 1;
   }
 
