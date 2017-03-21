@@ -63,7 +63,7 @@ int main (int argc, char **argv) {
     OPT_INTEGER(0, "size_divider", &args.size_divider, "size divider: default 1, accepted values 2 or 4"),
     OPT_INTEGER('r', "fps", &args.fps, "maximum frames per second (default: 60)"),
     OPT_GROUP("Audio options"),
-    OPT_BOOLEAN(0, "no-audio", &args.no_audio, "don't record audio'"),
+    OPT_BOOLEAN(0, "no-audio", &args.no_audio, "don't record audio"),
     OPT_GROUP("Advanced options"),
     OPT_STRING(0, "pix_fmt", &args.pix_fmt, "pixel format: yuv420p (default, compatible), or yuv444p"),
     OPT_INTEGER(0, "threads", &args.threads, "number of threads used to encode video"),

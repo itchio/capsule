@@ -63,6 +63,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   add_definitions(-D__STDC_CONSTANT_MACROS)
 endif()
 
+set(CMAKE_INSTALL_RPATH "\$ORIGIN")
 add_executable(capsulerun ${capsulerun_SRC})
 
 target_link_libraries(capsulerun shoom)
@@ -113,7 +114,7 @@ install(TARGETS capsulerun
 )
 
 set(CAPSULERUN_BINARY_PATH "${CMAKE_BINARY_DIR}/dist/capsulerun${CMAKE_EXECUTABLE_SUFFIX}")
-set(CAPSULERUN_LIBRARY_DIRS "${FFMPEG_LIBRARY_DIR}")
+set(CAPSULERUN_LIBRARY_DIRS "${FFMPEG_LIBRARY_DIR}:$ENV{HOME}/Dev/ffmpeg-prefix/lib")
 
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/dependencies.cmake.in"
