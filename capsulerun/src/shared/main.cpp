@@ -10,6 +10,7 @@
 
 #if defined(CAPSULE_MACOS)
 #include <mach-o/dyld.h> // _NSGetExecutablePath
+#include <sys/param.h> // realpath
 #endif
 
 #if defined(CAPSULE_WINDOWS)
@@ -149,7 +150,7 @@ int main (int argc, char **argv) {
   const size_t file_name_characters = 16 * 1024;
 #if defined(CAPSULE_WINDOWS)
   wchar_t *file_name = reinterpret_cast<wchar_t*>(calloc(file_name_characters, sizeof(wchar_t)));
-  DWORD file_name_actual_characters = GetModuleFileNameW(NULL, &file_name, static_cast<DWORD>(file_name_characters));
+  DWORD file_name_actual_characters = GetModuleFileNameW(NULL, file_name, static_cast<DWORD>(file_name_characters));
   char *utf8_file_name = nullptr;
   fromWideChar(file_name, &utf8_file_name);
   free(file_name);
