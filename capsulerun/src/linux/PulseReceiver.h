@@ -14,9 +14,11 @@ const int kAudioNbBuffers = 16;
 const int kAudioNbSamples = 128;
 
 // TODO: that's amore^Wan enum
-const int kBufferStateProcessed = 0;
-const int kBufferStateCommitted = 1;
-const int kBufferStateProcessing = 2;
+enum BufferState {
+  kBufferStateAvailable = 0,
+  kBufferStateCommitted,
+  kBufferStateProcessing,
+};
 
 class PulseReceiver : public AudioReceiver {
   public:
@@ -48,5 +50,5 @@ class PulseReceiver : public AudioReceiver {
     bool overrun_ = false;
 };
 
-}
-}
+} // namespace audio
+} // namespace capsule

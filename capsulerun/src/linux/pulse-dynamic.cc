@@ -34,5 +34,5 @@ bool Load() {
   return loaded;
 }
 
-}
-}
+} // namespace pulse
+} // namespace capsule

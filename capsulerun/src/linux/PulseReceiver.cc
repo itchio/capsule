@@ -62,7 +62,7 @@ PulseReceiver::PulseReceiver() {
   buffers_ = (uint8_t *) calloc(kAudioNbBuffers, buffer_size_);
 
   for (int i = 0; i < kAudioNbBuffers; i++) {
-    buffer_state_[i] = kBufferStateProcessed;
+    buffer_state_[i] = kBufferStateAvailable;
   }
   commit_index_ = 0;
   process_index_ = 0;
@@ -92,7 +92,7 @@ bool PulseReceiver::ReadFromPa() {
   {
     lock_guard<mutex> lock(buffer_mutex_);
 
-    if (buffer_state_[commit_index_] != kBufferStateProcessed) {
+    if (buffer_state_[commit_index_] != kBufferStateAvailable) {
       // no room for it, just skip those then
       if (!overrun_) {
         overrun_ = true;
@@ -131,7 +131,7 @@ void *PulseReceiver::ReceiveFrames(int *frames_received) {
     // if the previous one was processing, that means we've processed it.
     auto prev_process_index = (process_index_ == 0) ? (kAudioNbBuffers - 1) : (process_index_ - 1);
     if (buffer_state_[prev_process_index] == kBufferStateProcessing) {
-      buffer_state_[prev_process_index] = kBufferStateProcessed;
+      buffer_state_[prev_process_index] = kBufferStateAvailable;
     }
 
     uint8_t *source = buffers_ + (process_index_ * buffer_size_);
@@ -163,5 +163,5 @@ PulseReceiver::~PulseReceiver() {
   }
 }
 
-}
-}
+} // namespace audio
+} // namespace capsule

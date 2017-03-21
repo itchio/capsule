@@ -35,5 +35,5 @@ extern pa_simple_free_t Free;
 
 bool Load();
 
-}
-}
+} // namespace pulse
+} // namespace capsule
