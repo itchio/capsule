@@ -1,12 +1,11 @@
 
 #include <capsule/messages.h>
+#include <capsule/logging.h>
 
 #include "VideoReceiver.h"
 
 using namespace Capsule::Messages;
 using namespace std;
-
-#include <capsulerun_macros.h>
 
 #include <stdexcept>
 
@@ -66,7 +65,7 @@ int VideoReceiver::receive_frame(uint8_t *buffer_out, size_t buffer_size_out, in
   }
 
   if (frame_size != buffer_size_out) {
-    fprintf(stderr, "capsule internal error: expected frame_size (%d) and buffer_size_out (%d) to match, but they didn't\n", frame_size, buffer_size_out);
+    fprintf(stderr, "capsule internal error: expected frame_size (%" PRIdS ") and buffer_size_out (%" PRIdS ") to match, but they didn't\n", frame_size, buffer_size_out);
     fflush(stderr);
     throw runtime_error("frame_size !== buffer_size_out");
   }

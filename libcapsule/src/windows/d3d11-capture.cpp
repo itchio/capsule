@@ -16,9 +16,9 @@
 struct d3d11_data {
   ID3D11Device              *device; // do not release
   ID3D11DeviceContext       *context; // do not release
-  uint32_t                  cx; // framebuffer width
-  uint32_t                  cy; // framebuffer height
-  uint32_t                  size_divider;
+  int                       cx; // framebuffer width
+  int                       cy; // framebuffer height
+  int                       size_divider;
   DXGI_FORMAT               format; // pixel format
   DXGI_FORMAT               out_format; // pixel format
   bool                      multisampled; // if true, subresource needs to be resolved on GPU before downloading
@@ -49,8 +49,8 @@ struct d3d11_data {
   int                            cur_tex;
   int                            copy_wait;
 
-  uint32_t                       overlay_width;  
-  uint32_t                       overlay_height;  
+  int                            overlay_width;  
+  int                            overlay_height;  
   unsigned char                  *overlay_pixels;
   ID3D11Texture2D                *overlay_tex;
   ID3D11ShaderResourceView       *overlay_resource;
@@ -58,7 +58,7 @@ struct d3d11_data {
   ID3D11BlendState               *overlay_blend_state;
   ID3D11Buffer                   *overlay_vertex_buffer;
 
-  uint32_t                       pitch; // linesize, may not be (width * components) because of alignemnt
+  intptr_t                       pitch; // linesize, may not be (width * components) because of alignemnt
 };
 
 static struct d3d11_data data = {};
@@ -133,7 +133,7 @@ static bool create_d3d11_stage_surface(ID3D11Texture2D **tex) {
 /**
  * Create an on-GPU texture (used to resolve multisampled backbuffers)
  */
-static bool create_d3d11_tex(uint32_t cx, uint32_t cy, ID3D11Texture2D **tex, bool out) {
+static bool create_d3d11_tex(int cx, int cy, ID3D11Texture2D **tex, bool out) {
   HRESULT hr;
 
   D3D11_TEXTURE2D_DESC desc                 = {};

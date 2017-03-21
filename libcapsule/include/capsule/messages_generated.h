@@ -28,9 +28,9 @@ enum PixFmt {
   PixFmt_RGBA = 40069,
   PixFmt_BGRA = 40070,
   PixFmt_RGB10_A2 = 40071,
-  PixFmt_YUV444 = 60021,
+  PixFmt_YUV444P = 60021,
   PixFmt_MIN = PixFmt_UNKNOWN,
-  PixFmt_MAX = PixFmt_YUV444
+  PixFmt_MAX = PixFmt_YUV444P
 };
 
 enum Message {
@@ -250,11 +250,11 @@ struct VideoSetup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool vflip() const {
     return GetField<uint8_t>(VT_VFLIP, 0) != 0;
   }
-  const flatbuffers::Vector<uint32_t> *offset() const {
-    return GetPointer<const flatbuffers::Vector<uint32_t> *>(VT_OFFSET);
+  const flatbuffers::Vector<int64_t> *offset() const {
+    return GetPointer<const flatbuffers::Vector<int64_t> *>(VT_OFFSET);
   }
-  const flatbuffers::Vector<uint32_t> *linesize() const {
-    return GetPointer<const flatbuffers::Vector<uint32_t> *>(VT_LINESIZE);
+  const flatbuffers::Vector<int64_t> *linesize() const {
+    return GetPointer<const flatbuffers::Vector<int64_t> *>(VT_LINESIZE);
   }
   const Shmem *shmem() const {
     return GetPointer<const Shmem *>(VT_SHMEM);
@@ -290,10 +290,10 @@ struct VideoSetupBuilder {
   void add_vflip(bool vflip) {
     fbb_.AddElement<uint8_t>(VideoSetup::VT_VFLIP, static_cast<uint8_t>(vflip), 0);
   }
-  void add_offset(flatbuffers::Offset<flatbuffers::Vector<uint32_t>> offset) {
+  void add_offset(flatbuffers::Offset<flatbuffers::Vector<int64_t>> offset) {
     fbb_.AddOffset(VideoSetup::VT_OFFSET, offset);
   }
-  void add_linesize(flatbuffers::Offset<flatbuffers::Vector<uint32_t>> linesize) {
+  void add_linesize(flatbuffers::Offset<flatbuffers::Vector<int64_t>> linesize) {
     fbb_.AddOffset(VideoSetup::VT_LINESIZE, linesize);
   }
   void add_shmem(flatbuffers::Offset<Shmem> shmem) {
@@ -317,8 +317,8 @@ inline flatbuffers::Offset<VideoSetup> CreateVideoSetup(
     uint32_t height = 0,
     PixFmt pix_fmt = PixFmt_UNKNOWN,
     bool vflip = false,
-    flatbuffers::Offset<flatbuffers::Vector<uint32_t>> offset = 0,
-    flatbuffers::Offset<flatbuffers::Vector<uint32_t>> linesize = 0,
+    flatbuffers::Offset<flatbuffers::Vector<int64_t>> offset = 0,
+    flatbuffers::Offset<flatbuffers::Vector<int64_t>> linesize = 0,
     flatbuffers::Offset<Shmem> shmem = 0) {
   VideoSetupBuilder builder_(_fbb);
   builder_.add_shmem(shmem);
@@ -337,8 +337,8 @@ inline flatbuffers::Offset<VideoSetup> CreateVideoSetupDirect(
     uint32_t height = 0,
     PixFmt pix_fmt = PixFmt_UNKNOWN,
     bool vflip = false,
-    const std::vector<uint32_t> *offset = nullptr,
-    const std::vector<uint32_t> *linesize = nullptr,
+    const std::vector<int64_t> *offset = nullptr,
+    const std::vector<int64_t> *linesize = nullptr,
     flatbuffers::Offset<Shmem> shmem = 0) {
   return Capsule::Messages::CreateVideoSetup(
       _fbb,
@@ -346,8 +346,8 @@ inline flatbuffers::Offset<VideoSetup> CreateVideoSetupDirect(
       height,
       pix_fmt,
       vflip,
-      offset ? _fbb.CreateVector<uint32_t>(*offset) : 0,
-      linesize ? _fbb.CreateVector<uint32_t>(*linesize) : 0,
+      offset ? _fbb.CreateVector<int64_t>(*offset) : 0,
+      linesize ? _fbb.CreateVector<int64_t>(*linesize) : 0,
       shmem);
 }
 

@@ -157,6 +157,7 @@ int main (int argc, char **argv) {
   exe_path = std::string(utf8_file_name);
   free(utf8_file_name);
 #elif defined(CAPSULE_MACOS)
+  // style: have to use uint32_t for _NSGetExecutablePath
   uint32_t mac_file_name_characters = file_name_characters;
   char *utf8_file_name = reinterpret_cast<char *>(calloc(file_name_characters, sizeof(char)));
   if (_NSGetExecutablePath(utf8_file_name, &mac_file_name_characters) != 0) {

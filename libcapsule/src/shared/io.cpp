@@ -164,7 +164,7 @@ static void poll_infile() {
     }
 }
 
-void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, int vflip, int pitch) {
+void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, bool vflip, intptr_t pitch) {
     capsule_log("writing video format");
     for (int i = 0; i < NUM_BUFFERS; i++) {
         frame_locked[i] = false;
@@ -192,12 +192,12 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     auto shmem = shmem_builder.Finish();
 
     // TODO: support multiple linesizes (for planar formats)
-    uint32_t linesize[1];
+    intptr_t linesize[1];
     linesize[0] = pitch;
     auto linesize_vec = builder.CreateVector(linesize, 1);
 
     // TODO: support multiple offsets (for planar formats)
-    uint32_t offset[1];
+    intptr_t offset[1];
     offset[0] = 0;
     auto offset_vec = builder.CreateVector(offset, 1);
 

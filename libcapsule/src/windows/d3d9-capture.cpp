@@ -10,8 +10,8 @@
 struct d3d9_data {
   HMODULE                 d3d9;
   IDirect3DDevice9        *device; // do not release
-  uint32_t                cx;
-  uint32_t                cy;
+  int                     cx;
+  int                     cy;
   D3DFORMAT               format;
 
   IDirect3DSurface9       *d3d9_copytex;
@@ -21,7 +21,7 @@ struct d3d9_data {
   IDirect3DQuery9         *queries[NUM_BUFFERS];
  	bool                    texture_mapped[NUM_BUFFERS];
 	volatile bool           issued_queries[NUM_BUFFERS];
-  uint32_t                pitch;
+  intptr_t                pitch;
 };
 
 static struct d3d9_data data = {};

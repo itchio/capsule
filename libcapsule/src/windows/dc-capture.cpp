@@ -5,8 +5,8 @@
 struct dc_data {
   HWND window;
   HDC hdc_target;
-  uint32_t cx;
-  uint32_t cy;
+  int cx;
+  int cy;
 
   HBITMAP bmp;
   HDC hdc;

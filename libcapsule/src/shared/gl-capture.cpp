@@ -8,9 +8,9 @@
 
 // inspired by libobs
 struct gl_data {
-  uint32_t                cx;
-  uint32_t                cy;
-  uint32_t                pitch;
+  int                     cx;
+  int                     cy;
+  intptr_t                pitch;
   GLuint                  fbo;
 
   int                     cur_tex;
@@ -243,9 +243,9 @@ static inline bool gl_shmem_init_data(size_t idx, size_t size) {
 }
 
 static inline bool gl_shmem_init_buffers(void) {
-	uint32_t size = data.cx * data.cy * 4;
-	int last_pbo; // FIXME: GLint
-	int last_tex; // FIXME: GLint
+	size_t size = data.cx * data.cy * 4;
+	GLint last_pbo;
+	GLint last_tex;
 
 	_glGenBuffers(NUM_BUFFERS, data.pbos);
 	if (gl_error("gl_shmem_init_buffers", "failed to generate buffers")) {
