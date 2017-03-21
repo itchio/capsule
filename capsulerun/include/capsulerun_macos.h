@@ -1,3 +1,3 @@
 
-void capsule_run_app();
+void CapsuleRunApp();
 

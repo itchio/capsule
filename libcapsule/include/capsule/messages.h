@@ -34,7 +34,7 @@
  *
  * Blocks, returns null on closed pipe
  */
-static char *capsule_fread_packet (FILE *file) {
+static char *CapsuleFreadPacket (FILE *file) {
     uint32_t pkt_size = 0;
     int read_bytes = fread(&pkt_size, sizeof(pkt_size), 1, file);
     if (read_bytes == 0) {
@@ -51,8 +51,8 @@ static char *capsule_fread_packet (FILE *file) {
  * Writes a packet (built with builder) to file.
  * builder.Finish(x) must have been called beforehand.
  */
-static void capsule_fwrite_packet(const flatbuffers::FlatBufferBuilder &builder, FILE *file) {
-    // capsule_log("writing packet, size: %d bytes", builder.GetSize());
+static void CapsuleFwritePacket(const flatbuffers::FlatBufferBuilder &builder, FILE *file) {
+    // CapsuleLog("writing packet, size: %d bytes", builder.GetSize());
     uint32_t pkt_size = builder.GetSize();
     fwrite(&pkt_size, sizeof(pkt_size), 1, file);
     fwrite(builder.GetBufferPointer(), builder.GetSize(), 1, file);
@@ -67,7 +67,7 @@ static void capsule_fwrite_packet(const flatbuffers::FlatBufferBuilder &builder,
  *
  * Blocks, returns null on closed pipe
  */
-static char *capsule_hread_packet (HANDLE handle) {
+static char *CapsuleHreadPacket (HANDLE handle) {
     uint32_t pkt_size = 0;
 
     DWORD bytes_read = 0;
@@ -105,7 +105,7 @@ static char *capsule_hread_packet (HANDLE handle) {
  * Writes a packet (built with builder) to file.
  * builder.Finish(x) must have been called beforehand.
  */
-static void capsule_hwrite_packet(const flatbuffers::FlatBufferBuilder &builder, HANDLE handle) {
+static void CapsuleHwritePacket(const flatbuffers::FlatBufferBuilder &builder, HANDLE handle) {
     DWORD bytes_written;
 
     // fprintf(stdout, "writing packet, size: %d bytes\n", builder.GetSize());
@@ -137,7 +137,7 @@ static void capsule_hwrite_packet(const flatbuffers::FlatBufferBuilder &builder,
  *
  * Blocks, returns null on closed pipe
  */
-static char *capsule_read_packet (int fd) {
+static char *CapsuleReadPacket (int fd) {
     uint32_t pkt_size = 0;
     int read_bytes = read(fd, &pkt_size, sizeof(pkt_size));
     if (read_bytes == 0) {
@@ -154,7 +154,7 @@ static char *capsule_read_packet (int fd) {
  * Writes a packet (built with builder) to fd.
  * builder.Finish(x) must have been called beforehand.
  */
-static void capsule_write_packet(const flatbuffers::FlatBufferBuilder &builder, int fd) {
+static void CapsuleWritePacket(const flatbuffers::FlatBufferBuilder &builder, int fd) {
     uint32_t pkt_size = builder.GetSize();
     write(fd, &pkt_size, sizeof(pkt_size));
     write(fd, builder.GetBufferPointer(), builder.GetSize());

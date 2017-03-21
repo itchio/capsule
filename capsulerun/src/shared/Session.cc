@@ -38,7 +38,7 @@ void Session::Start () {
     encoder_params.has_audio = 0;  
   }
 
-  encoder_thread = new thread(encoder_run, args, &encoder_params);
+  encoder_thread = new thread(EncoderRun, args, &encoder_params);
 }
 
 void Session::Stop () {
@@ -52,7 +52,7 @@ void Session::Stop () {
 }
 
 void Session::Join () {
-  capsule_log("Waiting for encoder thread...");
+  CapsuleLog("Waiting for encoder thread...");
   encoder_thread->join();
 }
 

@@ -1,7 +1,5 @@
 #include "Connection.h"
 
-// TODO: what about capsule_log ?
-
 #if defined(CAPSULE_LINUX)
 #include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
@@ -33,7 +31,7 @@ static HANDLE create_pipe(
   std::string &pipe_path,
   DWORD pipe_mode
 ) {
-  // capsule_log("Created named pipe %s", pipe_path.c_str());
+  // CapsuleLog("Created named pipe %s", pipe_path.c_str());
   HANDLE handle = CreateNamedPipeA(
     pipe_path.c_str(),
     pipe_mode, // open mode
@@ -47,7 +45,7 @@ static HANDLE create_pipe(
 
   if (!handle) {
     DWORD err = GetLastError();
-    // capsule_log("CreateNamedPipe failed, err = %d (%x)", err, err);
+    // CapsuleLog("CreateNamedPipe failed, err = %d (%x)", err, err);
     throw runtime_error("CreateNamedPipe failed");
   }
 
@@ -65,7 +63,7 @@ static void create_fifo(
   // create fifo
   int fifo_ret = mkfifo(fifo_path.c_str(), 0644);
   if (fifo_ret != 0) {
-    // capsule_log("could not create fifo at %s (code %d)", fifo_path.c_str(), fifo_ret);
+    // CapsuleLog("could not create fifo at %s (code %d)", fifo_path.c_str(), fifo_ret);
     throw runtime_error("mkfifo failed");
   }
 }
@@ -75,11 +73,11 @@ static int open_fifo (
   std::string purpose,
   int flags
 ) {
-  // capsule_log("opening %s fifo...", purpose.c_str());
+  // CapsuleLog("opening %s fifo...", purpose.c_str());
 
   int fd = open(path.c_str(), flags);
   if (!fd) {
-    // capsule_log("could not open fifo for %s: %s", purpose.c_str(), strerror(errno));
+    // CapsuleLog("could not open fifo for %s: %s", purpose.c_str(), strerror(errno));
     throw runtime_error("could not open fifo");
   }
 
@@ -125,17 +123,17 @@ void Connection::connect() {
 
 void Connection::write(const flatbuffers::FlatBufferBuilder &builder) {
 #if defined(CAPSULE_WINDOWS)
-  capsule_hwrite_packet(builder, pipe_w);
+  CapsuleHwritePacket(builder, pipe_w);
 #else // CAPSULE_WINDOWS
-  capsule_write_packet(builder, fifo_w);
+  CapsuleWritePacket(builder, fifo_w);
 #endif // !CAPSULE_WINDOWS
 }
 
 char *Connection::read() {
 #if defined(CAPSULE_WINDOWS)
-  return capsule_hread_packet(pipe_r);
+  return CapsuleHreadPacket(pipe_r);
 #else // CAPSULE_WINDOWS
-  return capsule_read_packet(fifo_r);
+  return CapsuleReadPacket(fifo_r);
 #endif // !CAPSULE_WINDOWS
 }
 

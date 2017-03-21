@@ -70,13 +70,13 @@ pD3DCompile pD3DCompileFunc = NULL;
  * Copy the format, size, and multisampling information of the
  * D3D11 backbuffer to our internal state
  */
-static bool d3d11_init_format(IDXGISwapChain *swap, HWND *window) {
+static bool D3d11InitFormat(IDXGISwapChain *swap, HWND *window) {
   DXGI_SWAP_CHAIN_DESC desc;
   HRESULT hr;
 
   hr = swap->GetDesc(&desc);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init_format: swap->GetDesc failed");
+    CapsuleLog("D3d11InitFormat: swap->GetDesc failed");
     return false;
   }
   data.format = fix_dxgi_format(desc.BufferDesc.Format);
@@ -87,7 +87,7 @@ static bool d3d11_init_format(IDXGISwapChain *swap, HWND *window) {
   data.cy = desc.BufferDesc.Height;
   data.size_divider = capdata.settings.size_divider;
 
-  capsule_log("Backbuffer: %ux%u (%s) format = %s",
+  CapsuleLog("Backbuffer: %ux%u (%s) format = %s",
     data.cx, data.cy,
     data.multisampled ? "multisampled" : "",
     name_from_dxgi_format(desc.BufferDesc.Format).c_str()
@@ -99,7 +99,7 @@ static bool d3d11_init_format(IDXGISwapChain *swap, HWND *window) {
 /**
  * Release a COM resource, if it's non-null
  */
-static inline void safe_release(IUnknown *p) {
+static inline void SafeRelease(IUnknown *p) {
   if (p) {
     p->Release();
   }
@@ -108,7 +108,7 @@ static inline void safe_release(IUnknown *p) {
 /**
  * Create a staging surface (used to download data from the GPU to the CPU)
  */
-static bool create_d3d11_stage_surface(ID3D11Texture2D **tex) {
+static bool CreateD3d11StageSurface(ID3D11Texture2D **tex) {
   HRESULT hr;
 
   D3D11_TEXTURE2D_DESC desc      = {};
@@ -123,7 +123,7 @@ static bool create_d3d11_stage_surface(ID3D11Texture2D **tex) {
 
   hr = data.device->CreateTexture2D(&desc, nullptr, tex);
   if (FAILED(hr)) {
-    capsule_log("create_d3d11_stage_surface: failed to create texture (%x)", hr);
+    CapsuleLog("CreateD3d11StageSurface: failed to create texture (%x)", hr);
     return false;
   }
 
@@ -133,7 +133,7 @@ static bool create_d3d11_stage_surface(ID3D11Texture2D **tex) {
 /**
  * Create an on-GPU texture (used to resolve multisampled backbuffers)
  */
-static bool create_d3d11_tex(int cx, int cy, ID3D11Texture2D **tex, bool out) {
+static bool CreateD3d11Tex(int cx, int cy, ID3D11Texture2D **tex, bool out) {
   HRESULT hr;
 
   D3D11_TEXTURE2D_DESC desc                 = {};
@@ -153,7 +153,7 @@ static bool create_d3d11_tex(int cx, int cy, ID3D11Texture2D **tex, bool out) {
 
   hr = data.device->CreateTexture2D(&desc, nullptr, tex);
   if (FAILED(hr)) {
-    capsule_log("create_d3d11_tex: failed to create texture (%x)", hr);
+    CapsuleLog("CreateD3d11Tex: failed to create texture (%x)", hr);
     return false;
   }
 
@@ -163,12 +163,12 @@ static bool create_d3d11_tex(int cx, int cy, ID3D11Texture2D **tex, bool out) {
 /**
  * Initiate both on-GPU textures and copy surfaces (staging).
  */
-static bool d3d11_shmem_init_buffers(size_t idx) {
+static bool D3d11ShmemInitBuffers(size_t idx) {
   bool success;
 
-  success = create_d3d11_stage_surface(&data.copy_surfaces[idx]);
+  success = CreateD3d11StageSurface(&data.copy_surfaces[idx]);
   if (!success) {
-    capsule_log("d3d11_shmem_init_buffers: failed to create copy surface");
+    CapsuleLog("D3d11ShmemInitBuffers: failed to create copy surface");
     return false;
   }
 
@@ -181,7 +181,7 @@ static bool d3d11_shmem_init_buffers(size_t idx) {
       D3D11_MAP_READ, 0, &map);
 
     if (FAILED(hr)) {
-      capsule_log("d3d11_shmem_init_buffers: failed to get pitch (%x)", hr);
+      CapsuleLog("d3d11_shmem_init_buffers: failed to get pitch (%x)", hr);
       return false;
     }
 
@@ -189,22 +189,22 @@ static bool d3d11_shmem_init_buffers(size_t idx) {
     data.context->Unmap(data.copy_surfaces[idx], 0);
   }
 
-  success = create_d3d11_tex(data.cx / data.size_divider, data.cy / data.size_divider, &data.textures[idx], true);
+  success = CreateD3d11Tex(data.cx / data.size_divider, data.cy / data.size_divider, &data.textures[idx], true);
 
   if (!success) {
-    capsule_log("d3d11_shmem_init_buffers: failed to create texture");
+    CapsuleLog("D3d11ShmemInitBuffers: failed to create texture");
     return false;
   }
 
   HRESULT hr = data.device->CreateRenderTargetView(data.textures[idx], nullptr, &data.render_targets[idx]);
   if (FAILED(hr)) {
-    capsule_log("d3d11_shmem_init_buffers: failed to create rendertarget view (%x)", hr);
+    CapsuleLog("D3d11ShmemInitBuffers: failed to create rendertarget view (%x)", hr);
   }
 
-  success = create_d3d11_tex(data.cx, data.cy, &data.scale_tex, false);
+  success = CreateD3d11Tex(data.cx, data.cy, &data.scale_tex, false);
 
   if (!success) {
-    capsule_log("d3d11_shmem_init_buffers: failed to create scale texture");
+    CapsuleLog("D3d11ShmemInitBuffers: failed to create scale texture");
     return false;
   }
 
@@ -215,25 +215,25 @@ static bool d3d11_shmem_init_buffers(size_t idx) {
 
   hr = data.device->CreateShaderResourceView(data.scale_tex, &res_desc, &data.scale_resource);
   if (FAILED(hr)) {
-    capsule_log("d3d11_shmem_init_buffers: failed to create rendertarget view (%x)", hr);
+    CapsuleLog("d3d11_shmem_init_buffers: failed to create rendertarget view (%x)", hr);
     return false;
   }
 
   return true;
 }
 
-static bool d3d11_shmem_init(HWND window) {
+static bool D3d11ShmemInit(HWND window) {
   for (size_t i = 0; i < NUM_BUFFERS; i++) {
-    if (!d3d11_shmem_init_buffers(i)) {
+    if (!D3d11ShmemInitBuffers(i)) {
       return false;
     }
   }
 
-  capsule_log("d3d11 memory capture initialize successful");
+  CapsuleLog("d3d11 memory capture initialize successful");
   return true;
 }
 
-static bool d3d11_init_colorconv_shader() {
+static bool D3d11InitColorconvShader() {
   HRESULT hr;
 
   D3D11_BUFFER_DESC bd;
@@ -262,7 +262,7 @@ static bool d3d11_init_colorconv_shader() {
     0,
   };
 
-  capsule_log("d3d11_init_colorconv_shader: constant size = %d", constant_size);
+  CapsuleLog("D3d11InitColorconvShader: constant size = %d", constant_size);
 
   bd.ByteWidth = (constant_size+15) & 0xFFFFFFF0; // align
   bd.Usage = D3D11_USAGE_DYNAMIC;
@@ -271,7 +271,7 @@ static bool d3d11_init_colorconv_shader() {
 
   hr = data.device->CreateBuffer(&bd, nullptr, &data.constants);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init_colorconv_shader: failed to create constant buffer (%x)", hr);
+    CapsuleLog("D3d11InitColorconvShader: failed to create constant buffer (%x)", hr);
     return false;
   }
 
@@ -281,7 +281,7 @@ static bool d3d11_init_colorconv_shader() {
 
     hr = data.context->Map(data.constants, 0, D3D11_MAP_WRITE_DISCARD, 0, &map);
     if (FAILED(hr)) {
-      capsule_log("d3d11_init_colorconv_shader: could not lock constants buffer (%x)", hr);
+      CapsuleLog("D3d11InitColorconvShader: could not lock constants buffer (%x)", hr);
       return false;
     }
 
@@ -290,21 +290,21 @@ static bool d3d11_init_colorconv_shader() {
   }
 }
 
-static bool d3d11_load_shaders() {
+static bool D3d11LoadShaders() {
   hD3DCompiler = LoadLibraryA(D3DCOMPILER_DLL_A);
 
   if (!hD3DCompiler) {
-    capsule_log("d3d11_load_shaders: couldn't load %s", D3DCOMPILER_DLL_A);
+    CapsuleLog("D3d11LoadShaders: couldn't load %s", D3DCOMPILER_DLL_A);
     hD3DCompiler = LoadLibraryA("d3dcompiler_42.dll");
     if (!hD3DCompiler) {
-      capsule_log("d3d11_load_shaders: couldn't load d3dcompiler_42.dll, bailing");
+      CapsuleLog("D3d11LoadShaders: couldn't load d3dcompiler_42.dll, bailing");
       return false;
     }
   }
 
   pD3DCompileFunc = (pD3DCompile) GetProcAddress(hD3DCompiler, "D3DCompile");
   if (pD3DCompileFunc == NULL) {
-    capsule_log("d3d11_load_shaders: D3DCompile was NULL");
+    CapsuleLog("D3d11LoadShaders: D3DCompile was NULL");
     return false;
   }
 
@@ -322,7 +322,7 @@ static bool d3d11_load_shaders() {
     "vs_4_0", D3D10_SHADER_OPTIMIZATION_LEVEL1, 0, &blob, nullptr);
 
   if (FAILED(hr)) {
-    capsule_log("d3d11_load_shaders: failed to compile vertex shader (%x)", hr);
+    CapsuleLog("D3d11LoadShaders: failed to compile vertex shader (%x)", hr);
     return false;
   }
 
@@ -333,7 +333,7 @@ static bool d3d11_load_shaders() {
   hr = data.device->CreateVertexShader(vertex_shader_data, vertex_shader_size, nullptr, &data.vertex_shader);
 
   if (FAILED(hr)) {
-    capsule_log("d3d11_load_shaders: failed to create vertex shader (%x)", hr);
+    CapsuleLog("D3d11LoadShaders: failed to create vertex shader (%x)", hr);
     return false;
   }
 
@@ -356,7 +356,7 @@ static bool d3d11_load_shaders() {
   hr = data.device->CreateInputLayout(input_desc, 2, vertex_shader_data, vertex_shader_size, &data.vertex_layout);
 
   if (FAILED(hr)) {
-    capsule_log("d3d11_load_shaders: failed to create layout (%x)", hr);
+    CapsuleLog("D3d11LoadShaders: failed to create layout (%x)", hr);
     return false;
   }
 
@@ -383,8 +383,8 @@ static bool d3d11_load_shaders() {
       "ps_4_0", D3D10_SHADER_OPTIMIZATION_LEVEL1, 0, &blob, &error_msg);
 
     if (FAILED(hr)) {
-      capsule_log("d3d11_load_shaders: failed to compile pixel shader (%x)", hr);
-      capsule_log("d3d11_load_shaders: %s", (char*) error_msg->GetBufferPointer());
+      CapsuleLog("D3d11LoadShaders: failed to compile pixel shader (%x)", hr);
+      CapsuleLog("D3d11LoadShaders: %s", (char*) error_msg->GetBufferPointer());
       return false;
     }
 
@@ -395,12 +395,12 @@ static bool d3d11_load_shaders() {
     hr = data.device->CreatePixelShader(pixel_shader_data, pixel_shader_size, nullptr, &data.pixel_shader);
 
     if (FAILED(hr)) {
-      capsule_log("d3d11_load_shaders: failed to create pixel shader (%x)", hr);
+      CapsuleLog("D3d11LoadShaders: failed to create pixel shader (%x)", hr);
       return false;
     }
 
     if (data.gpu_color_conv) {
-      if (!d3d11_init_colorconv_shader()) {
+      if (!D3d11InitColorconvShader()) {
         return false;
       }
     }
@@ -423,8 +423,8 @@ static bool d3d11_load_shaders() {
       "ps_4_0", D3D10_SHADER_OPTIMIZATION_LEVEL1, 0, &blob, &error_msg);
 
     if (FAILED(hr)) {
-      capsule_log("d3d11_load_shaders: failed to compile pixel shader (%x)", hr);
-      capsule_log("d3d11_load_shaders: %s", (char*) error_msg->GetBufferPointer());
+      CapsuleLog("D3d11LoadShaders: failed to compile pixel shader (%x)", hr);
+      CapsuleLog("D3d11LoadShaders: %s", (char*) error_msg->GetBufferPointer());
       return false;
     }
 
@@ -435,7 +435,7 @@ static bool d3d11_load_shaders() {
     hr = data.device->CreatePixelShader(pixel_shader_data, pixel_shader_size, nullptr, &data.overlay_pixel_shader);
 
     if (FAILED(hr)) {
-      capsule_log("d3d11_load_shaders: failed to create pixel shader (%x)", hr);
+      CapsuleLog("D3d11LoadShaders: failed to create pixel shader (%x)", hr);
       return false;
     }
   }
@@ -443,7 +443,7 @@ static bool d3d11_load_shaders() {
   return true;
 }
 
-static bool d3d11_init_draw_states(void)
+static bool D3d11InitDrawStates(void)
 {
   HRESULT hr;
 
@@ -455,7 +455,7 @@ static bool d3d11_init_draw_states(void)
 
   hr = data.device->CreateSamplerState(&sampler_desc, &data.sampler_state);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init_draw_states: failed to create sampler state (%x)", hr);
+    CapsuleLog("D3d11InitDrawStates: failed to create sampler state (%x)", hr);
     return false;
   }
 
@@ -477,7 +477,7 @@ static bool d3d11_init_draw_states(void)
 
     hr = data.device->CreateBlendState(&blend_desc, &data.overlay_blend_state);
     if (FAILED(hr)) {
-      capsule_log("d3d11_init_blend_state: failed to create overlay blend state (%x)", hr);
+      CapsuleLog("D3d11InitBlendState: failed to create overlay blend state (%x)", hr);
       return false;
     }
   }
@@ -491,7 +491,7 @@ static bool d3d11_init_draw_states(void)
 
     hr = data.device->CreateBlendState(&blend_desc, &data.blend_state);
     if (FAILED(hr)) {
-      capsule_log("d3d11_init_blend_state: failed to create blend state (%x)", hr);
+      CapsuleLog("D3d11InitBlendState: failed to create blend state (%x)", hr);
       return false;
     }
   }
@@ -500,7 +500,7 @@ static bool d3d11_init_draw_states(void)
 
   hr = data.device->CreateDepthStencilState(&zstencil_desc, &data.zstencil_state);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init_zstencil_state: failed to create zstencil state (%x)", hr);
+    CapsuleLog("D3d11InitZstencilState: failed to create zstencil state (%x)", hr);
     return false;
   }
 
@@ -511,7 +511,7 @@ static bool d3d11_init_draw_states(void)
 
   hr = data.device->CreateRasterizerState(&raster_desc, &data.raster_state);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init_raster_state: failed to create raster state (%x)", hr);
+    CapsuleLog("D3d11InitRasterState: failed to create raster state (%x)", hr);
     return false;
   }
 
@@ -527,7 +527,7 @@ struct vertex {
   } tex;
 };
 
-static bool d3d11_init_quad_vbo(void)
+static bool D3d11InitQuadVbo(void)
 {
   HRESULT hr;
   const vertex verts[4] = {
@@ -549,14 +549,14 @@ static bool d3d11_init_quad_vbo(void)
 
   hr = data.device->CreateBuffer(&desc, &srd, &data.vertex_buffer);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init_quad_vbo: failed to create vertex buffer (%x)", hr);
+    CapsuleLog("D3d11InitQuadVbo: failed to create vertex buffer (%x)", hr);
     return false;
   }
 
   return true;
 }
 
-static bool d3d11_init_overlay_vbo(void)
+static bool D3d11InitOverlayVbo(void)
 {
   // d3d11 coordinate system: (0, 0) = bottom-left
   float cx = (float) data.cx;
@@ -571,7 +571,7 @@ static bool d3d11_init_overlay_vbo(void)
   float b = y / cy * 2.0f - 1.0f;
   float t = (y + height) / cy * 2.0f - 1.0f;
 
-  capsule_log("Overlay vbo: left = %.2f, right = %.2f, top = %.2f, bottom = %.2f", l, r, t, b);
+  CapsuleLog("Overlay vbo: left = %.2f, right = %.2f, top = %.2f, bottom = %.2f", l, r, t, b);
 
   HRESULT hr;
   const vertex verts[4] = {
@@ -593,14 +593,14 @@ static bool d3d11_init_overlay_vbo(void)
 
   hr = data.device->CreateBuffer(&desc, &srd, &data.overlay_vertex_buffer);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init_overlay_vbo: failed to create vertex buffer (%x)", hr);
+    CapsuleLog("D3d11InitOverlayVbo: failed to create vertex buffer (%x)", hr);
     return false;
   }
 
   return true;
 }
 
-static bool d3d11_init_overlay_texture(void)
+static bool D3d11InitOverlayTexture(void)
 {
   data.overlay_width = 256;
   data.overlay_height = 128;
@@ -625,7 +625,7 @@ static bool d3d11_init_overlay_texture(void)
 
   hr = data.device->CreateTexture2D(&desc, &srd, &data.overlay_tex);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init_overlay_texture: failed to create texture (%x)", hr);
+    CapsuleLog("D3d11InitOverlayTexture: failed to create texture (%x)", hr);
     return false;
   }
 
@@ -636,15 +636,15 @@ static bool d3d11_init_overlay_texture(void)
 
   hr = data.device->CreateShaderResourceView(data.overlay_tex, &res_desc, &data.overlay_resource);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init_overlay_texture: failed to create rendertarget view (%x)", hr);
+    CapsuleLog("D3d11InitOverlayTexture: failed to create rendertarget view (%x)", hr);
     return false;
   }
 
   return true;
 }
 
-static void d3d11_init(IDXGISwapChain *swap) {
-  capsule_log("Initializing D3D11 capture");
+static void D3d11Init(IDXGISwapChain *swap) {
+  CapsuleLog("Initializing D3D11 capture");
 
   bool success = true;
   HWND window;
@@ -652,7 +652,7 @@ static void d3d11_init(IDXGISwapChain *swap) {
 
   hr = swap->GetDevice(__uuidof(ID3D11Device), (void**)&data.device);
   if (FAILED(hr)) {
-    capsule_log("d3d11_init: failed to get device from swap (%x)", hr);
+    CapsuleLog("D3d11Init: failed to get device from swap (%x)", hr);
     return;
   }
   data.device->Release();
@@ -662,26 +662,26 @@ static void d3d11_init(IDXGISwapChain *swap) {
 
   data.gpu_color_conv = capdata.settings.gpu_color_conv;
 
-  d3d11_init_format(swap, &window);
+  D3d11InitFormat(swap, &window);
 
-  if (!d3d11_init_overlay_texture() || !d3d11_init_overlay_vbo()) {
+  if (!D3d11InitOverlayTexture() || !D3d11InitOverlayVbo()) {
     exit(1337);
     return;
   }
 
-  if (!d3d11_load_shaders() || !d3d11_init_draw_states() || !d3d11_init_quad_vbo()) {
+  if (!D3d11LoadShaders() || !D3d11InitDrawStates() || !D3d11InitQuadVbo()) {
     exit(1337);
     return;
   }
 
-  success = d3d11_shmem_init(window);
+  success = D3d11ShmemInit(window);
 
   if (!success) {
-    d3d11_free();
+    D3d11Free();
   }
 }
 
-static inline void d3d11_copy_texture (ID3D11Resource *dst, ID3D11Resource *src) {
+static inline void D3d11CopyTexture (ID3D11Resource *dst, ID3D11Resource *src) {
   if (data.multisampled) {
     data.context->ResolveSubresource(dst, 0, src, 0, data.format);
   } else {
@@ -724,7 +724,7 @@ struct d3d11_state {
 };
 
 // TODO: save PSSetConstantBuffers ?
-static void d3d11_save_state(struct d3d11_state *state) {
+static void D3d11SaveState(struct d3d11_state *state) {
   state->gs_class_inst_count = MAX_CLASS_INSTS;
   state->ps_class_inst_count = MAX_CLASS_INSTS;
   state->vs_class_inst_count = MAX_CLASS_INSTS;
@@ -751,7 +751,7 @@ static void d3d11_save_state(struct d3d11_state *state) {
 
 #define SO_APPEND ((UINT)-1)
 
-static void d3d11_restore_state(struct d3d11_state *state) {
+static void D3d11RestoreState(struct d3d11_state *state) {
   UINT so_offsets[MAX_SO_TARGETS] = { SO_APPEND, SO_APPEND, SO_APPEND, SO_APPEND };
 
   data.context->GSSetShader(state->geom_shader, state->gs_class_instances, state->gs_class_inst_count);
@@ -768,38 +768,42 @@ static void d3d11_restore_state(struct d3d11_state *state) {
   data.context->RSSetViewports(state->num_viewports, state->viewports);
   data.context->SOSetTargets(MAX_SO_TARGETS, state->stream_output_targets, so_offsets);
   data.context->VSSetShader(state->vertex_shader, state->vs_class_instances, state->vs_class_inst_count);
-  safe_release(state->geom_shader);
-  safe_release(state->vertex_layout);
-  safe_release(state->vertex_buffer);
-  safe_release(state->blend_state);
-  safe_release(state->zstencil_state);
+  SafeRelease(state->geom_shader);
+  SafeRelease(state->vertex_layout);
+  SafeRelease(state->vertex_buffer);
+  SafeRelease(state->blend_state);
+  SafeRelease(state->zstencil_state);
 
   for (size_t i = 0; i < MAX_RENDER_TARGETS; i++)
-    safe_release(state->render_targets[i]);
+    SafeRelease(state->render_targets[i]);
 
-  safe_release(state->zstencil_view);
-  safe_release(state->sampler_state);
-  safe_release(state->pixel_shader);
-  safe_release(state->resource);
-  safe_release(state->raster_state);
+  SafeRelease(state->zstencil_view);
+  SafeRelease(state->sampler_state);
+  SafeRelease(state->pixel_shader);
+  SafeRelease(state->resource);
+  SafeRelease(state->raster_state);
 
-  for (size_t i = 0; i < MAX_SO_TARGETS; i++)
-    safe_release(state->stream_output_targets[i]);
+  for (size_t i = 0; i < MAX_SO_TARGETS; i++) {
+    SafeRelease(state->stream_output_targets[i]);
+  }
 
-  safe_release(state->vertex_shader);
+  SafeRelease(state->vertex_shader);
 
-  for (size_t i = 0; i < state->gs_class_inst_count; i++)
+  for (size_t i = 0; i < state->gs_class_inst_count; i++) {
     state->gs_class_instances[i]->Release();
-  for (size_t i = 0; i < state->ps_class_inst_count; i++)
+  }
+  for (size_t i = 0; i < state->ps_class_inst_count; i++) {
     state->ps_class_instances[i]->Release();
-  for (size_t i = 0; i < state->vs_class_inst_count; i++)
+  }
+  for (size_t i = 0; i < state->vs_class_inst_count; i++) {
     state->vs_class_instances[i]->Release();
+  }
   free(state->viewports);
   memset(state, 0, sizeof(*state));
 }
 
 
-static void d3d11_setup_pipeline(ID3D11RenderTargetView *target, ID3D11ShaderResourceView *resource) {
+static void D3d11SetupPipeline(ID3D11RenderTargetView *target, ID3D11ShaderResourceView *resource) {
   const float factor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
   D3D11_VIEWPORT viewport = { 0 };
   UINT stride = sizeof(vertex);
@@ -829,7 +833,7 @@ static void d3d11_setup_pipeline(ID3D11RenderTargetView *target, ID3D11ShaderRes
   data.context->VSSetShader(data.vertex_shader, nullptr, 0);
 }
 
-static void d3d11_setup_overlay_pipeline(ID3D11ShaderResourceView *resource) {
+static void D3d11SetupOverlayPipeline(ID3D11ShaderResourceView *resource) {
   const float factor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
   D3D11_VIEWPORT viewport = { 0 };
   UINT stride = sizeof(vertex);
@@ -857,17 +861,17 @@ static void d3d11_setup_overlay_pipeline(ID3D11ShaderResourceView *resource) {
   data.context->VSSetShader(data.vertex_shader, nullptr, 0);
 }
 
-static inline void d3d11_scale_texture(ID3D11RenderTargetView *target,
+static inline void D3d11ScaleTexture(ID3D11RenderTargetView *target,
 		ID3D11ShaderResourceView *resource) {
 	static struct d3d11_state old_state = {0};
 
-	d3d11_save_state(&old_state);
-	d3d11_setup_pipeline(target, resource);
+	D3d11SaveState(&old_state);
+	D3d11SetupPipeline(target, resource);
 	data.context->Draw(4, 0);
-	d3d11_restore_state(&old_state);
+	D3d11RestoreState(&old_state);
 }
 
-static inline void d3d11_update_overlay_texture() {
+static inline void D3d11UpdateOverlayTexture() {
   D3D11_MAPPED_SUBRESOURCE map;
   HRESULT hr;
 
@@ -875,7 +879,7 @@ static inline void d3d11_update_overlay_texture() {
     D3D11_MAP_WRITE_DISCARD, 0, &map);
 
   if (FAILED(hr)) {
-    capsule_log("Could not map overlay tex");
+    CapsuleLog("Could not map overlay tex");
     return;
   }
 
@@ -894,18 +898,18 @@ static inline void d3d11_update_overlay_texture() {
   data.context->Unmap(data.overlay_tex, 0);
 }
 
-static inline void d3d11_draw_overlay_internal() {
-  d3d11_update_overlay_texture();
+static inline void D3d11DrawOverlayInternal() {
+  D3d11UpdateOverlayTexture();
 
 	static struct d3d11_state old_state = {0};
 
-	d3d11_save_state(&old_state);
-	d3d11_setup_overlay_pipeline(data.overlay_resource);
+	D3d11SaveState(&old_state);
+	D3d11SetupOverlayPipeline(data.overlay_resource);
 	data.context->Draw(4, 0);
-	d3d11_restore_state(&old_state);
+	D3d11RestoreState(&old_state);
 }
 
-static inline void d3d11_shmem_queue_copy() {
+static inline void D3d11ShmemQueueCopy() {
 	for (size_t i = 0; i < NUM_BUFFERS; i++) {
 		D3D11_MAPPED_SUBRESOURCE map;
 		HRESULT hr;
@@ -918,25 +922,25 @@ static inline void d3d11_shmem_queue_copy() {
 			if (SUCCEEDED(hr)) {
 				data.texture_mapped[i] = true;
         auto timestamp = data.timestamps[i];
-        capsule_write_video_frame(timestamp, (char *) map.pData, (data.cy / data.size_divider) * data.pitch);
+        CapsuleWriteVideoFrame(timestamp, (char *) map.pData, (data.cy / data.size_divider) * data.pitch);
 			}
 			break;
 		}
 	}
 }
 
-static inline void d3d11_shmem_capture (ID3D11Resource* backbuffer) {
+static inline void D3d11ShmemCapture (ID3D11Resource* backbuffer) {
   int next_tex;
 
-  d3d11_shmem_queue_copy();
+  D3d11ShmemQueueCopy();
 
   next_tex = (data.cur_tex + 1) % NUM_BUFFERS;
 
-  data.timestamps[data.cur_tex] = capsule_frame_timestamp();
+  data.timestamps[data.cur_tex] = CapsuleFrameTimestamp();
 
   // always using scale
-  d3d11_copy_texture(data.scale_tex, backbuffer);
-  d3d11_scale_texture(data.render_targets[data.cur_tex], data.scale_resource);
+  D3d11CopyTexture(data.scale_tex, backbuffer);
+  D3d11ScaleTexture(data.render_targets[data.cur_tex], data.scale_resource);
 
   if (data.copy_wait < NUM_BUFFERS - 1) {
     data.copy_wait++;
@@ -948,20 +952,20 @@ static inline void d3d11_shmem_capture (ID3D11Resource* backbuffer) {
     data.context->Unmap(dst, 0);
     data.texture_mapped[next_tex] = false;
 
-    d3d11_copy_texture(dst, src);
+    D3d11CopyTexture(dst, src);
     data.texture_ready[next_tex] = true;
   }
 
   data.cur_tex = next_tex;
 }
 
-void d3d11_capture(void *swap_ptr, void *backbuffer_ptr) {
+void D3d11Capture(void *swap_ptr, void *backbuffer_ptr) {
   static bool first_frame = true;
 
-  if (!capsule_capture_ready()) {
-    if (!capsule_capture_active() && !first_frame) {
+  if (!CapsuleCaptureReady()) {
+    if (!CapsuleCaptureActive() && !first_frame) {
       first_frame = true;
-      d3d11_free();
+      D3d11Free();
     }
 
     return;
@@ -971,7 +975,7 @@ void d3d11_capture(void *swap_ptr, void *backbuffer_ptr) {
   IDXGISwapChain *swap = (IDXGISwapChain*)swap_ptr;
 
   if (!data.device) {
-    d3d11_init(swap);
+    D3d11Init(swap);
   }
 
   HRESULT hr;
@@ -980,7 +984,7 @@ void d3d11_capture(void *swap_ptr, void *backbuffer_ptr) {
 
   hr = dxgi_backbuffer->QueryInterface(__uuidof(ID3D11Resource), (void**) &backbuffer);
   if (FAILED(hr)) {
-    capsule_log("d3d11_capture: failed to get backbuffer");
+    CapsuleLog("D3d11Capture: failed to get backbuffer");
     return;
   }
 
@@ -991,7 +995,7 @@ void d3d11_capture(void *swap_ptr, void *backbuffer_ptr) {
     } else {
       pix_fmt = dxgi_format_to_pix_fmt(data.format);
     }
-    capsule_write_video_format(
+    CapsuleWriteVideoFormat(
       data.cx / data.size_divider,
       data.cy / data.size_divider,
       pix_fmt,
@@ -1001,21 +1005,19 @@ void d3d11_capture(void *swap_ptr, void *backbuffer_ptr) {
     first_frame = false;
   }
 
-  d3d11_shmem_capture(backbuffer);
+  D3d11ShmemCapture(backbuffer);
   backbuffer->Release();
 }
 
-void d3d11_draw_overlay () {
+void D3d11DrawOverlay () {
   if (!data.device) {
     return;
   }
 
-  d3d11_draw_overlay_internal();
+  D3d11DrawOverlayInternal();
 }
 
-#define SAFE_RELEASE(x) if ((x)) { (x)->Release(); }
-
-void d3d11_free() {
+void D3d11Free() {
   SAFE_RELEASE(data.scale_tex);
   SAFE_RELEASE(data.scale_resource);
   SAFE_RELEASE(data.vertex_shader);
@@ -1042,5 +1044,5 @@ void d3d11_free() {
 
   memset(&data, 0, sizeof(data));
 
-  capsule_log("----------------- d3d11 capture freed ----------------");
+  CapsuleLog("----------------- d3d11 capture freed ----------------");
 }

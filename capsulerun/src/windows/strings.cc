@@ -7,13 +7,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-void toWideChar (const char *s, wchar_t **ws) {
+void ToWideChar (const char *s, wchar_t **ws) {
   int wchars_num = MultiByteToWideChar(CP_UTF8, 0, s, -1, NULL, 0);
   *ws = (wchar_t *) malloc(wchars_num * sizeof(wchar_t));
   MultiByteToWideChar(CP_UTF8, 0, s, -1, *ws, wchars_num);
 }
 
-void fromWideChar (const wchar_t *ws, char **s) {
+void FromWideChar (const wchar_t *ws, char **s) {
   int ret;
   int ws_len = wcslen(ws);
 

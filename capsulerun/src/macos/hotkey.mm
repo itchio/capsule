@@ -10,20 +10,20 @@
 
 using namespace std;
 
-void capsule_run_app () {
+void CapsuleRunApp () {
   [[NSApplication sharedApplication] run];
 }
 
-int capsule_hotkey_init(MainLoop *ml) {
-  capsule_log("capsule_hotkey_init: registering hotkey");
+int CapsuleHotkeyInit(MainLoop *ml) {
+  CapsuleLog("capsule_hotkey_init: registering hotkey");
 
-  capsule_log("capsule_hotkey_init: kVK_F9 is %d", kVK_F9);
+  CapsuleLog("capsule_hotkey_init: kVK_F9 is %d", kVK_F9);
   DDHotKey *hotKey = [[DDHotKeyCenter sharedHotKeyCenter] registerHotKeyWithKeyCode:kVK_F9 modifierFlags:0 task:^(NSEvent *ev) {
     ml->CaptureFlip();
   }];
 
   if (hotKey == nil) {
-    capsule_log("Hotkey registration failed.");
+    CapsuleLog("Hotkey registration failed.");
     return 1;
   }
 

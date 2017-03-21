@@ -33,9 +33,9 @@
 
 extern FILE *logfile;
 
-#define capsule_log(...) {\
+#define CapsuleLog(...) {\
   if (!logfile) { \
-    logfile = capsule_open_log(); \
+    logfile = CapsuleOpenLog(); \
   } \
   fprintf(logfile, __VA_ARGS__); \
   fprintf(logfile, "\n"); \
@@ -48,24 +48,24 @@ extern FILE *logfile;
 extern "C" {
 #endif
 
-FILE *capsule_open_log();
+FILE *CapsuleOpenLog();
 
 #ifdef CAPSULE_WINDOWS
-wchar_t *capsule_log_path();
+wchar_t *CapsuleLogPath();
 #else
-char *capsule_log_path();
+char *CapsuleLogPath();
 #endif // CAPSULE_WINDOWS
 
 #ifdef CAPSULE_WINDOWS
-DWORD CAPSULE_DLL capsule_windows_init();
-void capsule_install_windows_hooks();
-void capsule_install_process_hooks();
-void capsule_install_opengl_hooks();
-void capsule_install_dxgi_hooks();
-void capsule_install_d3d9_hooks();
-void capsule_install_ddraw_hooks();
+DWORD CAPSULE_DLL CapsuleWindowsInit();
+void CapsuleInstallWindowsHooks();
+void CapsuleInstallProcessHooks();
+void CapsuleInstallOpenglHooks();
+void CapsuleInstallDxgiHooks();
+void CapsuleInstallD3d9Hooks();
+void CapsuleInstallDdrawHooks();
 
-bool dc_capture_init();
+bool DcCaptureInit();
 
 #endif // CAPSULE_WINDOWS
 
@@ -86,18 +86,18 @@ struct capture_data {
 };
 extern struct capture_data capdata;
 
-bool CAPSULE_STDCALL capsule_capture_ready();
-bool CAPSULE_STDCALL capsule_capture_active();
-bool CAPSULE_STDCALL capsule_capture_try_start(struct capture_data_settings* settings);
-bool CAPSULE_STDCALL capsule_capture_try_stop();
-int64_t CAPSULE_STDCALL capsule_frame_timestamp();
+bool CAPSULE_STDCALL CapsuleCaptureReady();
+bool CAPSULE_STDCALL CapsuleCaptureActive();
+bool CAPSULE_STDCALL CapsuleCaptureTryStart(struct capture_data_settings* settings);
+bool CAPSULE_STDCALL CapsuleCaptureTryStop();
+int64_t CAPSULE_STDCALL CapsuleFrameTimestamp();
 
-void CAPSULE_STDCALL capsule_io_init();
-void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, int vflip, int pitch);
-void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_data, size_t frame_data_size);
+void CAPSULE_STDCALL CapsuleIoInit();
+void CAPSULE_STDCALL CapsuleWriteVideoFormat(int width, int height, int format, int vflip, int pitch);
+void CAPSULE_STDCALL CapsuleWriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size);
 
 // OpenGL-specific
-void CAPSULE_STDCALL gl_capture(int width, int height);
+void CAPSULE_STDCALL GlCapture(int width, int height);
 
 void* glXGetProcAddressARB(const char*);
 void glXSwapBuffers(void *a, void *b);
@@ -118,10 +118,10 @@ int glXQueryExtension(void *a, void *b, void *c);
 extern CNktHookLib cHookMgr;
 #endif // CAPSULE_WINDOWS
 
-static void CAPSULE_STDCALL capsule_assert(const char *msg, int cond) {
+static void CAPSULE_STDCALL CapsuleAssert(const char *msg, int cond) {
   if (cond) {
     return;
   }
-  capsule_log("Assertion failed: %s", msg);
+  CapsuleLog("Assertion failed: %s", msg);
   exit(1);
 }

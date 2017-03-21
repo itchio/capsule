@@ -30,11 +30,11 @@ static CGWindowID windowId = kCGNullWindowID;
 
   if (!windows_found) {
     windows_found = true;
-    capsule_log("First CGWindow frame capture");
+    CapsuleLog("First CGWindow frame capture");
     pid_t ourPID = getpid();
 
     NSArray *windows = (NSArray*) CGWindowListCopyWindowInfo(kCGWindowListExcludeDesktopElements, kCGNullWindowID);
-    capsule_log("Got %lu windows", (unsigned long) [windows count])
+    CapsuleLog("Got %lu windows", (unsigned long) [windows count])
 
     int bestWidth = -1;
     int bestHeight = -1;
@@ -43,22 +43,22 @@ static CGWindowID windowId = kCGNullWindowID;
       pid_t ownerPID = [[window objectForKey:(NSString *)kCGWindowOwnerPID] intValue];
       if (ownerPID == ourPID) {
         NSString *windowName = [window objectForKey:(NSString *)kCGWindowName];
-        capsule_log("PID %d, name %s", ownerPID, [windowName UTF8String]);
+        CapsuleLog("PID %d, name %s", ownerPID, [windowName UTF8String]);
 
         NSDictionary *bounds = [window objectForKey:(NSString *)kCGWindowBounds];
         int width = [[bounds objectForKey:@"Width"] intValue];
         int height = [[bounds objectForKey:@"Height"] intValue];
-        capsule_log("bounds: %dx%d", width, height);
+        CapsuleLog("bounds: %dx%d", width, height);
 
         if (width >= bestWidth || height >= bestHeight) {
-          capsule_log("new best size: %dx%d", width, height);
+          CapsuleLog("new best size: %dx%d", width, height);
           bestWidth = width;
           bestHeight = height;
           windowId = [[window objectForKey:(NSString *)kCGWindowNumber] unsignedIntValue];
         }
       }
     }
-    capsule_log("Our window id = %d", (int) windowId);
+    CapsuleLog("Our window id = %d", (int) windowId);
   }
 
   CGImageRef image = CGWindowListCreateImage(
@@ -71,7 +71,7 @@ static CGWindowID windowId = kCGNullWindowID;
 
   int width = CGImageGetWidth(image);
   int height = CGImageGetHeight(image);
-  capsule_log("Captured %dx%d CFImage", width, height);
+  CapsuleLog("Captured %dx%d CFImage", width, height);
 
   CFDataRef dataRef = CGDataProviderCopyData(CGImageGetDataProvider(image));
   char *frameData = (char*) CFDataGetBytePtr(dataRef);
@@ -88,12 +88,12 @@ static CGWindowID windowId = kCGNullWindowID;
 
 + (void)load {
   return;
-  capsule_log("Loading NSWindow");
+  CapsuleLog("Loading NSWindow");
 
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
-    capsule_log("Swizzling sendEvent implementations");
-    capsule_swizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
+    CapsuleLog("Swizzling sendEvent implementations");
+    CapsuleSwizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
   });
 }
 - (void)capsule_sendEvent:(NSEvent*)event {

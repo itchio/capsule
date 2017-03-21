@@ -3,4 +3,4 @@
 #include <vector>
 #include <string>
 
-char **merge_envs (char **a, char **b);
+char **MergeEnvs (char **a, char **b);

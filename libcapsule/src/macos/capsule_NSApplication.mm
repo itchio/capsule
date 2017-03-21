@@ -9,12 +9,12 @@
 @implementation NSApplication (Tracking)
 
 + (void)load {
-  capsule_log("Loading NSApplication");
+  CapsuleLog("Loading NSApplication");
 
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
-    capsule_log("Swizzling sendEvent implementations");
-    capsule_swizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
+    CapsuleLog("Swizzling sendEvent implementations");
+    CapsuleSwizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
   });
 }
 

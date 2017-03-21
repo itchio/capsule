@@ -12,14 +12,14 @@ static void capsule_hotkey_poll(MainLoop *ml) {
 
   if (!success) {
     DWORD err = GetLastError();
-    capsule_log("Could not register hotkey: %d (%x)", err, err);
+    CapsuleLog("Could not register hotkey: %d (%x)", err, err);
     return;
   }
 
   MSG msg = {0};
   while (GetMessage(&msg, NULL, 0, 0) != 0) {
     if (msg.message = WM_HOTKEY) {
-      capsule_log("capsule_hotkey_poll: Starting capture!");
+      CapsuleLog("capsule_hotkey_poll: Starting capture!");
       ml->CaptureFlip();
     }
   }

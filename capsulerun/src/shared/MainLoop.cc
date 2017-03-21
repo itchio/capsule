@@ -15,7 +15,7 @@ MICROPROFILE_DEFINE(MainLoopProcess, "MainLoop", "Process", 0xff773744);
 
 void MainLoop::Run () {
   MICROPROFILE_SCOPE(MainLoopCycle);
-  capsule_log("In MainLoop::Run, exec is %s", args->exec);
+  CapsuleLog("In MainLoop::Run, exec is %s", args->exec);
 
   while (true) {
     MICROPROFILE_SCOPE(MainLoopCycle);
@@ -27,7 +27,7 @@ void MainLoop::Run () {
       MICROPROFILE_SCOPE(MainLoopRead);
       buf = conn->read();
       if (!buf) {
-        capsule_log("MainLoop::Run: pipe closed");
+        CapsuleLog("MainLoop::Run: pipe closed");
         break;
       }
     }
@@ -46,12 +46,12 @@ void MainLoop::Run () {
           if (session && session->video) {
             session->video->FrameCommitted(vfc->index(), vfc->timestamp());
           } else {
-            capsule_log("no session, ignoring VideoFrameCommitted")
+            CapsuleLog("no session, ignoring VideoFrameCommitted")
           }
           break;
         }
         default: {
-          capsule_log("MainLoop::Run: received %s - not sure what to do", EnumNameMessage(pkt->message_type()));
+          CapsuleLog("MainLoop::Run: received %s - not sure what to do", EnumNameMessage(pkt->message_type()));
           break;
         }
       }
@@ -65,7 +65,7 @@ void MainLoop::Run () {
 }
 
 void MainLoop::CaptureFlip () {
-  capsule_log("MainLoop::CaptureFlip")
+  CapsuleLog("MainLoop::CaptureFlip")
   if (session) {
     CaptureStop();
   } else {
@@ -84,11 +84,11 @@ void MainLoop::CaptureStart () {
 
 void MainLoop::EndSession () {
   if (!session) {
-    capsule_log("MainLoop::end_session: no session to end")
+    CapsuleLog("MainLoop::end_session: no session to end")
     return;
   }
 
-  capsule_log("MainLoop::end_session: ending %p", session)
+  CapsuleLog("MainLoop::end_session: ending %p", session)
   auto old_session = session;
   session = nullptr;
   old_session->Stop();
@@ -96,14 +96,14 @@ void MainLoop::EndSession () {
 }
 
 void MainLoop::JoinSessions () {
-  capsule_log("MainLoop::join_sessions: joining %d sessions", old_sessions.size())
+  CapsuleLog("MainLoop::join_sessions: joining %d sessions", old_sessions.size())
 
   for (Session *session: old_sessions) {
-    capsule_log("MainLoop::join_sessions: joining session %p", session)
+    CapsuleLog("MainLoop::join_sessions: joining session %p", session)
     session->Join();
   }
 
-  capsule_log("MainLoop::join_sessions: joined all sessions!")
+  CapsuleLog("MainLoop::join_sessions: joined all sessions!")
 }
 
 void MainLoop::CaptureStop () {
@@ -117,7 +117,7 @@ void MainLoop::CaptureStop () {
 }
 
 void MainLoop::StartSession (const VideoSetup *vs) {
-  capsule_log("Setting up encoder");
+  CapsuleLog("Setting up encoder");
 
   video_format_t vfmt;
   vfmt.width = vs->width();
@@ -135,7 +135,7 @@ void MainLoop::StartSession (const VideoSetup *vs) {
   auto shm = new shoom::Shm(shm_path, vs->shmem()->size());
   int ret = shm->Open();
   if (ret != shoom::kOK) {
-    capsule_log("Could not open shared memory area: code %d", ret);
+    CapsuleLog("Could not open shared memory area: code %d", ret);
     return;
   }
 

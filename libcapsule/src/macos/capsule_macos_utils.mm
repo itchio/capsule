@@ -4,7 +4,7 @@
 #import <objc/runtime.h>
 #include <Foundation/NSObjCRuntime.h>
 
-void capsule_swizzle (Class clazz, SEL originalSelector, SEL swizzledSelector) {
+void CapsuleSwizzle (Class clazz, SEL originalSelector, SEL swizzledSelector) {
   NSLog(@"Getting original");
   Method originalMethod = class_getInstanceMethod(clazz, originalSelector);
   NSLog(@"Getting swizzled");

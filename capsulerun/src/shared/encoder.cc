@@ -37,7 +37,7 @@ MICROPROFILE_DEFINE(EncoderSendAudioFrames, "Encoder", "AEncode", MP_AZURE4);
 MICROPROFILE_DEFINE(EncoderRecvAudioPkt, "Encoder", "AMux1", MP_BURLYWOOD4);
 MICROPROFILE_DEFINE(EncoderWriteAudioPkt, "Encoder", "AMux2", MP_BROWN4);
 
-void encoder_run(capsule_args_t *args, encoder_params_t *params) {
+void EncoderRun(capsule_args_t *args, encoder_params_t *params) {
   MicroProfileOnThreadCreate("encoder");
   MICROPROFILE_SCOPE(EncoderMain);
 
@@ -61,14 +61,14 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   int components = 4;
   int linesize = vfmt_in.pitch;
 
-  capsule_log("video resolution: %dx%d, format %d, vflip %d, pitch %d (%d computed)",
+  CapsuleLog("video resolution: %dx%d, format %d, vflip %d, pitch %d (%d computed)",
     width, height, (int) vfmt_in.format, (int) vfmt_in.vflip,
     (int) linesize, (int) (width * components));
 
   const int buffer_size = height * linesize;
   uint8_t *buffer = (uint8_t*) malloc(buffer_size);
   if (!buffer) {
-    capsule_log("could not allocate buffer");
+    CapsuleLog("could not allocate buffer");
     exit(1);
   }
 
@@ -77,11 +77,11 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   if (params->has_audio) {
     ret = params->receive_audio_format(params->private_data, &afmt_in);
     if (ret != 0) {
-      capsule_log("could not receive audio format");
+      CapsuleLog("could not receive audio format");
       exit(1);
     }
 
-    capsule_log("audio format: %d channels, %d samplerate, %d samplewidth",
+    CapsuleLog("audio format: %d channels, %d samplerate, %d samplewidth",
       afmt_in.channels, afmt_in.samplerate, afmt_in.samplewidth);
   }
 
@@ -107,7 +107,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   // allocate output media context
   avformat_alloc_output_context2(&oc, fmt, NULL, NULL);
   if (!oc) {
-      capsule_log("could not allocate output context");
+      CapsuleLog("could not allocate output context");
       exit(1);
   }
   oc->oformat = fmt;
@@ -115,14 +115,14 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   /* open the output file, if needed */
   ret = avio_open(&oc->pb, output_path, AVIO_FLAG_WRITE);
   if (ret < 0) {
-      capsule_log("Could not open '%s'", output_path);
+      CapsuleLog("Could not open '%s'", output_path);
       exit(1);
   }
 
   // video stream
   video_st = avformat_new_stream(oc, NULL);
   if (!video_st) {
-      capsule_log("could not allocate video stream");
+      CapsuleLog("could not allocate video stream");
       exit(1);
   }
   video_st->id = oc->nb_streams - 1;
@@ -131,7 +131,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   if (params->has_audio) {
     audio_st = avformat_new_stream(oc, NULL);
     if (!audio_st) {
-        capsule_log("could not allocate audio stream");
+        CapsuleLog("could not allocate audio stream");
         exit(1);
     }
     audio_st->id = oc->nb_streams - 1;
@@ -140,15 +140,15 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   // video codec
   vcodec = avcodec_find_encoder(vcodec_id);
   if (!vcodec) {
-    capsule_log("could not find video codec");
+    CapsuleLog("could not find video codec");
     exit(1);
   }
 
-  capsule_log("found video codec");
+  CapsuleLog("found video codec");
 
   vc = avcodec_alloc_context3(vcodec);
   if (!vc) {
-      capsule_log("could not allocate video codec context");
+      CapsuleLog("could not allocate video codec context");
       exit(1);
   }
 
@@ -162,13 +162,13 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     } else if (0 == strcmp(args->pix_fmt, "yuv444p")) {
       vc->pix_fmt = AV_PIX_FMT_YUV444P;
     } else {
-      capsule_log("Unknown pix_fmt specified: %s - using default", args->pix_fmt);
+      CapsuleLog("Unknown pix_fmt specified: %s - using default", args->pix_fmt);
     }
   }
 
   bool do_swscale = true;
   if (vfmt_in.format == CAPSULE_PIX_FMT_YUV444P) {
-    capsule_log("GPU color conversion enabled, ignoring user output settings and picking yuv444p");
+    CapsuleLog("GPU color conversion enabled, ignoring user output settings and picking yuv444p");
     vc->pix_fmt = AV_PIX_FMT_YUV444P;
     do_swscale = false;
   }
@@ -179,7 +179,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   //   if (args->divider == 2 || args->divider == 4) {
   //     divider = args->divider;
   //   } else {
-  //     capsule_log("Invalid size divider %d: must be 2 or 4. Ignoring...", args->divider);
+  //     CapsuleLog("Invalid size divider %d: must be 2 or 4. Ignoring...", args->divider);
   //   }
   // }
 
@@ -194,7 +194,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     out_height++;
   }
 
-  capsule_log("output resolution: %dx%d", out_width, out_height);
+  CapsuleLog("output resolution: %dx%d", out_width, out_height);
 
   vc->width = out_width;
   vc->height = out_height;
@@ -219,11 +219,11 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   if (args->crf != -1) {
     if (args->crf >= 0 && args->crf <= 51) {
       if (args->crf < 18 || args->crf > 28) {
-        capsule_log("Warning: sane crf values lie within 18-28, using crf %d at your own risks", args->crf)
+        CapsuleLog("Warning: sane crf values lie within 18-28, using crf %d at your own risks", args->crf)
       }
       crf = args->crf;
     } else {
-      capsule_log("Invalid crf value %d (must be in the 0-51 range), ignoring", args->crf)
+      CapsuleLog("Invalid crf value %d (must be in the 0-51 range), ignoring", args->crf)
     }
   }
 
@@ -236,19 +236,19 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     if (args->threads > 0 && args->threads <= 32) {
       vc->thread_count = args->threads;
     } else {
-      capsule_log("Invalid threads parameter %d, ignoring", args->threads)
+      CapsuleLog("Invalid threads parameter %d, ignoring", args->threads)
     }
   }
 
   if (vc->thread_count > 1) {
-    capsule_log("Activating frame-level threading with %d threads", vc->thread_count);
+    CapsuleLog("Activating frame-level threading with %d threads", vc->thread_count);
     vc->thread_type = FF_THREAD_FRAME;
   }
 
   vc->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
   if (vc->pix_fmt == AV_PIX_FMT_YUV444P) {
-    capsule_log("Warning: can't use baseline because yuv444p colorspace selected. Encoding will take more CPU.")
+    CapsuleLog("Warning: can't use baseline because yuv444p colorspace selected. Encoding will take more CPU.")
   } else {
     vc->profile = FF_PROFILE_H264_BASELINE;
   }
@@ -261,13 +261,13 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
 
   ret = avcodec_open2(vc, vcodec, NULL);
   if (ret < 0) {
-    capsule_log("could not open video codec");
+    CapsuleLog("could not open video codec");
     exit(1);
   }
 
   ret = avcodec_parameters_from_context(video_st->codecpar, vc);
   if (ret < 0) {
-    capsule_log("could not copy video codec parameters");
+    CapsuleLog("could not copy video codec parameters");
     exit(1);
   }
 
@@ -275,15 +275,15 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   if (params->has_audio) {
     acodec = avcodec_find_encoder(acodec_id);
     if (!acodec) {
-      capsule_log("could not find audio codec");
+      CapsuleLog("could not find audio codec");
       exit(1);
     }
 
-    capsule_log("found audio codec");
+    CapsuleLog("found audio codec");
 
     ac = avcodec_alloc_context3(acodec);
     if (!ac) {
-        capsule_log("could not allocate audio codec context");
+        CapsuleLog("could not allocate audio codec context");
         exit(1);
     }
 
@@ -298,13 +298,13 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
 
     ret = avcodec_open2(ac, acodec, NULL);
     if (ret < 0) {
-      capsule_log("could not open audio codec");
+      CapsuleLog("could not open audio codec");
       exit(1);
     }
 
     ret = avcodec_parameters_from_context(audio_st->codecpar, ac);
     if (ret < 0) {
-      capsule_log("could not copy audio codec parameters");
+      CapsuleLog("could not copy audio codec parameters");
       exit(1);
     }
   }
@@ -312,7 +312,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
   // video frame
   vframe = av_frame_alloc();
   if (!vframe) {
-    capsule_log("could not allocate video frame");
+    CapsuleLog("could not allocate video frame");
     exit(1);
   }
   vframe->format = vc->pix_fmt;
@@ -387,7 +387,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     // FIXME: just messing around
     bool misalign_planes = !!getenv("MISALIGN_PLANES");
     if (misalign_planes) {
-      capsule_log("Purposefully misaligning planes to confirm suspicions about x264 performance");
+      CapsuleLog("Purposefully misaligning planes to confirm suspicions about x264 performance");
       size_t frame_buffer_size = vc->width * 4 * vc->height;
       uint8_t *frame_buffer = (uint8_t *) malloc(frame_buffer_size);
       vframe->data[0] = frame_buffer;
@@ -423,7 +423,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     vframe->linesize[2] = width * 4;
   }
 
-  capsule_log("initial offsets: %p %p (%d from first) %p (%d from first), linesize: %d %d %d",
+  CapsuleLog("initial offsets: %p %p (%d from first) %p (%d from first), linesize: %d %d %d",
     vframe->data[0],
     vframe->data[1], vframe->data[1] - vframe->data[0],
     vframe->data[2], vframe->data[2] - vframe->data[0],
@@ -506,8 +506,8 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
 
     auto delta = timestamp - last_timestamp;
     last_timestamp = timestamp;
-    if (fps_counter.tick_delta(delta)) {
-      fprintf(stderr, "FPS: %.2f\n", fps_counter.fps());
+    if (fps_counter.TickDelta(delta)) {
+      fprintf(stderr, "FPS: %.2f\n", fps_counter.Fps());
       fflush(stderr);
     }
 
@@ -527,7 +527,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
       vframe->pts = vnext_pts;
 
       if (frame_count < 3) {
-        capsule_log("initial offsets: %p %p (%d from first) %p (%d from first), linesize: %d %d %d",
+        CapsuleLog("initial offsets: %p %p (%d from first) %p (%d from first), linesize: %d %d %d",
           vframe->data[0],
           vframe->data[1], vframe->data[1] - vframe->data[0],
           vframe->data[2], vframe->data[2] - vframe->data[0],

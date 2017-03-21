@@ -41,7 +41,7 @@ int main (int _argc, char **_argv) {
   // argv must be null-terminated, calloc zeroes so this works out.
   char **argv = (char **) calloc(argc + 1, sizeof(char *));
   for (int i = 0; i < argc; i++) {
-    fromWideChar(argv_w[i], (char **) &argv[i]);
+    FromWideChar(argv_w[i], (char **) &argv[i]);
   }
 #else // CAPSULE_WINDOWS
 
@@ -121,7 +121,7 @@ int main (int argc, char **argv) {
   args.exec_argv = real_exec_argv;
 #endif // !CAPSULE_WINDOWS
 
-  capsule_log("thanks for flying capsule on %s", CAPSULE_PLATFORM);
+  CapsuleLog("thanks for flying capsule on %s", CAPSULE_PLATFORM);
 
   if (args.priority) {
 #if defined(CAPSULE_WINDOWS)
@@ -133,14 +133,14 @@ int main (int argc, char **argv) {
     } else if (0 == strcmp(args.priority, "high")) {
       hr = SetPriorityClass(hProcess, HIGH_PRIORITY_CLASS);
     } else {
-      capsule_log("Invalid priority parameter %s, expected above-normal or high", args.priority);
+      CapsuleLog("Invalid priority parameter %s, expected above-normal or high", args.priority);
     }
 
     if (FAILED(hr)) {
-      capsule_log("Failed to set process priority: %d (%x), continuing", hr, hr)
+      CapsuleLog("Failed to set process priority: %d (%x), continuing", hr, hr)
     }
 #else
-    capsule_log("priority parameter not yet supported");
+    CapsuleLog("priority parameter not yet supported");
 #endif
   }
 
@@ -152,7 +152,7 @@ int main (int argc, char **argv) {
   wchar_t *file_name = reinterpret_cast<wchar_t*>(calloc(file_name_characters, sizeof(wchar_t)));
   DWORD file_name_actual_characters = GetModuleFileNameW(NULL, file_name, static_cast<DWORD>(file_name_characters));
   char *utf8_file_name = nullptr;
-  fromWideChar(file_name, &utf8_file_name);
+  FromWideChar(file_name, &utf8_file_name);
   free(file_name);
   exe_path = std::string(utf8_file_name);
   free(utf8_file_name);
@@ -161,7 +161,7 @@ int main (int argc, char **argv) {
   uint32_t mac_file_name_characters = file_name_characters;
   char *utf8_file_name = reinterpret_cast<char *>(calloc(file_name_characters, sizeof(char)));
   if (_NSGetExecutablePath(utf8_file_name, &mac_file_name_characters) != 0) {
-    capsule_log("Could not get our own executable path, bailing out");
+    CapsuleLog("Could not get our own executable path, bailing out");
     exit(1);
   }
   char *utf8_absolute_file_name = realpath(utf8_file_name, nullptr);
@@ -179,13 +179,13 @@ int main (int argc, char **argv) {
   free(utf8_absolute_file_name);
 #endif
 
-  capsule_log("Running from: %s", exe_path.c_str());
+  CapsuleLog("Running from: %s", exe_path.c_str());
 
   size_t slash_index = exe_path.find_last_of("/\\");
   std::string lib_path = exe_path.substr(0, slash_index);
   args.libpath = lib_path.c_str();
 
-  capsule_log("Library path: %s", lib_path.c_str());
+  CapsuleLog("Library path: %s", lib_path.c_str());
 
   {
     MICROPROFILE_SCOPE(MAIN);

@@ -18,4 +18,4 @@
 #define cdprintf(...)
 #endif
 
-#define capsule_log(...) { fprintf(stdout, "[capsulerun] "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); fflush(stdout); }
+#define CapsuleLog(...) { fprintf(stdout, "[capsulerun] "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); fflush(stdout); }

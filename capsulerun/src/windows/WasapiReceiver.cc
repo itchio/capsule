@@ -66,7 +66,7 @@ WasapiReceiver::WasapiReceiver() {
   }
 
   // Print endpoint friendly name and endpoint ID.
-  capsule_log("WasapiReceiver: Capturing from: \"%S\"", var_name.pwszVal);
+  CapsuleLog("WasapiReceiver: Capturing from: \"%S\"", var_name.pwszVal);
 
   hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, NULL, (void**) &audio_client);
   if (FAILED(hr)) {
@@ -102,7 +102,7 @@ WasapiReceiver::WasapiReceiver() {
     throw runtime_error("Could not get buffer size");
   }
 
-  capsule_log("WasapiReceiver: Buffer frame count: %d", buffer_frame_count);
+  CapsuleLog("WasapiReceiver: Buffer frame count: %d", buffer_frame_count);
 
   hr = audio_client->GetService(
       IID_IAudioCaptureClient,
@@ -143,7 +143,7 @@ void *WasapiReceiver::ReceiveFrames(int *frames_received) {
   if (num_frames_received > 0) {
     hr = capture_client->ReleaseBuffer(num_frames_received);
     if (FAILED(hr)) {
-      capsule_log("WasapiReceiver: Could not release buffer: error %d (%x)\n", hr, hr);
+      CapsuleLog("WasapiReceiver: Could not release buffer: error %d (%x)\n", hr, hr);
       stopped = true;
       *frames_received = 0;
       return nullptr;
@@ -165,7 +165,7 @@ void *WasapiReceiver::ReceiveFrames(int *frames_received) {
       num_frames_received = 0;
       return nullptr;
     } else {
-      capsule_log("WasapiReceiver: Could not get buffer: error %d (%x)\n", hr, hr);
+      CapsuleLog("WasapiReceiver: Could not get buffer: error %d (%x)\n", hr, hr);
       stopped = true;
       *frames_received = 0;
       return nullptr;
@@ -182,7 +182,7 @@ void WasapiReceiver::Stop() {
 
   HRESULT hr = audio_client->Stop();
   if (FAILED(hr)) {
-    capsule_log("WasapiReceiver: Could not stop audio client: error %d (%x)", hr, hr);
+    CapsuleLog("WasapiReceiver: Could not stop audio client: error %d (%x)", hr, hr);
   }
   stopped = true;
 }

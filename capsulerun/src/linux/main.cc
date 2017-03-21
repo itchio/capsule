@@ -1,7 +1,7 @@
 
 #include "capsulerun.h"
 
-#include "../shared/env.h" // merge_envs
+#include "../shared/env.h"
 
 #include "../shared/MainLoop.h"
 #include "./PulseReceiver.h"
@@ -46,19 +46,19 @@ static void wait_for_child (int child_pid) {
   do {
     wait_result = waitpid(child_pid, &child_status, 0);
     if (wait_result == -1) {
-      capsule_log("could not wait on child (error %d): %s", wait_result, strerror(wait_result));
+      CapsuleLog("could not wait on child (error %d): %s", wait_result, strerror(wait_result));
       exit(1);
     }
 
     if (WIFEXITED(child_status)) {
-      capsule_log("exited, status=%d", WEXITSTATUS(child_status));
+      CapsuleLog("exited, status=%d", WEXITSTATUS(child_status));
       exit_code = WEXITSTATUS(child_status);
     } else if (WIFSIGNALED(child_status)) {
-      capsule_log("killed by signal %d", WTERMSIG(child_status));
+      CapsuleLog("killed by signal %d", WTERMSIG(child_status));
     } else if (WIFSTOPPED(child_status)) {
-      capsule_log("stopped by signal %d", WSTOPSIG(child_status));
+      CapsuleLog("stopped by signal %d", WSTOPSIG(child_status));
     } else if (WIFCONTINUED(child_status)) {
-      capsule_log("continued");
+      CapsuleLog("continued");
     }
   } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
 
@@ -75,7 +75,7 @@ int capsulerun_main (capsule_args_t *args) {
   pid_t child_pid;
 
   if (setenv("LD_PRELOAD", ldpreload.c_str(), 1 /* replace */) != 0) {
-    capsule_log("couldn't set LD_PRELOAD'");
+    CapsuleLog("couldn't set LD_PRELOAD'");
     exit(1);
   }
 
@@ -90,12 +90,12 @@ int capsulerun_main (capsule_args_t *args) {
     (char *) fifo_w_var.c_str(),
     NULL
   };
-  char **child_environ = merge_envs(environ, env_additions);
+  char **child_environ = MergeEnvs(environ, env_additions);
 
   auto conn = new Connection(fifo_r_path, fifo_w_path);
 
   if (strcmp("headless", args->exec) == 0) {
-    capsule_log("Running in headless mode...");
+    CapsuleLog("Running in headless mode...");
     conn->printDetails();
   } else {
     // spawn game
@@ -108,10 +108,10 @@ int capsulerun_main (capsule_args_t *args) {
       child_environ // environment
     );
     if (child_err != 0) {
-      capsule_log("child spawn error %d: %s", child_err, strerror(child_err));
+      CapsuleLog("child spawn error %d: %s", child_err, strerror(child_err));
     }
 
-    capsule_log("pid %d given to child %s", child_pid, args->exec);
+    CapsuleLog("pid %d given to child %s", child_pid, args->exec);
 
     thread child_thread(wait_for_child, child_pid);
     child_thread.detach();

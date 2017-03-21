@@ -26,21 +26,21 @@ static struct gl_data data = {};
 
 LIBHANDLE gl_handle;
 
-static inline bool gl_error(const char *func, const char *str) {
+static inline bool GlError(const char *func, const char *str) {
 	GLenum error = _glGetError();
 	if (error != 0) {
-		capsule_log("%s: %s: %lu", func, str, (unsigned long) error);
+		CapsuleLog("%s: %s: %lu", func, str, (unsigned long) error);
 		return true;
 	}
 
 	return false;
 }
 
-bool CAPSULE_STDCALL load_opengl (const char *opengl_path);
+bool CAPSULE_STDCALL LoadOpengl (const char *opengl_path);
 
-void CAPSULE_STDCALL ensure_opengl() {
+void CAPSULE_STDCALL EnsureOpengl() {
 	if (!gl_handle) {
-		load_opengl(DEFAULT_OPENGL);
+		LoadOpengl(DEFAULT_OPENGL);
 	}
 }
 
@@ -52,13 +52,13 @@ void CAPSULE_STDCALL ensure_opengl() {
     _ ## sym = (sym ## _t) dlsym(gl_handle, #sym); \
   } \
   if (! _ ## sym) { \
-    capsule_log("failed to glsym %s", #sym); \
+    CapsuleLog("failed to glsym %s", #sym); \
     return false; \
   } \
 }
 
-bool CAPSULE_STDCALL init_gl_functions() {
-  ensure_opengl();
+bool CAPSULE_STDCALL InitGlFunctions() {
+  EnsureOpengl();
   GLSYM(glGetError)
   GLSYM(glGetIntegerv)
 
@@ -86,7 +86,7 @@ bool CAPSULE_STDCALL init_gl_functions() {
   return true;
 }
 
-static void gl_free() {
+static void GlFree() {
   for (size_t i = 0; i < NUM_BUFFERS; i++) {
     if (data.pbos[i]) {
       if (data.texture_mapped[i]) {
@@ -106,38 +106,38 @@ static void gl_free() {
 		_glDeleteFramebuffers(1, &data.fbo);
   }
 
-	gl_error("gl_free", "GL error occurred on free");
+	GlError("GlFree", "GL error occurred on free");
 
   memset(&data, 0, sizeof(data));
 
-  capsule_log("----------------------- gl capture freed ----------------------");
+  CapsuleLog("----------------------- gl capture freed ----------------------");
 }
 
 typedef void* (*dlopen_type)(const char*, int);
 dlopen_type _dlopen;
 
-void CAPSULE_STDCALL ensure_real_dlopen() {
+void CAPSULE_STDCALL EnsureRealDlopen() {
 #ifdef CAPSULE_LINUX
   if (!_dlopen) {
     // on linux, since we intercept dlopen, we need to
     // get back the actual dlopen, so that we can, y'know,
     // open libraries.
-    capsule_log("Getting real dlopen");
+    CapsuleLog("Getting real dlopen");
     _dlopen = (dlopen_type) dlsym(RTLD_NEXT, "dlopen");
   }
 #endif
 }
 
-bool CAPSULE_STDCALL load_opengl (const char *opengl_path) {
+bool CAPSULE_STDCALL LoadOpengl (const char *opengl_path) {
 #if defined(CAPSULE_LINUX)
-  ensure_real_dlopen();
+  EnsureRealDlopen();
   gl_handle = _dlopen(opengl_path, (RTLD_NOW|RTLD_LOCAL));
 #else
   gl_handle = dlopen(opengl_path, (RTLD_NOW|RTLD_LOCAL));
 #endif
 
   if (!gl_handle) {
-    capsule_log("could not load real opengl library from %s", opengl_path);
+    CapsuleLog("could not load real opengl library from %s", opengl_path);
     return false;
   }
 
@@ -164,9 +164,9 @@ void* glXGetProcAddressARB (const char *name) {
     return (void*) &glXSwapBuffers;
   }
 
-  // capsule_log("In glXGetProcAddressARB: %s", name);
+  // CapsuleLog("In glXGetProcAddressARB: %s", name);
 
-  ensure_opengl();
+  EnsureOpengl();
   return _glXGetProcAddressARB(name);
 }
 
@@ -175,24 +175,24 @@ void* glXGetProcAddressARB (const char *name) {
 
 #ifdef CAPSULE_LINUX
 void* dlopen (const char * filename, int flag) {
-  ensure_real_dlopen();
+  EnsureRealDlopen();
 
   if (filename != NULL && strstr(filename, "libGL.so.1")) {
-    load_opengl(filename);
+    LoadOpengl(filename);
 
     if (!strcmp(filename, "libGL.so.1")) {
       _dlopen(filename, flag);
-      capsule_log("Faking libGL for %s", filename);
+      CapsuleLog("Faking libGL for %s", filename);
       return _dlopen(NULL, RTLD_NOW|RTLD_LOCAL);
     } else {
-      capsule_log("Looks like a real libGL? %s", filename);
+      CapsuleLog("Looks like a real libGL? %s", filename);
       return _dlopen(filename, flag);
     }
   } else {
     pid_t pid = getpid();
-    capsule_log("pid %d, dlopen(%s, %d)", pid, filename, flag);
+    CapsuleLog("pid %d, dlopen(%s, %d)", pid, filename, flag);
     void *res = _dlopen(filename, flag);
-    capsule_log("pid %d, dlopen(%s, %d): %p", pid, filename, flag, res);
+    CapsuleLog("pid %d, dlopen(%s, %d): %p", pid, filename, flag, res);
     return res;
   }
 }
@@ -202,7 +202,7 @@ void* dlopen (const char * filename, int flag) {
 extern "C" {
   void glXSwapBuffers (void *a, void *b) {
     capdata.saw_opengl = true;
-    gl_capture(0, 0);
+    GlCapture(0, 0);
     return _glXSwapBuffers(a, b);
   }
 
@@ -212,64 +212,64 @@ extern "C" {
 }
 #endif
 
-static inline bool gl_init_fbo(void) {
+static inline bool GlInitFbo(void) {
 	_glGenFramebuffers(1, &data.fbo);
-	return !gl_error("gl_init_fbo", "failed to initialize FBO");
+	return !GlError("GlInitFbo", "failed to initialize FBO");
 }
 
-static inline bool gl_shmem_init_data(size_t idx, size_t size) {
+static inline bool GlShmemInitData(size_t idx, size_t size) {
 	_glBindBuffer(GL_PIXEL_PACK_BUFFER, data.pbos[idx]);
-	if (gl_error("gl_shmem_init_data", "failed to bind pbo")) {
+	if (GlError("GlShmemInitData", "failed to bind pbo")) {
 		return false;
 	}
 
 	_glBufferData(GL_PIXEL_PACK_BUFFER, size, 0, GL_STREAM_READ);
-	if (gl_error("gl_shmem_init_data", "failed to set pbo data")) {
+	if (GlError("GlShmemInitData", "failed to set pbo data")) {
 		return false;
 	}
 
 	_glBindTexture(GL_TEXTURE_2D, data.textures[idx]);
-	if (gl_error("gl_shmem_init_data", "failed to set bind texture")) {
+	if (GlError("GlShmemInitData", "failed to set bind texture")) {
 		return false;
 	}
 
 	_glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, data.cx, data.cy,
 			0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);
-	if (gl_error("gl_shmem_init_data", "failed to set texture data")) {
+	if (GlError("GlShmemInitData", "failed to set texture data")) {
 		return false;
 	}
 
 	return true;
 }
 
-static inline bool gl_shmem_init_buffers(void) {
+static inline bool GlShmemInitBuffers(void) {
 	size_t size = data.cx * data.cy * 4;
 	GLint last_pbo;
 	GLint last_tex;
 
 	_glGenBuffers(NUM_BUFFERS, data.pbos);
-	if (gl_error("gl_shmem_init_buffers", "failed to generate buffers")) {
+	if (GlError("GlShmemInitBuffers", "failed to generate buffers")) {
 		return false;
 	}
 
 	_glGenTextures(NUM_BUFFERS, data.textures);
-	if (gl_error("gl_shmem_init_buffers", "failed to generate textures")) {
+	if (GlError("gl_shmem_init_buffers", "failed to generate textures")) {
 		return false;
 	}
 
 	_glGetIntegerv(GL_PIXEL_PACK_BUFFER_BINDING, &last_pbo);
-	if (gl_error("gl_shmem_init_buffers",
+	if (GlError("gl_shmem_init_buffers",
 				"failed to save pixel pack buffer")) {
 		return false;
 	}
 
 	_glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_tex);
-	if (gl_error("gl_shmem_init_buffers", "failed to save texture")) {
+	if (GlError("gl_shmem_init_buffers", "failed to save texture")) {
 		return false;
 	}
 
 	for (size_t i = 0; i < NUM_BUFFERS; i++) {
-		if (!gl_shmem_init_data(i, size)) {
+		if (!GlShmemInitData(i, size)) {
 			return false;
 		}
 	}
@@ -279,19 +279,19 @@ static inline bool gl_shmem_init_buffers(void) {
 	return true;
 }
 
-static bool gl_shmem_init() {
-	if (!gl_shmem_init_buffers()) {
+static bool GlShmemInit() {
+	if (!GlShmemInitBuffers()) {
 		return false;
 	}
-	if (!gl_init_fbo()) {
+	if (!GlInitFbo()) {
 		return false;
 	}
 
-	capsule_log("gl memory capture successful");
+	CapsuleLog("gl memory capture successful");
 	return true;
 }
 
-static bool gl_init (int width, int height) {
+static bool GlInit (int width, int height) {
   if (width == 0 || height == 0) {
     int viewport[4];
     _glGetIntegerv(GL_VIEWPORT, viewport);
@@ -300,7 +300,7 @@ static bool gl_init (int width, int height) {
       width = viewport[2];
       height = viewport[3];
     } else {
-      capsule_log("gl_init: 0x0 viewport");
+      CapsuleLog("gl_init: 0x0 viewport");
       // TODO: how do we handle that error?
     }
   }
@@ -323,46 +323,46 @@ static bool gl_init (int width, int height) {
   data.cy = height;
   data.pitch = pitch;
 
-  bool success = gl_shmem_init();
+  bool success = GlShmemInit();
 
   if (!success) {
-    gl_free();
+    GlFree();
     return false;
   }
 
   return true;
 }
 
-static void gl_copy_backbuffer(GLuint dst) {
+static void GlCopyBackbuffer(GLuint dst) {
 	_glBindFramebuffer(GL_DRAW_FRAMEBUFFER, data.fbo);
-	if (gl_error("gl_copy_backbuffer", "failed to bind FBO")) {
+	if (GlError("gl_copy_backbuffer", "failed to bind FBO")) {
 		return;
 	}
 
 	_glBindTexture(GL_TEXTURE_2D, dst);
-	if (gl_error("gl_copy_backbuffer", "failed to bind texture")) {
+	if (GlError("gl_copy_backbuffer", "failed to bind texture")) {
 		return;
 	}
 
 	_glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
 			GL_TEXTURE_2D, dst, 0);
-	if (gl_error("gl_copy_backbuffer", "failed to set frame buffer")) {
+	if (GlError("gl_copy_backbuffer", "failed to set frame buffer")) {
 		return;
 	}
 
 	_glReadBuffer(GL_BACK);
 
 	_glDrawBuffer(GL_COLOR_ATTACHMENT0);
-	if (gl_error("gl_copy_backbuffer", "failed to set draw buffer")) {
+	if (GlError("gl_copy_backbuffer", "failed to set draw buffer")) {
 		return;
 	}
 
 	_glBlitFramebuffer(0, 0, data.cx, data.cy,
 			0, 0, data.cx, data.cy, GL_COLOR_BUFFER_BIT, GL_LINEAR);
-	gl_error("gl_copy_backbuffer", "failed to blit");
+	GlError("gl_copy_backbuffer", "failed to blit");
 }
 
-static inline void gl_shmem_capture_queue_copy(void) {
+static inline void GlShmemCaptureQueueCopy(void) {
 	for (int i = 0; i < NUM_BUFFERS; i++) {
 		if (data.texture_ready[i]) {
 			GLvoid *buffer;
@@ -371,64 +371,64 @@ static inline void gl_shmem_capture_queue_copy(void) {
 			data.texture_ready[i] = false;
 
 			_glBindBuffer(GL_PIXEL_PACK_BUFFER, data.pbos[i]);
-			if (gl_error("gl_shmem_capture_queue_copy", "failed to bind pbo")) {
+			if (GlError("gl_shmem_capture_queue_copy", "failed to bind pbo")) {
 				return;
 			}
 
 			buffer = _glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 			if (buffer) {
 				data.texture_mapped[i] = true;
-        capsule_write_video_frame(timestamp, (char*) buffer, data.cy * data.pitch);
+        CapsuleWriteVideoFrame(timestamp, (char*) buffer, data.cy * data.pitch);
 			}
 			break;
 		}
 	}
 }
 
-static inline void gl_shmem_capture_stage(GLuint dst_pbo, GLuint src_tex) {
+static inline void GlShmemCaptureStage(GLuint dst_pbo, GLuint src_tex) {
 	_glBindTexture(GL_TEXTURE_2D, src_tex);
-	if (gl_error("gl_shmem_capture_stage", "failed to bind src_tex")) {
+	if (GlError("GlShmemCaptureStage", "failed to bind src_tex")) {
 		return;
 	}
 
 	_glBindBuffer(GL_PIXEL_PACK_BUFFER, dst_pbo);
-	if (gl_error("gl_shmem_capture_stage", "failed to bind dst_pbo")) {
+	if (GlError("GlShmemCaptureStage", "failed to bind dst_pbo")) {
 		return;
 	}
 
 	_glGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, 0);
-	if (gl_error("gl_shmem_capture_stage", "failed to read src_tex")) {
+	if (GlError("GlShmemCaptureStage", "failed to read src_tex")) {
 		return;
 	}
 }
 
-void gl_shmem_capture () {
+void GlShmemCapture () {
   int next_tex;
   GLint last_fbo;
   GLint last_tex;
 
-  auto timestamp = capsule_frame_timestamp();
+  auto timestamp = CapsuleFrameTimestamp();
 
   // save last fbo & texture to restore them after capture
   {
     _glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &last_fbo);
-    if (gl_error("gl_shmem_capture", "failed to get last fbo")) {
+    if (GlError("GlShmemCapture", "failed to get last fbo")) {
       return;
     }
 
     _glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_tex);
-    if (gl_error("gl_shmem_capture", "failed to get last texture")) {
+    if (GlError("GlShmemCapture", "failed to get last texture")) {
       return;
     }
   }
 
   // try to map & send all the textures that are ready
-  gl_shmem_capture_queue_copy();
+  GlShmemCaptureQueueCopy();
 
   next_tex = (data.cur_tex + 1) % NUM_BUFFERS;
 
   data.timestamps[next_tex] = timestamp;
-  gl_copy_backbuffer(data.textures[next_tex]);
+  GlCopyBackbuffer(data.textures[next_tex]);
 
   if (data.copy_wait < NUM_BUFFERS - 1) {
     data.copy_wait++;
@@ -440,7 +440,7 @@ void gl_shmem_capture () {
     _glUnmapBuffer(GL_PIXEL_PACK_BUFFER);
     data.texture_mapped[next_tex] = false;
 
-    gl_shmem_capture_stage(dst, src);
+    GlShmemCaptureStage(dst, src);
     data.texture_ready[next_tex] = true;
   }
 
@@ -451,7 +451,7 @@ void gl_shmem_capture () {
 /**
  * Capture one OpenGL frame
  */
-void CAPSULE_STDCALL gl_capture (int width, int height) {
+void CAPSULE_STDCALL GlCapture (int width, int height) {
 
   static bool functions_initialized = false;
   static bool critical_failure = false;
@@ -462,7 +462,7 @@ void CAPSULE_STDCALL gl_capture (int width, int height) {
   }
 
   if (!functions_initialized) {
-    functions_initialized = init_gl_functions();
+    functions_initialized = InitGlFunctions();
     if (!functions_initialized) {
       critical_failure = true;
       return;
@@ -472,22 +472,22 @@ void CAPSULE_STDCALL gl_capture (int width, int height) {
   // reset error flag
 	_glGetError();
 
-  if (!capsule_capture_ready()) {
-    if (!capsule_capture_active() && !first_frame) {
+  if (!CapsuleCaptureReady()) {
+    if (!CapsuleCaptureActive() && !first_frame) {
       first_frame = true;
-      gl_free();
+      GlFree();
     }
 
     return;
   }
 
   if (!data.cx) {
-    gl_init(width, height);
+    GlInit(width, height);
   }
 
   if (data.cx) {
     if (first_frame) {
-      capsule_write_video_format(
+      CapsuleWriteVideoFormat(
         data.cx,
         data.cy,
         CAPSULE_PIX_FMT_BGRA,
@@ -497,7 +497,7 @@ void CAPSULE_STDCALL gl_capture (int width, int height) {
       first_frame = false;
     }
 
-    gl_shmem_capture();
+    GlShmemCapture();
   }
 }
 

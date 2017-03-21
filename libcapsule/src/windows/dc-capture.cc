@@ -18,7 +18,7 @@ static struct dc_data data = {0};
 static HWND g_hwnd = NULL;
 std::thread *g_dc_thread;
 
-static BOOL CALLBACK enum_windows_proc(HWND hwnd, LPARAM lParam) {
+static BOOL CALLBACK EnumWindowsProc(HWND hwnd, LPARAM lParam) {
   DWORD lpdwProcessId;
   GetWindowThreadProcessId(hwnd, &lpdwProcessId);
   if (lpdwProcessId == lParam) {
@@ -28,16 +28,16 @@ static BOOL CALLBACK enum_windows_proc(HWND hwnd, LPARAM lParam) {
   return TRUE;
 }
 
-static void find_hwnd(DWORD pid) {
+static void FindHwnd(DWORD pid) {
   if (g_hwnd) {
     return;
   }
 
-  capsule_log("Looking for hwnd");
-  EnumWindows(enum_windows_proc, pid);
+  CapsuleLog("Looking for hwnd");
+  EnumWindows(EnumWindowsProc, pid);
 }
 
-static void capture_hwnd(HWND hwnd) {
+static void CaptureHwnd(HWND hwnd) {
   static bool first_frame = true;
   const int components = 4;
 
@@ -64,9 +64,11 @@ static void capture_hwnd(HWND hwnd) {
   capsule_write_video_frame(timestamp, data.frame_data, frame_data_size);
 }
 
-static void dc_capture_capture() { capture_hwnd(data.window); }
+static void DcCaptureCapture() {
+  CaptureHwnd(data.window);
+}
 
-static void dc_capture_loop() {
+static void DcCaptureLoop() {
   while (true) {
     Sleep(16); // FIXME: that's dumb
     if (!capsule_capture_active()) {
@@ -77,11 +79,11 @@ static void dc_capture_loop() {
       return;
     }
 
-    dc_capture_capture();
+    DcCaptureCapture();
   }
 }
 
-static bool dc_capture_init_format() {
+static bool DcCaptureInitFormat() {
   bool success = false;
   data.window = g_hwnd;
   g_hwnd = NULL;
@@ -95,7 +97,7 @@ static bool dc_capture_init_format() {
   // TODO: error checking
   GetWindowText(data.window, window_title, MAX_TITLE_LENGTH);
 
-  capsule_log("dc_capture_init_format: initializing for window %S",
+  CapsuleLog("dc_capture_init_format: initializing for window %S",
               window_title);
   delete[] window_title;
 
@@ -108,7 +110,7 @@ static bool dc_capture_init_format() {
   data.cx = rect.right;
   data.cy = rect.bottom;
 
-  capsule_log("dc_capture_init_format: window size: %dx%d", data.cx, data.cy);
+  CapsuleLog("dc_capture_init_format: window size: %dx%d", data.cx, data.cy);
 
   // TODO: error checking
   data.hdc = CreateCompatibleDC(NULL);
@@ -130,19 +132,19 @@ static bool dc_capture_init_format() {
   return true;
 }
 
-bool dc_capture_init() {
+bool DcCaptureInit() {
   DWORD pid = GetCurrentProcessId();
-  capsule_log("dc_capture_init: our pid is %d", pid);
+  CapsuleLog("DcCaptureInit: our pid is %d", pid);
 
   g_hwnd = NULL;
-  find_hwnd(pid);
+  FindHwnd(pid);
   if (g_hwnd == NULL) {
-    capsule_log("dc_capture_init: could not find a window, bailing out");
+    CapsuleLog("DcCaptureInit: could not find a window, bailing out");
     return false;
   }
-  capsule_log("dc_capture_init: our hwnd is %p", g_hwnd);
+  CapsuleLog("DcCaptureInit: our hwnd is %p", g_hwnd);
 
-  if (!dc_capture_init_format()) {
+  if (!DcCaptureInitFormat()) {
     return false;
   }
 

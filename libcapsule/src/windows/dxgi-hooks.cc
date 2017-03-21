@@ -35,7 +35,7 @@ static bool setup_dxgi(IDXGISwapChain *swap) {
 
   hr = swap->GetDevice(__uuidof(ID3D10Device), (void**) &device);
   if (SUCCEEDED(hr)) {
-    capsule_log("Found D3D10 Device!");
+    CapsuleLog("Found D3D10 Device!");
     data.swap = swap;
     data.capture = d3d10_capture;
     data.free = d3d10_free;
@@ -45,7 +45,7 @@ static bool setup_dxgi(IDXGISwapChain *swap) {
 
   hr = swap->GetDevice(__uuidof(ID3D11Device), (void**) &device);
   if (SUCCEEDED(hr)) {
-    capsule_log("Found D3D11 Device!");
+    CapsuleLog("Found D3D11 Device!");
     data.swap = swap;
     data.draw_overlay = d3d11_draw_overlay;
     data.capture = d3d11_capture;
@@ -63,7 +63,7 @@ static inline IUnknown *get_dxgi_backbuffer (IDXGISwapChain *swap) {
 
   hr = swap->GetBuffer(0, __uuidof(IUnknown), (void**) &res);
   if (FAILED(hr)) {
-    capsule_log("get_dxgi_backbuffer: GetBuffer failed");
+    CapsuleLog("get_dxgi_backbuffer: GetBuffer failed");
   }
 
   return res;
@@ -127,9 +127,9 @@ void install_present_hook (IDXGISwapChain *swap) {
       0
     );
     if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking Present derped with error %d (%x)", err, err);
+      CapsuleLog("Hooking Present derped with error %d (%x)", err, err);
     } else {
-      capsule_log("Installed Present hook");
+      CapsuleLog("Installed Present hook");
     }
   }
 }
@@ -169,7 +169,7 @@ HRESULT CAPSULE_STDCALL D3D11CreateDeviceAndSwapChain_hook (
         D3D_FEATURE_LEVEL    *pFeatureLevel,
         ID3D11DeviceContext  **ppImmediateContext 
 ) {
-  capsule_log("Before D3D11CreateDeviceAndSwapChain!");
+  CapsuleLog("Before D3D11CreateDeviceAndSwapChain!");
 
   HRESULT res = D3D11CreateDeviceAndSwapChain_real(
     pAdapter, DriverType, Software, Flags,
@@ -179,7 +179,7 @@ HRESULT CAPSULE_STDCALL D3D11CreateDeviceAndSwapChain_hook (
   );
 
   if (FAILED(res)) {
-    capsule_log("Swap chain creation failed, bailing out");
+    CapsuleLog("Swap chain creation failed, bailing out");
     return res;
   }
 
@@ -218,7 +218,7 @@ HRESULT CAPSULE_STDCALL CreateSwapChainForHwnd_hook (
         IDXGIOutput                     *pRestrictToOutput,
         IDXGISwapChain1                 **ppSwapChain
   ) {
-  capsule_log("Before CreateSwapChainForHwnd!");
+  CapsuleLog("Before CreateSwapChainForHwnd!");
 
   // this part is just a mix of curiosity of hubris, aka
   // "we have an hWnd! we can do wonderful things with it!"
@@ -226,13 +226,13 @@ HRESULT CAPSULE_STDCALL CreateSwapChainForHwnd_hook (
   wchar_t title_buffer[title_buffer_size];
   title_buffer[0] = '\0';
   GetWindowText(hWnd, title_buffer, title_buffer_size);
-  capsule_log("Creating swapchain for window \"%S\"", title_buffer);
+  CapsuleLog("Creating swapchain for window \"%S\"", title_buffer);
 
   HRESULT res = CreateSwapChainForHwnd_real(factory, pDevice, hWnd, pDesc, pFullscreenDesc, pRestrictToOutput, ppSwapChain);
-  capsule_log("After CreateSwapChainForHwnd!");
+  CapsuleLog("After CreateSwapChainForHwnd!");
 
   if (FAILED(res)) {
-    capsule_log("Swap chain creation failed, bailing out");
+    CapsuleLog("Swap chain creation failed, bailing out");
     return res;
   }
 
@@ -269,13 +269,13 @@ HRESULT CAPSULE_STDCALL CreateSwapChain_hook (
         DXGI_SWAP_CHAIN_DESC            *pDesc,
         IDXGISwapChain                  **ppSwapChain
   ) {
-  capsule_log("Before CreateSwapChain!");
+  CapsuleLog("Before CreateSwapChain!");
 
   HRESULT res = CreateSwapChain_real(factory, pDevice, pDesc, ppSwapChain);
-  capsule_log("After CreateSwapChain!");
+  CapsuleLog("After CreateSwapChain!");
 
   if (FAILED(res)) {
-    capsule_log("Swap chain creation failed, bailing out");
+    CapsuleLog("Swap chain creation failed, bailing out");
     return res;
   }
 
@@ -299,7 +299,7 @@ static void install_swapchain_hooks (IDXGIFactory *factory) {
       0
     );
     if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking CreateSwapChainForHwnd derped with error %d (%x)", err, err);
+      CapsuleLog("Hooking CreateSwapChainForHwnd derped with error %d (%x)", err, err);
     }
   }
 
@@ -315,7 +315,7 @@ static void install_swapchain_hooks (IDXGIFactory *factory) {
       0
     );
     if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking CreateSwapChain derped with error %d (%x)", err, err);
+      CapsuleLog("Hooking CreateSwapChain derped with error %d (%x)", err, err);
     }
   }
 }
@@ -331,13 +331,13 @@ static CreateDXGIFactory_t CreateDXGIFactory_real;
 static SIZE_T CreateDXGIFactory_hookId = 0;
 
 HRESULT CAPSULE_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
-  capsule_log("CreateDXGIFactory called with riid: %s", name_from_iid(riid).c_str());
+  CapsuleLog("CreateDXGIFactory called with riid: %s", name_from_iid(riid).c_str());
   HRESULT res = CreateDXGIFactory_real(riid, ppFactory);
 
   if (SUCCEEDED(res)) {
     install_swapchain_hooks((IDXGIFactory *) *ppFactory);
   } else {
-    capsule_log("CreateDXGIFactory failed!");
+    CapsuleLog("CreateDXGIFactory failed!");
   }
 
   return res;
@@ -352,13 +352,13 @@ static CreateDXGIFactory1_t CreateDXGIFactory1_real;
 static SIZE_T CreateDXGIFactory1_hookId;
 
 HRESULT CAPSULE_STDCALL CreateDXGIFactory1_hook (REFIID riid, void** ppFactory) {
-  capsule_log("Hooked_CreateDXGIFactory1 called with riid: %s", name_from_iid(riid).c_str());
+  CapsuleLog("Hooked_CreateDXGIFactory1 called with riid: %s", name_from_iid(riid).c_str());
   HRESULT res = CreateDXGIFactory1_real(riid, ppFactory);
 
   if (SUCCEEDED(res)) {
     install_swapchain_hooks((IDXGIFactory *) *ppFactory);
   } else {
-    capsule_log("CreateDXGIFactory failed!");
+    CapsuleLog("CreateDXGIFactory failed!");
   }
 
   return res;
@@ -371,7 +371,7 @@ static void capsule_install_d3d11_hooks () {
 
   HMODULE d3d11 = LoadLibrary(L"d3d11.dll");
   if (!d3d11) {
-    capsule_log("Could not load d3d11.dll, disabling D3D10/11 capture");
+    CapsuleLog("Could not load d3d11.dll, disabling D3D10/11 capture");
     return;
   }
 
@@ -379,7 +379,7 @@ static void capsule_install_d3d11_hooks () {
   {
     LPVOID D3D11CreateDeviceAndSwapChain_addr = NktHookLibHelpers::GetProcedureAddress(d3d11, "D3D11CreateDeviceAndSwapChain");
     if (!D3D11CreateDeviceAndSwapChain_addr) {
-      capsule_log("Could not find D3D11CreateDeviceAndSwapChain");
+      CapsuleLog("Could not find D3D11CreateDeviceAndSwapChain");
       return;
     }
 
@@ -391,10 +391,10 @@ static void capsule_install_d3d11_hooks () {
       0
     );
     if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking D3D11CreateDeviceAndSwapChain derped with error %d (%x)", err, err);
+      CapsuleLog("Hooking D3D11CreateDeviceAndSwapChain derped with error %d (%x)", err, err);
       return;
     }
-    capsule_log("Installed D3D11CreateDeviceAndSwapChain hook");
+    CapsuleLog("Installed D3D11CreateDeviceAndSwapChain hook");
   }
 }
 
@@ -405,7 +405,7 @@ void capsule_install_dxgi_hooks () {
 
   HMODULE dxgi = LoadLibrary(L"dxgi.dll");
   if (!dxgi) {
-    capsule_log("Could not load dxgi.dll, disabling D3D10/11 capture");
+    CapsuleLog("Could not load dxgi.dll, disabling D3D10/11 capture");
     return;
   }
 
@@ -413,7 +413,7 @@ void capsule_install_dxgi_hooks () {
   {
     LPVOID CreateDXGIFactory_addr = NktHookLibHelpers::GetProcedureAddress(dxgi, "CreateDXGIFactory");
     if (!CreateDXGIFactory_addr) {
-      capsule_log("Could not find CreateDXGIFactory");
+      CapsuleLog("Could not find CreateDXGIFactory");
       return;
     }
 
@@ -425,17 +425,17 @@ void capsule_install_dxgi_hooks () {
       0
     );
     if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking CreateDXGIFactory derped with error %d (%x)", err, err);
+      CapsuleLog("Hooking CreateDXGIFactory derped with error %d (%x)", err, err);
       return;
     }
-    capsule_log("Installed CreateDXGIFactory hook");
+    CapsuleLog("Installed CreateDXGIFactory hook");
   }
 
   {
     // CreateDXGIFactory1
     LPVOID CreateDXGIFactory1_addr = NktHookLibHelpers::GetProcedureAddress(dxgi, "CreateDXGIFactory1");
     if (!CreateDXGIFactory1_addr) {
-      capsule_log("Could not find CreateDXGIFactory1");
+      CapsuleLog("Could not find CreateDXGIFactory1");
       return;
     }
 
@@ -447,10 +447,10 @@ void capsule_install_dxgi_hooks () {
       0
     );
     if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking CreateDXGIFactory1 derped with error %d (%x)", err, err);
+      CapsuleLog("Hooking CreateDXGIFactory1 derped with error %d (%x)", err, err);
       return;
     }
-    capsule_log("Installed CreateDXGIFactory1 hook");
+    CapsuleLog("Installed CreateDXGIFactory1 hook");
   }
 
   capsule_install_d3d11_hooks();

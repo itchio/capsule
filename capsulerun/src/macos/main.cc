@@ -1,7 +1,7 @@
 
 #include <capsulerun.h>
 
-#include "../shared/env.h" // merge_envs
+#include "../shared/env.h"
 #include "../shared/MainLoop.h"
 
 #include <stdio.h>
@@ -18,13 +18,13 @@
 
 #include <thread>
 
-int capsule_hotkey_init(MainLoop *ml);
+int CapsuleHotkeyInit(MainLoop *ml);
 
 using namespace std;
 
 extern char **environ;
 
-void capsulerun_main_thread (capsule_args_t *args) {
+void CapsulerunMainThread (capsule_args_t *args) {
   auto libcapsule_path = string(args->libpath) + "/libcapsule.dylib";
 
   // TODO: respect outside DYLD_INSERT_LIBRARIES ?
@@ -43,7 +43,7 @@ void capsulerun_main_thread (capsule_args_t *args) {
     NULL
   };
 
-  char **child_environ = merge_envs(environ, env_additions);
+  char **child_environ = MergeEnvs(environ, env_additions);
 
   pid_t child_pid;
 
@@ -58,10 +58,10 @@ void capsulerun_main_thread (capsule_args_t *args) {
     child_environ
   );
   if (child_err != 0) {
-    capsule_log("spawn error %d: %s", child_err, strerror(child_err));
+    CapsuleLog("spawn error %d: %s", child_err, strerror(child_err));
   }
 
-  capsule_log("pid %d given to child %s", child_pid, args->exec);
+  CapsuleLog("pid %d given to child %s", child_pid, args->exec);
 
   conn->connect();
 
@@ -75,27 +75,27 @@ void capsulerun_main_thread (capsule_args_t *args) {
   do {
     wait_result = waitpid(child_pid, &child_status, 0);
     if (wait_result == -1) {
-      capsule_log("could not wait on child (error %d): %s", wait_result, strerror(wait_result));
+      CapsuleLog("could not wait on child (error %d): %s", wait_result, strerror(wait_result));
       exit(1);
     }
 
     if (WIFEXITED(child_status)) {
-      capsule_log("exited, status=%d", WEXITSTATUS(child_status));
+      CapsuleLog("exited, status=%d", WEXITSTATUS(child_status));
     } else if (WIFSIGNALED(child_status)) {
-      capsule_log("killed by signal %d", WTERMSIG(child_status));
+      CapsuleLog("killed by signal %d", WTERMSIG(child_status));
     } else if (WIFSTOPPED(child_status)) {
-      capsule_log("stopped by signal %d", WSTOPSIG(child_status));
+      CapsuleLog("stopped by signal %d", WSTOPSIG(child_status));
     } else if (WIFCONTINUED(child_status)) {
-      capsule_log("continued");
+      CapsuleLog("continued");
     }
   } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
 
   exit(0);
 }
 
-int capsulerun_main (capsule_args_t *args) {
-  thread main_thread(capsulerun_main_thread, args);
-  capsule_run_app();
+int CapsulerunMain (capsule_args_t *args) {
+  thread main_thread(CapsulerunMainThread, args);
+  CapsuleRunApp();
   return 0;
 }
 

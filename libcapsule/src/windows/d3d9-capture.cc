@@ -26,7 +26,7 @@ struct d3d9_data {
 
 static struct d3d9_data data = {};
 
-void d3d9_free() {
+void D3d9Free() {
   for (size_t i = 0; i < NUM_BUFFERS; i++) {
     if (data.copy_surfaces[i]) {
       if (data.texture_mapped[i]) {
@@ -44,10 +44,10 @@ void d3d9_free() {
 
   memset(&data, 0, sizeof(data));
 
-  capsule_log("----------------------- d3d9 capture freed ----------------------");
+  CapsuleLog("----------------------- d3d9 capture freed ----------------------");
 }
 
-static DXGI_FORMAT d3d9_to_dxgi_format (D3DFORMAT format) {
+static DXGI_FORMAT D3d9ToDxgiFormat (D3DFORMAT format) {
   switch ((unsigned long) format) {
     case D3DFMT_A2B10G10R10: return DXGI_FORMAT_R10G10B10A2_UNORM;
     case D3DFMT_A8R8G8B8:    return DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -56,13 +56,13 @@ static DXGI_FORMAT d3d9_to_dxgi_format (D3DFORMAT format) {
   }
 }
 
-static bool d3d9_get_swap_desc (D3DPRESENT_PARAMETERS *pp) {
+static bool D3d9GetSwapDesc (D3DPRESENT_PARAMETERS *pp) {
   IDirect3DSwapChain9 *swap = nullptr;
   HRESULT hr;
 
   hr = data.device->GetSwapChain(0, &swap);
   if (FAILED(hr)) {
-    capsule_log("d3d9_get_swap_desc: Failed to get swap chain %d (%x)", hr, hr);
+    CapsuleLog("D3d9GetSwapDesc: Failed to get swap chain %d (%x)", hr, hr);
     return false;
   }
 
@@ -70,20 +70,20 @@ static bool d3d9_get_swap_desc (D3DPRESENT_PARAMETERS *pp) {
   swap->Release();
 
   if (FAILED(hr)) {
-    capsule_log("d3d9_get_swap_desc: Failed to get presentation parameters %d (%x)", hr, hr);
+    CapsuleLog("D3d9GetSwapDesc: Failed to get presentation parameters %d (%x)", hr, hr);
     return false;
   }
 
   return true;
 }
 
-static bool d3d9_init_format_backbuffer(HWND *window) {
+static bool D3d9InitFormatBackbuffer(HWND *window) {
   IDirect3DSurface9 *back_buffer = nullptr;
   D3DPRESENT_PARAMETERS pp;
   D3DSURFACE_DESC desc;
   HRESULT hr;
   
-  if (!d3d9_get_swap_desc(&pp)) {
+  if (!D3d9GetSwapDesc(&pp)) {
     return false;
   }
 
@@ -96,7 +96,7 @@ static bool d3d9_init_format_backbuffer(HWND *window) {
   back_buffer->Release();
 
   if (FAILED(hr)) {
-    capsule_log("d3d9_init_format_backbuffer: Failed to get backbuffer descriptor %d (%x)", hr, hr);
+    CapsuleLog("D3d9InitFormatBackbuffer: Failed to get backbuffer descriptor %d (%x)", hr, hr);
   }
 
   data.format = desc.Format;
@@ -107,10 +107,10 @@ static bool d3d9_init_format_backbuffer(HWND *window) {
   return true;
 }
 
-static bool d3d9_init_format_swapchain(HWND *window) {
+static bool D3d9InitFormatSwapchain(HWND *window) {
   D3DPRESENT_PARAMETERS pp;
 
-  if (!d3d9_get_swap_desc(&pp)) {
+  if (!D3d9GetSwapDesc(&pp)) {
     return false;
   }
 
@@ -121,7 +121,7 @@ static bool d3d9_init_format_swapchain(HWND *window) {
   return false;
 }
 
-static bool d3d9_shmem_init_buffers(size_t buffer) {
+static bool D3d9ShmemInitBuffers(size_t buffer) {
   HRESULT hr;
 
   hr = data.device->CreateOffscreenPlainSurface(
@@ -134,7 +134,7 @@ static bool d3d9_shmem_init_buffers(size_t buffer) {
   );
 
   if (FAILED(hr)) {
-    capsule_log("d3d9_shmem_init_buffers: Failed to create surface %d (%x)", hr, hr);
+    CapsuleLog("D3d9ShmemInitBuffers: Failed to create surface %d (%x)", hr, hr);
     return false;
   }
 
@@ -142,7 +142,7 @@ static bool d3d9_shmem_init_buffers(size_t buffer) {
     D3DLOCKED_RECT rect;
     hr = data.copy_surfaces[buffer]->LockRect(&rect, nullptr, D3DLOCK_READONLY);
     if (FAILED(hr)) {
-      capsule_log("d3d9_shmem_init_buffers: Failed to lock buffer %d (%x)", hr, hr);
+      CapsuleLog("D3d9ShmemInitBuffers: Failed to lock buffer %d (%x)", hr, hr);
       return false;
     }
 
@@ -161,32 +161,32 @@ static bool d3d9_shmem_init_buffers(size_t buffer) {
     nullptr
   );
   if (FAILED(hr)) {
-    capsule_log("d3d9_shmem_init_buffers: Failed to create render target %d (%x)", hr, hr);
+    CapsuleLog("D3d9ShmemInitBuffers: Failed to create render target %d (%x)", hr, hr);
     return false;
   }
 
   hr = data.device->CreateQuery(D3DQUERYTYPE_EVENT, &data.queries[buffer]);
   if (FAILED(hr)) {
-    capsule_log("d3d9_shmem_init_buffers: Failed to create query %d (%x)", hr, hr);
+    CapsuleLog("D3d9ShmemInitBuffers: Failed to create query %d (%x)", hr, hr);
     return false;
   }
 
   return true;
 }
 
-static bool d3d9_shmem_init() {
+static bool D3d9ShmemInit() {
   for (size_t i = 0; i < NUM_BUFFERS; i++) {
-    if (!d3d9_shmem_init_buffers(i)) {
+    if (!D3d9ShmemInitBuffers(i)) {
       return false;
     }
   }
 
-  capsule_log("d3d9 memory capture successful");
+  CapsuleLog("d3d9 memory capture successful");
   return true;
 }
 
-static void d3d9_init(IDirect3DDevice9 *device) {
-  capsule_log("Initializing D3D9 capture");
+static void D3d9Init(IDirect3DDevice9 *device) {
+  CapsuleLog("Initializing D3D9 capture");
 
   bool success;
 
@@ -194,31 +194,31 @@ static void d3d9_init(IDirect3DDevice9 *device) {
 
   data.device = device;
 
-  capsule_log("Determining D3D9 format");
+  CapsuleLog("Determining D3D9 format");
 
-  if (!d3d9_init_format_backbuffer(&window)) {
-    if (!d3d9_init_format_swapchain(&window)) {
+  if (!D3d9InitFormatBackbuffer(&window)) {
+    if (!D3d9InitFormatSwapchain(&window)) {
       return;
     }
   }
 
-  capsule_log("Initializing shmem D3D9 capture");
-  capsule_log("Backbuffer format: %ux%u %s",
+  CapsuleLog("Initializing shmem D3D9 capture");
+  CapsuleLog("Backbuffer format: %ux%u %s",
     data.cx, data.cy,
-    name_from_dxgi_format(d3d9_to_dxgi_format(data.format)).c_str());
+    NameFromDxgiFormat(D3d9ToDxgiFormat(data.format)).c_str());
 
-  success = d3d9_shmem_init();
+  success = D3d9ShmemInit();
 
   if (!success) {
     return;
   }
 }
 
-void d3d9_shmem_capture (IDirect3DSurface9 *backbuffer) {
+void D3d9ShmemCapture (IDirect3DSurface9 *backbuffer) {
   // TODO: buffering (using queries)
   HRESULT hr;
 
-  auto timestamp = capsule_frame_timestamp();
+  auto timestamp = CapsuleFrameTimestamp();
 
   hr = data.device->StretchRect(
     backbuffer,
@@ -229,7 +229,7 @@ void d3d9_shmem_capture (IDirect3DSurface9 *backbuffer) {
   );
 
   if (FAILED(hr)) {
-    capsule_log("d3d9_shmem_capture: StretchRect failed %d (%x)", hr, hr);
+    CapsuleLog("D3d9ShmemCapture: StretchRect failed %d (%x)", hr, hr);
     return;
   }
 
@@ -239,7 +239,7 @@ void d3d9_shmem_capture (IDirect3DSurface9 *backbuffer) {
   );
 
   if (FAILED(hr)) {
-    capsule_log("d3d9_shmem_capture: GetRenderTargetData failed %d (%x)", hr, hr);
+    CapsuleLog("D3d9ShmemCapture: GetRenderTargetData failed %d (%x)", hr, hr);
   }
 
   D3DLOCKED_RECT rect;
@@ -248,16 +248,16 @@ void d3d9_shmem_capture (IDirect3DSurface9 *backbuffer) {
   if (SUCCEEDED(hr)) {
     char *frame_data = (char *) rect.pBits;
     int frame_data_size = data.cy * data.pitch;
-    capsule_write_video_frame(timestamp, frame_data, frame_data_size);
+    CapsuleWriteVideoFrame(timestamp, frame_data, frame_data_size);
     data.copy_surfaces[0]->UnlockRect();
   }
 }
 
-void d3d9_capture (IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer) {
+void D3d9Capture (IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer) {
   static bool first_frame = true;
 
-  if (!capsule_capture_ready()) {
-    if (!capsule_capture_active()) {
+  if (!CapsuleCaptureReady()) {
+    if (!CapsuleCaptureActive()) {
       first_frame = true;
     }
 
@@ -265,17 +265,17 @@ void d3d9_capture (IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer) {
   }
 
   if (!data.device) {
-    d3d9_init(device);
+    D3d9Init(device);
   }
 
   if (data.device != device) {
-    d3d9_free();
+    D3d9Free();
     return;
   }
 
   if (first_frame) {
-    auto pix_fmt = dxgi_format_to_pix_fmt(d3d9_to_dxgi_format(data.format));
-    capsule_write_video_format(
+    auto pix_fmt = DxgiFormatToPixFmt(D3d9ToDxgiFormat(data.format));
+    CapsuleWriteVideoFormat(
       data.cx,
       data.cy,
       pix_fmt,
@@ -285,5 +285,5 @@ void d3d9_capture (IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer) {
     first_frame = false;
   }
 
-  d3d9_shmem_capture(backbuffer);
+  D3d9ShmemCapture(backbuffer);
 }

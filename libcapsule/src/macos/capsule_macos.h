@@ -9,7 +9,7 @@ __attribute__ ((section ("__DATA,__interpose"))) = { (const void*)(unsigned long
 
 extern int capsule_capturing;
 extern int capsule_had_opengl;
-void capsule_swizzle (Class clazz, SEL originalSelector, SEL swizzledSelector);
+void CapsuleSwizzle (Class clazz, SEL originalSelector, SEL swizzledSelector);
 
 @interface CapsuleFixedRecorder : NSObject
 

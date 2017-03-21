@@ -39,7 +39,7 @@ static void wait_for_child (HANDLE hProcess) {
   cdprintf("Done waiting on child");
 
   GetExitCodeProcess(hProcess, &exitCode);
-  capsule_log("Exit code: %d (%x)", exitCode, exitCode);
+  CapsuleLog("Exit code: %d (%x)", exitCode, exitCode);
 
   if (!connected) {
     exit(exitCode);
@@ -58,7 +58,7 @@ int capsulerun_main (capsule_args_t *args) {
   const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s\\%s", args->libpath, libcapsule_name);
 
   if (libcapsule_path_length > CAPSULE_MAX_PATH_LENGTH) {
-    capsule_log("libcapsule path too long (%d > %d)", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
+    CapsuleLog("libcapsule path too long (%d > %d)", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
     exit(1);
   }
 
@@ -73,10 +73,10 @@ int capsulerun_main (capsule_args_t *args) {
   ZeroMemory(&pi, sizeof(pi));  
 
   wchar_t *executable_path_w;
-  toWideChar(args->exec, &executable_path_w);
+  ToWideChar(args->exec, &executable_path_w);
 
   wchar_t *libcapsule_path_w;
-  toWideChar(libcapsule_path, &libcapsule_path_w);
+  ToWideChar(libcapsule_path, &libcapsule_path_w);
 
   string pipe_r_path = "\\\\.\\pipe\\capsule.runr";
   string pipe_w_path = "\\\\.\\pipe\\capsule.runw";
@@ -86,20 +86,20 @@ int capsulerun_main (capsule_args_t *args) {
   // swapped on purpose
   err = SetEnvironmentVariableA("CAPSULE_PIPE_R_PATH", pipe_w_path.c_str());
   if (err == 0) {
-    capsule_log("Could not set pipe_r path environment variable");
+    CapsuleLog("Could not set pipe_r path environment variable");
     exit(1);
   }
 
   // swapped on purpose
   err = SetEnvironmentVariableA("CAPSULE_PIPE_W_PATH", pipe_r_path.c_str());
   if (err == 0) {
-    capsule_log("Could not set pipe_w path environment variable");
+    CapsuleLog("Could not set pipe_w path environment variable");
     exit(1);
   }
 
   err = SetEnvironmentVariableA("CAPSULE_LIBRARY_PATH", libcapsule_path);
   if (err == 0) {
-    capsule_log("Could not set library path environment variable");
+    CapsuleLog("Could not set library path environment variable");
     exit(1);
   }
 
@@ -109,7 +109,7 @@ int capsulerun_main (capsule_args_t *args) {
   for (int i = 0; i < args->exec_argc; i++) {
     wchar_t *arg;
     // this "leaks" mem, but it's one time, so don't care
-    toWideChar(args->exec_argv[i], &arg);
+    ToWideChar(args->exec_argv[i], &arg);
 
     if (first_arg) {
       first_arg = false;
@@ -119,8 +119,8 @@ int capsulerun_main (capsule_args_t *args) {
     ArgvQuote(arg, command_line_w, false);
   }
 
-  capsule_log("Launching %S", command_line_w.c_str());
-  capsule_log("Injecting %S", libcapsule_path_w);
+  CapsuleLog("Launching %S", command_line_w.c_str());
+  CapsuleLog("Injecting %S", libcapsule_path_w);
   auto libcapsule_init_function_name = "capsule_windows_init";
 
   err = NktHookLibHelpers::CreateProcessWithDllW(
@@ -140,7 +140,7 @@ int capsulerun_main (capsule_args_t *args) {
   );
 
   if (err == ERROR_SUCCESS) {
-    capsule_log("Process #%lu successfully launched with dll injected!", pi.dwProcessId);
+    CapsuleLog("Process #%lu successfully launched with dll injected!", pi.dwProcessId);
 
     thread child_thread(wait_for_child, pi.hProcess);
     child_thread.detach();
@@ -155,7 +155,7 @@ int capsulerun_main (capsule_args_t *args) {
 
     ml.Run();
   } else {
-    capsule_log("Error %lu: Cannot launch process and inject dll.", err);
+    CapsuleLog("Error %lu: Cannot launch process and inject dll.", err);
     return 127;
   }
 

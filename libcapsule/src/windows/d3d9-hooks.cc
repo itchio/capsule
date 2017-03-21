@@ -20,7 +20,7 @@ static void present_begin(IDirect3DDevice9 *device, IDirect3DSurface9 **backbuff
   if (!present_recurse) {
     hr = get_backbuffer(device, backbuffer);
     if (FAILED(hr)) {
-      capsule_log("d3d9 present_begin: failed to get backbuffer %d (%x)", hr, hr);
+      CapsuleLog("d3d9 present_begin: failed to get backbuffer %d (%x)", hr, hr);
     }
 
     d3d9_capture(device, *backbuffer);
@@ -57,7 +57,7 @@ HRESULT CAPSULE_STDCALL Present_hook (
         HWND         hDestWindowOverride,
   const RGNDATA      *pDirtyRegion
 ) {
-  // capsule_log("IDirect3DDevice9::Present called");
+  // CapsuleLog("IDirect3DDevice9::Present called");
   capdata.saw_d3d9 = true;
 
   IDirect3DSurface9 *backbuffer = nullptr;
@@ -98,7 +98,7 @@ HRESULT CAPSULE_STDCALL PresentEx_hook(
   const RGNDATA      *pDirtyRegion,
         DWORD        dwFlags
 ) {
-  // capsule_log("IDirect3DDevice9Ex::PresentEx called");
+  // CapsuleLog("IDirect3DDevice9Ex::PresentEx called");
   capdata.saw_d3d9 = true;
 
   IDirect3DSurface9 *backbuffer = nullptr;
@@ -140,7 +140,7 @@ HRESULT CAPSULE_STDCALL PresentSwap_hook(
   const RGNDATA         *pDirtyRegion,
         DWORD           dwFlags
 ) {
-  // capsule_log("IDirect3DSwapChain9::Present called");
+  // CapsuleLog("IDirect3DSwapChain9::Present called");
   capdata.saw_d3d9 = true;
 
   IDirect3DSurface9 *backbuffer = nullptr;
@@ -182,7 +182,7 @@ static void install_present_hooks(IDirect3DDevice9 *device) {
   if (!Present_hookId) {
     LPVOID Present_addr = capsule_get_IDirect3DDevice9_Present_address((void*) device);
     if (!Present_addr) {
-      capsule_log("Could not find IDirect3DDevice9::Present");
+      CapsuleLog("Could not find IDirect3DDevice9::Present");
       return;
     }
 
@@ -194,9 +194,9 @@ static void install_present_hooks(IDirect3DDevice9 *device) {
       0
     );
     if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking IDirect3DDevice9::Present derped with error %d (%x)", err, err);
+      CapsuleLog("Hooking IDirect3DDevice9::Present derped with error %d (%x)", err, err);
     } else {
-      capsule_log("Installed IDirect3DDevice9::Present hook");
+      CapsuleLog("Installed IDirect3DDevice9::Present hook");
     }
   }
 
@@ -206,7 +206,7 @@ static void install_present_hooks(IDirect3DDevice9 *device) {
     if (SUCCEEDED(castRes)) {
       LPVOID PresentEx_addr = capsule_get_IDirect3DDevice9Ex_PresentEx_address((void*) deviceEx);
       if (!PresentEx_addr) {
-        capsule_log("Could not find IDirect3DDevice9Ex::PresentEx");
+        CapsuleLog("Could not find IDirect3DDevice9Ex::PresentEx");
         return;
       }
 
@@ -218,9 +218,9 @@ static void install_present_hooks(IDirect3DDevice9 *device) {
         0
       );
       if (err != ERROR_SUCCESS) {
-        capsule_log("Hooking IDirect3DDevice9Ex::PresentEx derped with error %d (%x)", err, err);
+        CapsuleLog("Hooking IDirect3DDevice9Ex::PresentEx derped with error %d (%x)", err, err);
       } else {
-        capsule_log("Installed IDirect3DDevice9Ex::PresentEx hook");
+        CapsuleLog("Installed IDirect3DDevice9Ex::PresentEx hook");
       }
     }
   }
@@ -231,7 +231,7 @@ static void install_present_hooks(IDirect3DDevice9 *device) {
     if (SUCCEEDED(getRes)) {
       LPVOID PresentSwap_addr = capsule_get_IDirect3DSwapChain9_Present_address((void*) swap);
       if (!PresentSwap_addr) {
-        capsule_log("Could not find IDirect3DSwapChain9::Present");
+        CapsuleLog("Could not find IDirect3DSwapChain9::Present");
         return;
       }
 
@@ -243,9 +243,9 @@ static void install_present_hooks(IDirect3DDevice9 *device) {
         0
       );
       if (err != ERROR_SUCCESS) {
-        capsule_log("Hooking IDirect3DSwapChain9::Present derped with error %d (%x)", err, err);
+        CapsuleLog("Hooking IDirect3DSwapChain9::Present derped with error %d (%x)", err, err);
       } else {
-        capsule_log("Installed IDirect3DSwapChain9::Present hook");
+        CapsuleLog("Installed IDirect3DSwapChain9::Present hook");
       }
     }
   }
@@ -275,7 +275,7 @@ HRESULT CAPSULE_STDCALL CreateDevice_hook(
   D3DPRESENT_PARAMETERS *pPresentationParameters,
   IDirect3DDevice9      **ppReturnedDeviceInterface
 ) {
-  capsule_log("IDirect3D9::CreateDevice called with adapter %u", (unsigned int) Adapter);
+  CapsuleLog("IDirect3D9::CreateDevice called with adapter %u", (unsigned int) Adapter);
   HRESULT res = CreateDevice_real(
     obj,
     Adapter,
@@ -300,7 +300,7 @@ static void install_device_hooks(IDirect3D9 *obj) {
   if (!CreateDevice_hookId) {
     LPVOID CreateDevice_addr = capsule_get_IDirect3D9_CreateDevice_address((void *) obj);
 
-    capsule_log("Address of CreateDevice: %p", CreateDevice_addr);
+    CapsuleLog("Address of CreateDevice: %p", CreateDevice_addr);
 
     err = cHookMgr.Hook(
       &CreateDevice_hookId,
@@ -310,9 +310,9 @@ static void install_device_hooks(IDirect3D9 *obj) {
       0
     );
     if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking CreateDevice derped with error %d (%x)", err, err);
+      CapsuleLog("Hooking CreateDevice derped with error %d (%x)", err, err);
     } else {
-      capsule_log("Installed CreateDevice hook");
+      CapsuleLog("Installed CreateDevice hook");
     }
   }
 }
@@ -343,7 +343,7 @@ HRESULT CAPSULE_STDCALL CreateDeviceEx_hook (
   D3DDISPLAYMODEEX      *pFullscreenDisplayMode,
   IDirect3DDevice9      **ppReturnedDeviceInterface
 ) {
-  capsule_log("IDirect3D9Ex::CreateDeviceEx called with adapter %u", (unsigned int) Adapter);
+  CapsuleLog("IDirect3D9Ex::CreateDeviceEx called with adapter %u", (unsigned int) Adapter);
   HRESULT res = CreateDeviceEx_real(
     obj,
     Adapter,
@@ -371,7 +371,7 @@ static void install_device_ex_hooks (IDirect3D9Ex *obj) {
   if (!CreateDeviceEx_hookId) {
     LPVOID CreateDeviceEx_addr = capsule_get_IDirect3D9Ex_CreateDeviceEx_address((void *) obj);
 
-    capsule_log("Address of CreateDeviceEx: %p", CreateDeviceEx_addr);
+    CapsuleLog("Address of CreateDeviceEx: %p", CreateDeviceEx_addr);
 
     err = cHookMgr.Hook(
       &CreateDeviceEx_hookId,
@@ -381,9 +381,9 @@ static void install_device_ex_hooks (IDirect3D9Ex *obj) {
       0
     );
     if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking CreateDeviceEx derped with error %d (%x)", err, err);
+      CapsuleLog("Hooking CreateDeviceEx derped with error %d (%x)", err, err);
     } else {
-      capsule_log("Installed CreateDeviceEx hook");
+      CapsuleLog("Installed CreateDeviceEx hook");
     }
   }
 }
@@ -401,13 +401,13 @@ static SIZE_T Direct3DCreate9_hookId = 0;
 IDirect3D9 * CAPSULE_STDCALL Direct3DCreate9_hook(
   UINT SDKVersion
 ) {
-  capsule_log("Direct3DCreate9 called with SDKVersion %u", (unsigned int) SDKVersion);
+  CapsuleLog("Direct3DCreate9 called with SDKVersion %u", (unsigned int) SDKVersion);
   IDirect3D9 * res = Direct3DCreate9_real(SDKVersion);
   if (res) {
-    capsule_log("d3d9 created!");
+    CapsuleLog("d3d9 created!");
     install_device_hooks(res);
   } else {
-    capsule_log("d3d9 could not be created.");
+    CapsuleLog("d3d9 could not be created.");
   }
 
   return res;
@@ -428,20 +428,20 @@ HRESULT CAPSULE_STDCALL Direct3DCreate9Ex_hook(
   UINT SDKVersion,
   IDirect3D9Ex **ppD3D
 ) {
-  capsule_log("Direct3DCreate9Ex called with SDKVersion %u", (unsigned int) SDKVersion);
+  CapsuleLog("Direct3DCreate9Ex called with SDKVersion %u", (unsigned int) SDKVersion);
   HRESULT res = Direct3DCreate9Ex_real(SDKVersion, ppD3D);
   if (SUCCEEDED(res)) {
-    capsule_log("d3d9ex created!, address = %p", *ppD3D);
+    CapsuleLog("d3d9ex created!, address = %p", *ppD3D);
     void *d3d9ex;
     HRESULT hr = (*ppD3D)->QueryInterface(__uuidof(IDirect3D9Ex), (void**) &d3d9ex);
     if (SUCCEEDED(hr)) {
-      capsule_log("found IDirect3D9Ex interface");
+      CapsuleLog("found IDirect3D9Ex interface");
     } else {
-      capsule_log("could not find IDirect3D9Ex interface");
+      CapsuleLog("could not find IDirect3D9Ex interface");
     }
     install_device_ex_hooks(*ppD3D);
   } else {
-    capsule_log("d3d9ex could not be created.");
+    CapsuleLog("d3d9ex could not be created.");
   }
 
   return res;
@@ -452,7 +452,7 @@ void capsule_install_d3d9_hooks () {
 
   HMODULE d3d9 = LoadLibrary(L"d3d9.dll");
   if (!d3d9) {
-    capsule_log("Could not load d3d9.dll, disabling D3D9 capture");
+    CapsuleLog("Could not load d3d9.dll, disabling D3D9 capture");
     return;
   }
 
@@ -460,7 +460,7 @@ void capsule_install_d3d9_hooks () {
   if (!Direct3DCreate9_hookId) {
     LPVOID Direct3DCreate9_addr = NktHookLibHelpers::GetProcedureAddress(d3d9, "Direct3DCreate9");
     if (!Direct3DCreate9_addr) {
-      capsule_log("Could not find Direct3DCreate9");
+      CapsuleLog("Could not find Direct3DCreate9");
       return;
     }
 
@@ -472,17 +472,17 @@ void capsule_install_d3d9_hooks () {
       0
     );
     if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking Direct3DCreate9 derped with error %d (%x)", err, err);
+      CapsuleLog("Hooking Direct3DCreate9 derped with error %d (%x)", err, err);
       return;
     }
-    capsule_log("Installed Direct3DCreate9 hook");
+    CapsuleLog("Installed Direct3DCreate9 hook");
   }
 
   // Direct3DCreate9Ex
   if (!Direct3DCreate9Ex_hookId) {
     LPVOID Direct3DCreate9Ex_addr = NktHookLibHelpers::GetProcedureAddress(d3d9, "Direct3DCreate9Ex");
     if (!Direct3DCreate9Ex_addr) {
-      capsule_log("Could not find Direct3DCreate9Ex");
+      CapsuleLog("Could not find Direct3DCreate9Ex");
       return;
     }
 
@@ -494,9 +494,9 @@ void capsule_install_d3d9_hooks () {
       0
     );
     if (err != ERROR_SUCCESS) {
-      capsule_log("Hooking Direct3DCreate9Ex derped with error %d (%x)", err, err);
+      CapsuleLog("Hooking Direct3DCreate9Ex derped with error %d (%x)", err, err);
       return;
     }
-    capsule_log("Installed Direct3DCreate9Ex hook");
+    CapsuleLog("Installed Direct3DCreate9Ex hook");
   }
 }

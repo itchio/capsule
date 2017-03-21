@@ -46,7 +46,7 @@ typedef struct encoder_params_s {
   int use_yuv444;
 } encoder_params_t;
 
-void encoder_run(capsule_args_t *args, encoder_params_t *params);
+void EncoderRun(capsule_args_t *args, encoder_params_t *params);
 
 #if defined(CAPSULERUN_WINDOWS)
 #include "capsulerun_windows.h"

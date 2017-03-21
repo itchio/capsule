@@ -17,30 +17,30 @@ using namespace std;
 
 mutex capdata_mutex;
 
-bool CAPSULE_STDCALL capsule_capture_active () {
+bool CAPSULE_STDCALL CapsuleCaptureActive () {
   lock_guard<mutex> lock(capdata_mutex);
   return capdata.active;
 }
 
-bool CAPSULE_STDCALL capsule_capture_try_start (struct capture_data_settings *settings) {
+bool CAPSULE_STDCALL CapsuleCaptureTryStart (struct capture_data_settings *settings) {
   lock_guard<mutex> lock(capdata_mutex);
   if (capdata.active) {
-    capsule_log("capsule_capture_try_start: already active, ignoring start");
+    CapsuleLog("CapsuleCaptureTryStart: already active, ignoring start");
     return false;
   }
 
   memcpy(&capdata.settings, settings, sizeof(struct capture_data_settings));
-  capsule_log("Setting FPS to %d", capdata.settings.fps);
+  CapsuleLog("Setting FPS to %d", capdata.settings.fps);
   cur_fps = capdata.settings.fps;
   frame_interval = std::chrono::microseconds(1000000 / cur_fps);
   capdata.active = true;
   return true;
 }
 
-bool CAPSULE_STDCALL capsule_capture_try_stop () {
+bool CAPSULE_STDCALL CapsuleCaptureTryStop () {
   lock_guard<mutex> lock(capdata_mutex);
   if (!capdata.active) {
-    capsule_log("capsule_capture_try_stop: not active, ignoring stop");
+    CapsuleLog("capsule_capture_try_stop: not active, ignoring stop");
     return false;
   }
 
@@ -48,10 +48,10 @@ bool CAPSULE_STDCALL capsule_capture_try_stop () {
   return true;
 }
 
-static inline bool capsule_frame_ready () {
+static inline bool CapsuleFrameReady () {
   static std::chrono::time_point<std::chrono::steady_clock> last_ts;
 
-  if (!capsule_capture_active()) {
+  if (!CapsuleCaptureActive()) {
     first_frame = true;
     return false;
   }
@@ -82,12 +82,12 @@ static inline bool capsule_frame_ready () {
   return true;
 }
 
-int64_t CAPSULE_STDCALL capsule_frame_timestamp () {
+int64_t CAPSULE_STDCALL CapsuleFrameTimestamp () {
   auto frame_timestamp = std::chrono::steady_clock::now() - first_ts;
   auto micro_timestamp = std::chrono::duration_cast<std::chrono::microseconds>(frame_timestamp);
   return (int64_t) micro_timestamp.count();
 }
 
-bool CAPSULE_STDCALL capsule_capture_ready () {
-  return capsule_frame_ready();
+bool CAPSULE_STDCALL CapsuleCaptureReady () {
+  return CapsuleFrameReady();
 }

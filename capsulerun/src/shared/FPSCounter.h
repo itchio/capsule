@@ -12,15 +12,15 @@ class FPSCounter {
   public:
     FPSCounter();
 
-    bool tick_delta(int64_t delta);
-    bool tick();
-    float fps();
+    bool TickDelta(int64_t delta);
+    bool Tick();
+    float Fps();
 
   private:
-    int64_t timestamp();
-    float samples[NUM_FPS_SAMPLES];
-    int cur_sample;
+    int64_t Timestamp();
+    float samples_[NUM_FPS_SAMPLES];
+    int cur_sample_;
 
-    std::chrono::time_point<std::chrono::steady_clock> first_ts;
-    int64_t last_ts;
+    std::chrono::time_point<std::chrono::steady_clock> first_ts_;
+    int64_t last_ts_;
 };
