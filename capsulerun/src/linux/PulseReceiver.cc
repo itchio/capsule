@@ -4,8 +4,6 @@
 
 #include <string.h> // memset, memcpy
 
-using namespace std;
-
 namespace capsule {
 namespace audio {
 
@@ -68,12 +66,12 @@ PulseReceiver::PulseReceiver() {
   process_index_ = 0;
 
   // start reading
-  pa_thread_ = new thread(ReadLoop, this);
+  pa_thread_ = new std::thread(ReadLoop, this);
 }
 
 bool PulseReceiver::ReadFromPa() {
   {
-    lock_guard<mutex> lock(pa_mutex_);
+    std::lock_guard<std::mutex> lock(pa_mutex_);
 
     if (!ctx_) {
       // we're closed!
@@ -90,7 +88,7 @@ bool PulseReceiver::ReadFromPa() {
 
   // cool, so we got a buffer, now let's find room for it.
   {
-    lock_guard<mutex> lock(buffer_mutex_);
+    std::lock_guard<std::mutex> lock(buffer_mutex_);
 
     if (buffer_state_[commit_index_] != kBufferStateAvailable) {
       // no room for it, just skip those then
@@ -119,7 +117,7 @@ int PulseReceiver::ReceiveFormat(audio_format_t *afmt) {
 }
 
 void *PulseReceiver::ReceiveFrames(int *frames_received) {
-  lock_guard<mutex> lock(buffer_mutex_);
+  std::lock_guard<std::mutex> lock(buffer_mutex_);
 
   if (buffer_state_[process_index_] != kBufferStateCommitted) {
     // nothing to receive
@@ -144,7 +142,7 @@ void *PulseReceiver::ReceiveFrames(int *frames_received) {
 
 void PulseReceiver::Stop() {
   {
-    lock_guard<mutex> lock(pa_mutex_);
+    std::lock_guard<std::mutex> lock(pa_mutex_);
     if (ctx_) {
       capsule::pulse::Free(ctx_);
     }
