@@ -108,7 +108,11 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   PKG_CHECK_MODULES(libpulse-simple_PKG libpulse-simple)
   include_directories(${libpulse-simple_PKG_INCLUDE_DIRS})
 
+  # looks like C++11 threads rely on that somehow
+  target_link_libraries(capsulerun -lpthread)
+  # for hotkey support
   target_link_libraries(capsulerun -lX11)
+  # for dynamically loading some libraries (libpulse-simple, etc.)
   target_link_libraries(capsulerun -ldl)
 endif()
 
