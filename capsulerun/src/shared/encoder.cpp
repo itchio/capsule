@@ -253,7 +253,7 @@ void encoder_run(capsule_args_t *args, encoder_params_t *params) {
     vc->profile = FF_PROFILE_H264_BASELINE;
   }
 
-  char *preset = (char*) "ultrafast";
+  const char *preset = "ultrafast";
   if (args->x264_preset) {
     preset = args->x264_preset;
   }

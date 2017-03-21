@@ -30,10 +30,41 @@
 
 using namespace std;
 
+static bool connected = false;
+static int exit_code = 0;
+
 int capsule_hotkey_init(MainLoop *ml);
 
 static AudioReceiver *audio_receiver_factory () {
   return new PulseReceiver();
+}
+
+static void wait_for_child (int child_pid) {
+  int child_status;
+  pid_t wait_result;
+
+  do {
+    wait_result = waitpid(child_pid, &child_status, 0);
+    if (wait_result == -1) {
+      capsule_log("could not wait on child (error %d): %s", wait_result, strerror(wait_result));
+      exit(1);
+    }
+
+    if (WIFEXITED(child_status)) {
+      capsule_log("exited, status=%d", WEXITSTATUS(child_status));
+      exit_code = WEXITSTATUS(child_status);
+    } else if (WIFSIGNALED(child_status)) {
+      capsule_log("killed by signal %d", WTERMSIG(child_status));
+    } else if (WIFSTOPPED(child_status)) {
+      capsule_log("stopped by signal %d", WSTOPSIG(child_status));
+    } else if (WIFCONTINUED(child_status)) {
+      capsule_log("continued");
+    }
+  } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
+
+  if (!connected) {
+    exit(exit_code);
+  }
 }
 
 int capsulerun_main (capsule_args_t *args) {
@@ -81,38 +112,19 @@ int capsulerun_main (capsule_args_t *args) {
     }
 
     capsule_log("pid %d given to child %s", child_pid, args->exec);
+
+    thread child_thread(wait_for_child, child_pid);
+    child_thread.detach();
   }
 
   conn->connect();
+  connected = true;
+
   MainLoop ml {args, conn};
   ml.audio_receiver_factory = audio_receiver_factory;
 
   capsule_hotkey_init(&ml);
   ml.run();
-
-  int child_status;
-  pid_t wait_result;
-
-  int exit_code = 0;
-
-  do {
-    wait_result = waitpid(child_pid, &child_status, 0);
-    if (wait_result == -1) {
-      capsule_log("could not wait on child (error %d): %s", wait_result, strerror(wait_result));
-      exit(1);
-    }
-
-    if (WIFEXITED(child_status)) {
-      capsule_log("exited, status=%d", WEXITSTATUS(child_status));
-      exit_code = WEXITSTATUS(child_status);
-    } else if (WIFSIGNALED(child_status)) {
-      capsule_log("killed by signal %d", WTERMSIG(child_status));
-    } else if (WIFSTOPPED(child_status)) {
-      capsule_log("stopped by signal %d", WSTOPSIG(child_status));
-    } else if (WIFCONTINUED(child_status)) {
-      capsule_log("continued");
-    }
-  } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
 
   return exit_code;
 }

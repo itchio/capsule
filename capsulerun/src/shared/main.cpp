@@ -3,6 +3,11 @@
 
 #include "argparse.h"
 
+#if defined(CAPSULE_LINUX)
+#include <unistd.h> // readlink
+#include <limits.h> // realpath
+#endif
+
 #if defined(CAPSULE_WINDOWS)
 #include "../windows/strings.h"
 #define WIN32_LEAN_AND_MEAN
@@ -11,12 +16,14 @@
 #include <shellapi.h> // CommandLineToArgvW
 #endif // CAPSULE_WINDOWS
 
+#include <string>
+
 #include <microprofile.h>
 
 MICROPROFILE_DEFINE(MAIN, "MAIN", "Main", 0xff0000);
 
 static const char *const usage[] = {
-  "capsulerun -L libpath [options] -- executable [args]",
+  "capsulerun [options] -- executable [args]",
   NULL
 };
 
@@ -54,8 +61,6 @@ int main (int argc, char **argv) {
 
   struct argparse_option options[] = {
     OPT_HELP(),
-    OPT_GROUP("Required options"),
-    OPT_STRING('L', "libpath", &args.libpath, "where libcapsule can be found"),
     OPT_GROUP("Basic options"),
     OPT_STRING('d', "dir", &args.dir, "where to output .mp4 videos (defaults to current directory)"),
     OPT_GROUP("Video options"),
@@ -86,11 +91,6 @@ int main (int argc, char **argv) {
     ""
   );
   argc = argparse_parse(&argparse, argc, (const char **) argv);
-
-  if (!args.libpath) {
-    argparse_usage(&argparse);
-    exit(1);
-  }
 
   const int num_positional_args = 1;
   if (argc < num_positional_args) {
@@ -132,12 +132,48 @@ int main (int argc, char **argv) {
     }
 
     if (FAILED(hr)) {
-      capsule_log("Failed to set process priority")
+      capsule_log("Failed to set process priority: %d (%x), continuing", hr, hr)
     }
 #else
     capsule_log("priority parameter not yet supported");
 #endif
   }
+
+  // get our own path
+  std::string exe_path;
+
+  const size_t file_name_characters = 16 * 1024;
+#if defined(CAPSULE_WINDOWS)
+  wchar_t *file_name = reinterpret_cast<wchar_t*>(calloc(file_name_characters, sizeof(wchar_t)));
+  DWORD file_name_actual_characters = GetModuleFileNameW(NULL, &file_name, static_cast<DWORD>(file_name_characters));
+  char *utf8_file_name = nullptr;
+  fromWideChar(file_name, &utf8_file_name);
+  free(file_name);
+  exe_path = std::string(utf8_file_name);
+#elif defined(CAPSULE_MACOS)
+  char *utf8_file_name = reinterpret_cast<char *>(calloc(file_name_characters, sizeof(char)));
+  if (_NSGetExecutablePath(utf8_file_name, file_name_characters) != 0) {
+    capsule_log("Could not get our own executable path, bailing out");
+    exit(1);
+  }
+  exe_path = std::string(utf8_file_name);
+#elif defined(CAPSULE_LINUX)
+  char *utf8_file_name = reinterpret_cast<char *>(calloc(file_name_characters, sizeof(char)));
+  ssize_t dest_num_characters = readlink("/proc/self/exe", utf8_file_name, file_name_characters);
+  // readlink does not append a null character
+  utf8_file_name[dest_num_characters] = '\0';
+  char *utf8_absolute_file_name = realpath(utf8_file_name, nullptr);
+  free(utf8_file_name);
+  exe_path = std::string(utf8_absolute_file_name);
+#endif
+
+  capsule_log("Running from: %s", exe_path.c_str());
+
+  size_t slash_index = exe_path.find_last_of("/\\");
+  std::string lib_path = exe_path.substr(0, slash_index);
+  args.libpath = lib_path.c_str();
+
+  capsule_log("Library path: %s", lib_path.c_str());
 
   {
     MICROPROFILE_SCOPE(MAIN);

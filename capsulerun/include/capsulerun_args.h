@@ -4,14 +4,14 @@
 // all strings are UTF-8, even on windows
 typedef struct capsule_args_s {
   // positional arguments
-  char *libpath;
+  const char *libpath;
   char *exec;
   int exec_argc;
   char **exec_argv;
 
   // options
-  char *dir;
-  char *pix_fmt;
+  const char *dir;
+  const char *pix_fmt;
   int crf;
   int no_audio;
   int size_divider;
@@ -22,6 +22,6 @@ typedef struct capsule_args_s {
   int gop_size;
   int max_b_frames;
   int buffered_frames;
-  char *priority;
-  char *x264_preset;
+  const char *priority;
+  const char *x264_preset;
 } capsule_args_t;

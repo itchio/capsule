@@ -160,13 +160,13 @@ yourself into a prefix. You can then pass it to cmake with `-DCAPSULE_FFMPEG_PRE
 mkdir build64
 cd build64
 cmake -DCMAKE_BUILD_TYPE=Debug ..
-make -j4
+make install -j4
 ```
 
 Capsulerun usage:
 
 ```bash
-capsulerun/capsulerun -L $PWD/libcapsule -- path/to/some/game.x86_64
+path/to/capsule/build64/dist/capsulerun -- path/to/some/game.x86_64
 ```
 
 When launching, one might want to override mesa version:
@@ -197,37 +197,24 @@ Microsoft Visual C++ (MSVC) is needed, 2015 is what we're using internally.
 CMake shipped with msys2 won't cut it, you need a Windows release of CMake (which
 includes the Visual Studio project generators): <https://cmake.org/>
 
-Two batch files are included for convenience, although they assume:
-
-  * You're running 64-bit Windows
-  * CMake lives in `C:\Program Files\CMake\bin\cmake.exe`
-  * You want the Debug build
-
-If so, you can simply do, in `Visual C++ 2015 Native Build Tools Command Prompt`:
+From the `Visual C++ 2015 Native Build Tools Command Prompt`, run:
 
 ```batch
-scripts\configure.cmd
+mkdir build32
+cd build32
+cmake -G "Visual Studio 14 2015" ..
 ```
-
-... once, to run CMake - this generates the `build32` and `build64` folders
-
-To compile, run:
+To compile, run this from the build32 folder:
 
 ```batch
-scripts\build.cmd
+msbuild INSTALL.vcxproj
 ```
 
-This builds both the 32 and 64-bit builds, and creates a `build` folder with
-the 64-bit `capsulerun.exe`, and both DLLs.
-
-capsulerun usage:
+To build a 64-bit version, add ` Win64` to the generator name (the `-G` parameter).
 
 ```
-C:\path\to\capsule\build\capsulerun.exe -L C:\path\to\capsule\build -- some_game.exe
+C:\path\to\capsule\build32\dist\capsulerun.exe -- some_game.exe
 ```
-
-If the `scripts\configure.cmd` / `scripts\build.cmd` method fails for you, read them
-to figure out the proper invocations for your system.
 
 ## License
 
