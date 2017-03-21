@@ -2,7 +2,7 @@
 // this file is pretty much textbook msdn:
 // https://msdn.microsoft.com/en-us/library/windows/desktop/dd370800(v=vs.85).aspx 
 
-#include "WasapiReceiver.h"
+#include "wasapi_receiver.h"
 
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
