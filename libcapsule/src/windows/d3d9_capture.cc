@@ -218,7 +218,7 @@ void D3d9ShmemCapture (IDirect3DSurface9 *backbuffer) {
   // TODO: buffering (using queries)
   HRESULT hr;
 
-  auto timestamp = CapsuleFrameTimestamp();
+  auto timestamp = capsule::FrameTimestamp();
 
   hr = data.device->StretchRect(
     backbuffer,
@@ -248,7 +248,7 @@ void D3d9ShmemCapture (IDirect3DSurface9 *backbuffer) {
   if (SUCCEEDED(hr)) {
     char *frame_data = (char *) rect.pBits;
     int frame_data_size = data.cy * data.pitch;
-    CapsuleWriteVideoFrame(timestamp, frame_data, frame_data_size);
+    capsule::io::WriteVideoFrame(timestamp, frame_data, frame_data_size);
     data.copy_surfaces[0]->UnlockRect();
   }
 }
@@ -256,8 +256,8 @@ void D3d9ShmemCapture (IDirect3DSurface9 *backbuffer) {
 void D3d9Capture (IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer) {
   static bool first_frame = true;
 
-  if (!CapsuleCaptureReady()) {
-    if (!CapsuleCaptureActive()) {
+  if (!capsule::CaptureReady()) {
+    if (!capsule::CaptureActive()) {
       first_frame = true;
     }
 
@@ -275,7 +275,7 @@ void D3d9Capture (IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer) {
 
   if (first_frame) {
     auto pix_fmt = DxgiFormatToPixFmt(D3d9ToDxgiFormat(data.format));
-    CapsuleWriteVideoFormat(
+    capsule::io::WriteVideoFormat(
       data.cx,
       data.cy,
       pix_fmt,

@@ -5,17 +5,16 @@
 
 #include <microprofile.h>
 
-using namespace Capsule::Messages;
-using namespace std;
-
 MICROPROFILE_DEFINE(MainLoopMain, "MainLoop", "Main", 0xff0000);
 MICROPROFILE_DEFINE(MainLoopCycle, "MainLoop", "Cycle", 0xff00ff38);
 MICROPROFILE_DEFINE(MainLoopRead, "MainLoop", "Read", 0xff00ff00);
 MICROPROFILE_DEFINE(MainLoopProcess, "MainLoop", "Process", 0xff773744);
 
+namespace capsule {
+
 void MainLoop::Run () {
   MICROPROFILE_SCOPE(MainLoopCycle);
-  CapsuleLog("In MainLoop::Run, exec is %s", args->exec);
+  CapsuleLog("In MainLoop::Run, exec is %s", args_->exec);
 
   while (true) {
     MICROPROFILE_SCOPE(MainLoopCycle);
@@ -34,24 +33,24 @@ void MainLoop::Run () {
 
     {
       MICROPROFILE_SCOPE(MainLoopProcess);
-      auto pkt = GetPacket(buf);
+      auto pkt = messages::GetPacket(buf);
       switch (pkt->message_type()) {
-        case Message_VideoSetup: {
-          auto vs = static_cast<const VideoSetup*>(pkt->message());
+        case messages::Message_VideoSetup: {
+          auto vs = static_cast<const messages::VideoSetup*>(pkt->message());
           StartSession(vs);
           break;
         }
-        case Message_VideoFrameCommitted: {
-          auto vfc = static_cast<const VideoFrameCommitted*>(pkt->message());
-          if (session_ && session_->video) {
-            session_->video->FrameCommitted(vfc->index(), vfc->timestamp());
+        case messages::Message_VideoFrameCommitted: {
+          auto vfc = static_cast<const messages::VideoFrameCommitted*>(pkt->message());
+          if (session_ && session_->video_) {
+            session_->video_->FrameCommitted(vfc->index(), vfc->timestamp());
           } else {
             CapsuleLog("no session, ignoring VideoFrameCommitted")
           }
           break;
         }
         default: {
-          CapsuleLog("MainLoop::Run: received %s - not sure what to do", EnumNameMessage(pkt->message_type()));
+          CapsuleLog("MainLoop::Run: received %s - not sure what to do", messages::EnumNameMessage(pkt->message_type()));
           break;
         }
       }
@@ -76,8 +75,8 @@ void MainLoop::CaptureFlip () {
 
 void MainLoop::CaptureStart () {
   flatbuffers::FlatBufferBuilder builder(1024);
-  auto cps = CreateCaptureStart(builder, args->fps, args->size_divider, args->gpu_color_conv);
-  auto opkt = CreatePacket(builder, Message_CaptureStart, cps.Union());
+  auto cps = messages::CreateCaptureStart(builder, args_->fps, args_->size_divider, args_->gpu_color_conv);
+  auto opkt = messages::CreatePacket(builder, messages::Message_CaptureStart, cps.Union());
   builder.Finish(opkt);
   conn_->write(builder);
 }
@@ -92,13 +91,13 @@ void MainLoop::EndSession () {
   auto old_session = session_;
   session_ = nullptr;
   old_session->Stop();
-  old_sessions.push_back(old_session);
+  old_sessions_.push_back(old_session);
 }
 
 void MainLoop::JoinSessions () {
-  CapsuleLog("MainLoop::join_sessions: joining %d sessions", old_sessions.size())
+  CapsuleLog("MainLoop::join_sessions: joining %d sessions", old_sessions_.size())
 
-  for (Session *session: old_sessions) {
+  for (Session *session: old_sessions_) {
     CapsuleLog("MainLoop::join_sessions: joining session_ %p", session)
     session->Join();
   }
@@ -110,13 +109,13 @@ void MainLoop::CaptureStop () {
   EndSession();
 
   flatbuffers::FlatBufferBuilder builder(1024);
-  auto cps = CreateCaptureStop(builder);
-  auto opkt = CreatePacket(builder, Message_CaptureStop, cps.Union());
+  auto cps = messages::CreateCaptureStop(builder);
+  auto opkt = CreatePacket(builder, messages::Message_CaptureStop, cps.Union());
   builder.Finish(opkt);
   conn_->write(builder);
 }
 
-void MainLoop::StartSession (const VideoSetup *vs) {
+void MainLoop::StartSession (const messages::VideoSetup *vs) {
   CapsuleLog("Setting up encoder");
 
   video_format_t vfmt;
@@ -140,16 +139,18 @@ void MainLoop::StartSession (const VideoSetup *vs) {
   }
 
   int num_buffered_frames = 60;
-  if (args->buffered_frames) {
-    num_buffered_frames = args->buffered_frames;
+  if (args_->buffered_frames) {
+    num_buffered_frames = args_->buffered_frames;
   }
 
-  auto video = new VideoReceiver(conn_, vfmt, shm, num_buffered_frames);
-  AudioReceiver *audio = nullptr;
-  if (audio_receiver_factory && !args->no_audio) {
-    audio = audio_receiver_factory();
+  auto video = new video::VideoReceiver(conn_, vfmt, shm, num_buffered_frames);
+  audio::AudioReceiver *audio = nullptr;
+  if (audio_receiver_factory_ && !args_->no_audio) {
+    audio = audio_receiver_factory_();
   }
 
-  session_ = new Session(args, video, audio);
+  session_ = new Session(args_, video, audio);
   session_->Start();
 }
+
+} // namespace capsule

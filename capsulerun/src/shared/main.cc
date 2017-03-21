@@ -191,7 +191,7 @@ int main (int argc, char **argv) {
     MICROPROFILE_SCOPE(MAIN);
 
     // different for each platform, CMake compiles the right one in.
-    int ret = capsulerun_main(&args);
+    int ret = capsule::Main(&args);
 
 #if defined(CAPSULE_WINDOWS)
     free(argv);

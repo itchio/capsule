@@ -22,7 +22,7 @@ void __attribute__((constructor)) CapsuleLoad() {
 
   CapsuleLog("CAPSULE_PIPE_R_PATH: %s", getenv("CAPSULE_PIPE_R_PATH"));
   CapsuleLog("CAPSULE_PIPE_W_PATH: %s", getenv("CAPSULE_PIPE_W_PATH"));
-  CapsuleIoInit();
+  capsule::io::Init();
 }
 
 void __attribute__((destructor)) CapsuleUnload() {

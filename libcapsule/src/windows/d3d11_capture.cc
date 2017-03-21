@@ -922,7 +922,7 @@ static inline void D3d11ShmemQueueCopy() {
 			if (SUCCEEDED(hr)) {
 				data.texture_mapped[i] = true;
         auto timestamp = data.timestamps[i];
-        CapsuleWriteVideoFrame(timestamp, (char *) map.pData, (data.cy / data.size_divider) * data.pitch);
+        capsule::io::WriteVideoFrame(timestamp, (char *) map.pData, (data.cy / data.size_divider) * data.pitch);
 			}
 			break;
 		}
@@ -936,7 +936,7 @@ static inline void D3d11ShmemCapture (ID3D11Resource* backbuffer) {
 
   next_tex = (data.cur_tex + 1) % NUM_BUFFERS;
 
-  data.timestamps[data.cur_tex] = CapsuleFrameTimestamp();
+  data.timestamps[data.cur_tex] = capsule::FrameTimestamp();
 
   // always using scale
   D3d11CopyTexture(data.scale_tex, backbuffer);
@@ -962,8 +962,8 @@ static inline void D3d11ShmemCapture (ID3D11Resource* backbuffer) {
 void D3d11Capture(void *swap_ptr, void *backbuffer_ptr) {
   static bool first_frame = true;
 
-  if (!CapsuleCaptureReady()) {
-    if (!CapsuleCaptureActive() && !first_frame) {
+  if (!capsule::CaptureReady()) {
+    if (!capsule::CaptureActive() && !first_frame) {
       first_frame = true;
       D3d11Free();
     }
@@ -995,7 +995,7 @@ void D3d11Capture(void *swap_ptr, void *backbuffer_ptr) {
     } else {
       pix_fmt = dxgi_format_to_pix_fmt(data.format);
     }
-    CapsuleWriteVideoFormat(
+    capsule::io::WriteVideoFormat(
       data.cx / data.size_divider,
       data.cy / data.size_divider,
       pix_fmt,

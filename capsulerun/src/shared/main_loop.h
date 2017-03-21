@@ -14,18 +14,20 @@
 #include "session.h"
 #include "connection.h"
 
-typedef AudioReceiver * (*audio_receiver_factory_t)();
+namespace capsule {
+
+typedef audio::AudioReceiver * (*audio_receiver_factory_t)();
 
 class MainLoop {
   public:
     MainLoop(capsule_args_t *args, Connection *conn) :
-      args(args),
+      args_(args),
       conn_(conn)
       {};
     void Run(void);
     void CaptureFlip();
 
-    audio_receiver_factory_t audio_receiver_factory = nullptr;
+    audio_receiver_factory_t audio_receiver_factory_ = nullptr;
 
   private:
     void EndSession();
@@ -33,11 +35,13 @@ class MainLoop {
 
     void CaptureStart();
     void CaptureStop();
-    void StartSession(const Capsule::Messages::VideoSetup *vs);
+    void StartSession(const messages::VideoSetup *vs);
 
-    capsule_args_t *args;
+    capsule_args_t *args_;
 
     Connection *conn_;
     Session *session_ = nullptr;
-    std::vector<Session *> old_sessions;
+    std::vector<Session *> old_sessions_;
 };
+
+} // namespace capsule

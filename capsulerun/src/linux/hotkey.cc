@@ -1,4 +1,5 @@
 
+#include "../capsulerun_hotkey.h"
 #include "../shared/main_loop.h"
 
 #include <X11/Xlib.h>
@@ -6,10 +7,13 @@
 
 #include <thread>
 
+namespace capsule {
+namespace hotkey {
+
 Display *capsule_x11_dpy;
 Window capsule_x11_root;
 
-static void CapsuleHotkeyPoll (MainLoop *ml) {
+static void Poll (MainLoop *ml) {
     XEvent ev;
 
     while(1) {
@@ -24,7 +28,7 @@ static void CapsuleHotkeyPoll (MainLoop *ml) {
     }
 }
 
-int CapsuleHotkeyInit(MainLoop *ml) {
+void Init(MainLoop *ml) {
     // XSetErrorHandler(capsule_x11_error_handler);
     capsule_x11_dpy = XOpenDisplay(0);
     capsule_x11_root = DefaultRootWindow(capsule_x11_dpy);
@@ -56,9 +60,9 @@ int CapsuleHotkeyInit(MainLoop *ml) {
     }
     XSelectInput(capsule_x11_dpy, capsule_x11_root, KeyPressMask);
 
-    std::thread poll_thread(CapsuleHotkeyPoll, ml);
+    std::thread poll_thread(Poll, ml);
     poll_thread.detach();
-
-    return 0;
 }
 
+} // namespace hotkey
+} // namespace capsule

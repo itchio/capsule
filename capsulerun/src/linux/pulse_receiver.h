@@ -13,7 +13,6 @@ namespace audio {
 const int kAudioNbBuffers = 16;
 const int kAudioNbSamples = 128;
 
-// TODO: that's amore^Wan enum
 enum BufferState {
   kBufferStateAvailable = 0,
   kBufferStateCommitted,

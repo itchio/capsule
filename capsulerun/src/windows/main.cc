@@ -10,18 +10,18 @@
 
 #include "capsulerun.h"
 
-#include "../shared/MainLoop.h"
-#include "./WasapiReceiver.h"
+#include "../shared/main_loop.h"
+#include "./wasapi_receiver.h"
 
 #include "strings.h"
 
+namespace capsule {
+
 static bool connected = false;
-static DWORD exitCode = 0;
+static DWORD exit_code = 0;
 
-int CapsuleHotkeyInit(MainLoop *ml);
-
-AudioReceiver *AudioReceiverFactory() {
-  return new WasapiReceiver();
+audio::AudioReceiver *AudioReceiverFactory() {
+  return new audio::WasapiReceiver();
 }
 
 static void WaitForChild (HANDLE hProcess) {
@@ -36,15 +36,15 @@ static void WaitForChild (HANDLE hProcess) {
   WaitForSingleObject(hProcess, INFINITE);
   cdprintf("Done waiting on child");
 
-  GetExitCodeProcess(hProcess, &exitCode);
-  CapsuleLog("Exit code: %d (%x)", exitCode, exitCode);
+  GetExitCodeProcess(hProcess, &exit_code);
+  CapsuleLog("Exit code: %d (%x)", exit_code, exit_code);
 
   if (!connected) {
-    exit(exitCode);
+    exit(exit_code);
   }
 }
 
-int capsulerun_main (capsule_args_t *args) {
+int Main (capsule_args_t *args) {
   // From Deviare-InProc's doc: 
   //   If "szDllNameW" string ends with 'x86.dll', 'x64.dll', '32.dll', '64.dll', the dll name will be adjusted
   //   in order to match the process platform. I.e.: "mydll_x86.dll" will become "mydll_x64.dll" on 64-bit processes.
@@ -147,9 +147,9 @@ int capsulerun_main (capsule_args_t *args) {
     connected = true;
 
     MainLoop ml {args, conn};
-    ml.audio_receiver_factory = AudioReceiverFactory;
+    ml.audio_receiver_factory_ = AudioReceiverFactory;
 
-    capsule_hotkey_init(&ml);
+    hotkey::Init(&ml);
 
     ml.Run();
   } else {
@@ -157,5 +157,7 @@ int capsulerun_main (capsule_args_t *args) {
     return 127;
   }
 
-  return exitCode;
+  return exit_code;
 }
+
+} // namespace capsule

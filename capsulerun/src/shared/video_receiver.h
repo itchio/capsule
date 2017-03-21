@@ -8,6 +8,15 @@
 #include "locking_queue.h"
 #include "connection.h"
 
+namespace capsule {
+namespace video {
+
+enum FrameState {
+  kFrameStateAvailable = 0,
+  kFrameStateCommitted,
+  kFrameStateProcessing,
+};
+
 struct FrameInfo {
   int index;
   int64_t timestamp;
@@ -23,22 +32,25 @@ class VideoReceiver {
     void Stop();
 
   private:
-    Connection *conn;
-    video_format_t vfmt;
-    shoom::Shm *shm;
+    Connection *conn_;
+    video_format_t vfmt_;
+    shoom::Shm *shm_;
 
-    char *mapped;
-    LockingQueue<FrameInfo> queue;
+    char *mapped_;
+    LockingQueue<FrameInfo> queue_;
 
-    int num_frames;
-    size_t frame_size;
-    int commit_index;
-    char *buffer;
-    int *buffer_state;
-    std::mutex buffer_mutex;
+    int num_frames_;
+    size_t frame_size_;
+    int commit_index_;
+    char *buffer_;
+    int *buffer_state_;
+    std::mutex buffer_mutex_;
 
-    bool stopped;
-    std::mutex stopped_mutex;
+    bool stopped_ = false;
+    std::mutex stopped_mutex_;
 
-    int overrun = 0;
+    int overrun_ = 0;
 };
+
+} // namespace video
+} // namespace capsule

@@ -6,8 +6,8 @@
 
 #include "flatbuffers/flatbuffers.h"
 
-namespace Capsule {
-namespace Messages {
+namespace capsule {
+namespace messages {
 
 struct Packet;
 
@@ -340,7 +340,7 @@ inline flatbuffers::Offset<VideoSetup> CreateVideoSetupDirect(
     const std::vector<int64_t> *offset = nullptr,
     const std::vector<int64_t> *linesize = nullptr,
     flatbuffers::Offset<Shmem> shmem = 0) {
-  return Capsule::Messages::CreateVideoSetup(
+  return capsule::messages::CreateVideoSetup(
       _fbb,
       width,
       height,
@@ -406,7 +406,7 @@ inline flatbuffers::Offset<Shmem> CreateShmemDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const char *path = nullptr,
     uint64_t size = 0) {
-  return Capsule::Messages::CreateShmem(
+  return capsule::messages::CreateShmem(
       _fbb,
       path ? _fbb.CreateString(path) : 0,
       size);
@@ -542,22 +542,22 @@ inline bool VerifyMessageVector(flatbuffers::Verifier &verifier, const flatbuffe
   return true;
 }
 
-inline const Capsule::Messages::Packet *GetPacket(const void *buf) {
-  return flatbuffers::GetRoot<Capsule::Messages::Packet>(buf);
+inline const capsule::messages::Packet *GetPacket(const void *buf) {
+  return flatbuffers::GetRoot<capsule::messages::Packet>(buf);
 }
 
 inline bool VerifyPacketBuffer(
     flatbuffers::Verifier &verifier) {
-  return verifier.VerifyBuffer<Capsule::Messages::Packet>(nullptr);
+  return verifier.VerifyBuffer<capsule::messages::Packet>(nullptr);
 }
 
 inline void FinishPacketBuffer(
     flatbuffers::FlatBufferBuilder &fbb,
-    flatbuffers::Offset<Capsule::Messages::Packet> root) {
+    flatbuffers::Offset<capsule::messages::Packet> root) {
   fbb.Finish(root);
 }
 
-}  // namespace Messages
-}  // namespace Capsule
+}  // namespace messages
+}  // namespace capsule
 
 #endif  // FLATBUFFERS_GENERATED_MESSAGES_CAPSULE_MESSAGES_H_

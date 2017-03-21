@@ -378,7 +378,7 @@ static inline void GlShmemCaptureQueueCopy(void) {
 			buffer = _glMapBuffer(GL_PIXEL_PACK_BUFFER, GL_READ_ONLY);
 			if (buffer) {
 				data.texture_mapped[i] = true;
-        CapsuleWriteVideoFrame(timestamp, (char*) buffer, data.cy * data.pitch);
+        capsule::io::WriteVideoFrame(timestamp, (char*) buffer, data.cy * data.pitch);
 			}
 			break;
 		}
@@ -407,7 +407,7 @@ void GlShmemCapture () {
   GLint last_fbo;
   GLint last_tex;
 
-  auto timestamp = CapsuleFrameTimestamp();
+  auto timestamp = capsule::FrameTimestamp();
 
   // save last fbo & texture to restore them after capture
   {
@@ -472,8 +472,8 @@ void CAPSULE_STDCALL GlCapture (int width, int height) {
   // reset error flag
 	_glGetError();
 
-  if (!CapsuleCaptureReady()) {
-    if (!CapsuleCaptureActive() && !first_frame) {
+  if (!capsule::CaptureReady()) {
+    if (!capsule::CaptureActive() && !first_frame) {
       first_frame = true;
       GlFree();
     }
@@ -487,7 +487,7 @@ void CAPSULE_STDCALL GlCapture (int width, int height) {
 
   if (data.cx) {
     if (first_frame) {
-      CapsuleWriteVideoFormat(
+      capsule::io::WriteVideoFormat(
         data.cx,
         data.cy,
         CAPSULE_PIX_FMT_BGRA,

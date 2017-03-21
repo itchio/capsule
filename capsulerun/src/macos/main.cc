@@ -18,11 +18,11 @@
 
 #include <thread>
 
-int CapsuleHotkeyInit(MainLoop *ml);
+namespace capsule {
 
 extern char **environ;
 
-void CapsulerunMainThread (capsule_args_t *args) {
+void MainThread (capsule_args_t *args) {
   auto libcapsule_path = string(args->libpath) + "/libcapsule.dylib";
 
   // TODO: respect outside DYLD_INSERT_LIBRARIES ?
@@ -64,7 +64,7 @@ void CapsulerunMainThread (capsule_args_t *args) {
   conn->connect();
 
   MainLoop ml {args, conn};
-  capsule_hotkey_init(&ml);
+  hotkey::Init(&ml);
   ml.Run();
 
   int child_status;
@@ -91,9 +91,10 @@ void CapsulerunMainThread (capsule_args_t *args) {
   exit(0);
 }
 
-int CapsulerunMain (capsule_args_t *args) {
+int Main (capsule_args_t *args) {
   std::thread main_thread(CapsulerunMainThread, args);
   CapsuleRunApp();
   return 0;
 }
 
+} // namespace capsule

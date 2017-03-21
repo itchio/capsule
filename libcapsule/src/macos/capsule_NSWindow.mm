@@ -26,7 +26,7 @@ static CGWindowID windowId = kCGNullWindowID;
     return;
   }
 
-  auto timestamp = CapsuleFrameTimestamp();
+  auto timestamp = capsule::FrameTimestamp();
 
   if (!windows_found) {
     windows_found = true;
@@ -76,7 +76,7 @@ static CGWindowID windowId = kCGNullWindowID;
   CFDataRef dataRef = CGDataProviderCopyData(CGImageGetDataProvider(image));
   char *frameData = (char*) CFDataGetBytePtr(dataRef);
   size_t frameDataSize = CFDataGetLength(dataRef);
-  CapsuleWriteVideoFrame(timestamp, frameData, frameDataSize);
+  capsule::io::WriteVideoFrame(timestamp, frameData, frameDataSize);
 
   CFRelease(dataRef);
   CGImageRelease(image);

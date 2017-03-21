@@ -1,5 +1,5 @@
 
-namespace Capsule.Messages;
+namespace capsule.messages;
 
 enum PixFmt:int {
     UNKNOWN     = 0,

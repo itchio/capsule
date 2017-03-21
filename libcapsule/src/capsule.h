@@ -86,16 +86,6 @@ struct capture_data {
 };
 extern struct capture_data capdata;
 
-bool CAPSULE_STDCALL CapsuleCaptureReady();
-bool CAPSULE_STDCALL CapsuleCaptureActive();
-bool CAPSULE_STDCALL CapsuleCaptureTryStart(struct capture_data_settings* settings);
-bool CAPSULE_STDCALL CapsuleCaptureTryStop();
-int64_t CAPSULE_STDCALL CapsuleFrameTimestamp();
-
-void CAPSULE_STDCALL CapsuleIoInit();
-void CAPSULE_STDCALL CapsuleWriteVideoFormat(int width, int height, int format, int vflip, int pitch);
-void CAPSULE_STDCALL CapsuleWriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size);
-
 // OpenGL-specific
 void CAPSULE_STDCALL GlCapture(int width, int height);
 
@@ -125,3 +115,20 @@ static void CAPSULE_STDCALL CapsuleAssert(const char *msg, int cond) {
   CapsuleLog("Assertion failed: %s", msg);
   exit(1);
 }
+
+namespace capsule {
+
+bool CAPSULE_STDCALL CaptureReady();
+bool CAPSULE_STDCALL CaptureActive();
+bool CAPSULE_STDCALL CaptureTryStart(struct capture_data_settings* settings);
+bool CAPSULE_STDCALL CaptureTryStop();
+int64_t CAPSULE_STDCALL FrameTimestamp();
+
+namespace io {
+
+void CAPSULE_STDCALL Init();
+void CAPSULE_STDCALL WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch);
+void CAPSULE_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size);
+
+} // namespace io
+} // namespace capsule

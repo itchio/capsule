@@ -1,5 +1,6 @@
 
 #include "capsulerun.h"
+#include "capsulerun_hotkey.h"
 
 #include "../shared/env.h"
 
@@ -28,12 +29,12 @@
 // thread
 #include <thread>
 
+namespace capsule {
+
 static bool connected = false;
 static int exit_code = 0;
 
-int CapsuleHotkeyInit(MainLoop *ml);
-
-static AudioReceiver *audio_receiver_factory () {
+static audio::AudioReceiver *AudioReceiverFactory () {
   return new capsule::audio::PulseReceiver();
 }
 
@@ -65,7 +66,7 @@ static void WaitForChild (int child_pid) {
   }
 }
 
-int capsulerun_main (capsule_args_t *args) {
+int Main (capsule_args_t *args) {
   std::string libcapsule32_path = std::string(args->libpath) + "/libcapsule32.so";
   std::string libcapsule64_path = std::string(args->libpath) + "/libcapsule64.so";
   std::string ldpreload = libcapsule32_path + ":" + libcapsule64_path;
@@ -119,10 +120,12 @@ int capsulerun_main (capsule_args_t *args) {
   connected = true;
 
   MainLoop ml {args, conn};
-  ml.audio_receiver_factory = audio_receiver_factory;
+  ml.audio_receiver_factory_ = AudioReceiverFactory;
 
-  CapsuleHotkeyInit(&ml);
+  hotkey::Init(&ml);
   ml.Run();
 
   return exit_code;
 }
+
+} // namespace capsule

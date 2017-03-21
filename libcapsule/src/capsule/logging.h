@@ -23,12 +23,12 @@ extern FILE *logfile;
 extern "C" {
 #endif
 
-FILE *capsule_open_log();
+FILE *CapsuleOpenLog();
 
 #ifdef CAPSULE_WINDOWS
-wchar_t *CapsuleLog_path();
+wchar_t *CapsuleLogPath();
 #else
-char *CapsuleLog_path();
+char *CapsuleLogPath();
 #endif // CAPSULE_WINDOWS
 
 #ifdef __cplusplus

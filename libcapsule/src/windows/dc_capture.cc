@@ -41,14 +41,14 @@ static void CaptureHwnd(HWND hwnd) {
   static bool first_frame = true;
   const int components = 4;
 
-  if (!CapsuleCaptureReady()) {
+  if (!capsule::CaptureReady()) {
     return;
   }
 
-  auto timestamp = CapsuleFrameTimestamp();
+  auto timestamp = capsule::FrameTimestamp();
 
   if (first_frame) {
-    CapsuleWriteVideoFormat(data.cx, data.cy, CAPSULE_PIX_FMT_BGRA, 1 /* vflip */, data.cx * components);
+    capsule::io::WriteVideoFormat(data.cx, data.cy, CAPSULE_PIX_FMT_BGRA, 1 /* vflip */, data.cx * components);
     first_frame = false;
   }
 
@@ -61,7 +61,7 @@ static void CaptureHwnd(HWND hwnd) {
          SRCCOPY);
 
   int frame_data_size = data.cx * data.cy * components;
-  CapsuleWriteVideoFrame(timestamp, data.frame_data, frame_data_size);
+  capsule::io::WriteVideoFrame(timestamp, data.frame_data, frame_data_size);
 }
 
 static void DcCaptureCapture() {
@@ -71,7 +71,7 @@ static void DcCaptureCapture() {
 static void DcCaptureLoop() {
   while (true) {
     Sleep(16); // FIXME: that's dumb
-    if (!CapsuleCaptureActive()) {
+    if (!capsule::CaptureActive()) {
       // TODO: proper cleanup somewhere
       // ReleaseDC(NULL, hdc_target);
       // DeleteDC(hdc);

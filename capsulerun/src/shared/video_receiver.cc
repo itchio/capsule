@@ -4,42 +4,37 @@
 
 #include "video_receiver.h"
 
-using namespace Capsule::Messages;
-using namespace std;
-
 #include <stdexcept>
 
 #include <microprofile.h>
-
-#define VIDEO_FRAME_PROCESSED 0
-#define VIDEO_FRAME_COMMITTED 1
-#define VIDEO_FRAME_PROCESSING 2
 
 MICROPROFILE_DEFINE(VideoReceiverWait, "VideoReceiver", "VWait", MP_CHOCOLATE3);
 MICROPROFILE_DEFINE(VideoReceiverCopy1, "VideoReceiver", "VCopy1", MP_CORNSILK3);
 MICROPROFILE_DEFINE(VideoReceiverCopy2, "VideoReceiver", "VCopy2", MP_PINK3);
 
-VideoReceiver::VideoReceiver (Connection *conn_in, video_format_t vfmt_in, shoom::Shm *shm_in, int num_frames_in) {
-  CapsuleLog("Initializing VideoReceiver, buffered frames = %d", num_frames_in);
-  conn = conn_in;
-  vfmt = vfmt_in;
-  shm = shm_in;
-  stopped = false;
+namespace capsule {
+namespace video {
 
-  num_frames = num_frames_in;
-  frame_size = vfmt.pitch * vfmt.height;
-  CapsuleLog("VideoReceiver: total buffer size in RAM: %.2f MB", (float) (frame_size * num_frames) / 1024.0f / 1024.0f);
-  buffer = (char *) calloc(num_frames, frame_size);
+VideoReceiver::VideoReceiver (Connection *conn, video_format_t vfmt, shoom::Shm *shm, int num_frames) {
+  conn_ = conn;
+  vfmt_ = vfmt;
+  shm_ = shm;
 
-  buffer_state = (int *) calloc(num_frames, sizeof(int));
+  num_frames_ = num_frames;
+  frame_size_ = vfmt_.pitch * vfmt_.height;
+  CapsuleLog("VideoReceiver: initializing, buffer of %d frames", num_frames_);
+  CapsuleLog("VideoReceiver: total buffer size in RAM: %.2f MB", (float) (frame_size_ * num_frames_) / 1024.0f / 1024.0f);
+  buffer_ = (char *) calloc(num_frames_, frame_size_);
+
+  buffer_state_ = (int *) calloc(num_frames_, sizeof(int));
   for (int i = 0; i < num_frames; i++) {
-    buffer_state[i] = VIDEO_FRAME_PROCESSED;
+    buffer_state_[i] = kFrameStateAvailable;
   }
-  commit_index = 0;
+  commit_index_ = 0;
 }
 
-int VideoReceiver::ReceiveFormat(video_format_t *vfmt_out) {
-  memcpy(vfmt_out, &vfmt, sizeof(video_format_t));
+int VideoReceiver::ReceiveFormat(video_format_t *vfmt) {
+  memcpy(vfmt, &vfmt_, sizeof(*vfmt));
   return 0;
 }
 
@@ -49,7 +44,7 @@ int VideoReceiver::ReceiveFrame(uint8_t *buffer_out, size_t buffer_size_out, int
   while (true) {
     {
       MICROPROFILE_SCOPE(VideoReceiverWait);
-      if (queue.TryWaitAndPop(info, 200)) {
+      if (queue_.TryWaitAndPop(info, 200)) {
         // got a frame!
         break;
       }
@@ -57,35 +52,35 @@ int VideoReceiver::ReceiveFrame(uint8_t *buffer_out, size_t buffer_size_out, int
 
     // didn't get a frame, are we stopped?
     {
-      lock_guard<mutex> lock(stopped_mutex);
-      if (stopped) {
+      std::lock_guard<std::mutex> lock(stopped_mutex_);
+      if (stopped_) {
         return 0;
       }
     }
   }
 
-  if (frame_size != buffer_size_out) {
-    fprintf(stderr, "capsule internal error: expected frame_size (%" PRIdS ") and buffer_size_out (%" PRIdS ") to match, but they didn't\n", frame_size, buffer_size_out);
+  if (frame_size_ != buffer_size_out) {
+    fprintf(stderr, "capsule internal error: expected frame_size (%" PRIdS ") and buffer_size_out (%" PRIdS ") to match, but they didn't\n", frame_size_, buffer_size_out);
     fflush(stderr);
-    throw runtime_error("frame_size !== buffer_size_out");
+    throw std::runtime_error("frame_size !== buffer_size_out");
   }
 
   *timestamp_out = info.timestamp;
 
-  char *src = buffer + (info.index * frame_size);
+  char *src = buffer_ + (info.index * frame_size_);
   char *dst = (char *) buffer_out;
   {
     MICROPROFILE_SCOPE(VideoReceiverCopy2);
-    memcpy(dst, src, frame_size);
+    memcpy(dst, src, frame_size_);
   }
 
   {
-    lock_guard<mutex> lock(buffer_mutex);
+    std::lock_guard<std::mutex> lock(buffer_mutex_);
 
-    buffer_state[info.index] = VIDEO_FRAME_PROCESSING;
-    int prev_index = (info.index == 0) ? (num_frames - 1) : (info.index - 1);
-    if (buffer_state[prev_index] == VIDEO_FRAME_PROCESSING) {
-      buffer_state[prev_index] = VIDEO_FRAME_PROCESSED;
+    buffer_state_[info.index] = kFrameStateProcessing;
+    int prev_index = (info.index == 0) ? (num_frames_ - 1) : (info.index - 1);
+    if (buffer_state_[prev_index] == kFrameStateProcessing) {
+      buffer_state_[prev_index] = kFrameStateAvailable;
     }
 
     /////////////////////////////////
@@ -93,12 +88,12 @@ int VideoReceiver::ReceiveFrame(uint8_t *buffer_out, size_t buffer_size_out, int
     /////////////////////////////////
     if ((info.index % 10) == 0) {
       int committed_frames = 0;
-      for (int i = 0; i < num_frames; i++) {
-        if (buffer_state[i] == VIDEO_FRAME_COMMITTED) {
+      for (int i = 0; i < num_frames_; i++) {
+        if (buffer_state_[i] == kFrameStateCommitted) {
           committed_frames++;
         }
       }
-      fprintf(stderr, "buffer fill: %d/%d, skipped %d\n", committed_frames, num_frames, overrun);
+      fprintf(stderr, "buffer fill: %d/%d, skipped %d\n", committed_frames, num_frames_, overrun_);
       fflush(stderr);
     }
     /////////////////////////////////
@@ -111,8 +106,8 @@ int VideoReceiver::ReceiveFrame(uint8_t *buffer_out, size_t buffer_size_out, int
 
 void VideoReceiver::FrameCommitted(int index, int64_t timestamp) {
   {
-    lock_guard<mutex> lock(stopped_mutex);
-    if (stopped) {
+    std::lock_guard<std::mutex> lock(stopped_mutex_);
+    if (stopped_) {
       // just ignore
       return;
     }
@@ -121,11 +116,11 @@ void VideoReceiver::FrameCommitted(int index, int64_t timestamp) {
   int commit = 0;
 
   {
-    lock_guard<mutex> lock(buffer_mutex);
+    std::lock_guard<std::mutex> lock(buffer_mutex_);
 
-    if (buffer_state[commit_index] != VIDEO_FRAME_PROCESSED) {
+    if (buffer_state_[commit_index_] != kFrameStateAvailable) {
       // no room, just skip it
-      overrun++;
+      overrun_++;
     } else {
       commit = 1;
     }
@@ -133,39 +128,42 @@ void VideoReceiver::FrameCommitted(int index, int64_t timestamp) {
 
   if (commit) {
       // got room, copy it
-      char *src = reinterpret_cast<char*>(shm->Data()) + (frame_size * index);
-      char *dst = buffer + (frame_size * commit_index);
+      char *src = reinterpret_cast<char*>(shm_->Data()) + (frame_size_ * index);
+      char *dst = buffer_ + (frame_size_ * commit_index_);
       {
         MICROPROFILE_SCOPE(VideoReceiverCopy1);
-        memcpy(dst, src, frame_size);
+        memcpy(dst, src, frame_size_);
       }
 
-      FrameInfo info {commit_index, timestamp};
-      queue.Push(info);
+      FrameInfo info {commit_index_, timestamp};
+      queue_.Push(info);
 
       {
-        lock_guard<mutex> lock(buffer_mutex);
+        std::lock_guard<std::mutex> lock(buffer_mutex_);
 
-        buffer_state[commit_index] = VIDEO_FRAME_COMMITTED;
-        commit_index = (commit_index + 1) % num_frames;
+        buffer_state_[commit_index_] = kFrameStateCommitted;
+        commit_index_ = (commit_index_ + 1) % num_frames_;
       }
   }
 
   // in both cases, free up that index for the sender
   flatbuffers::FlatBufferBuilder builder(1024);
-  auto vfp = CreateVideoFrameProcessed(builder, index); 
-  auto opkt = CreatePacket(builder, Message_VideoFrameProcessed, vfp.Union());
+  auto vfp = messages::CreateVideoFrameProcessed(builder, index); 
+  auto opkt = messages::CreatePacket(builder, messages::Message_VideoFrameProcessed, vfp.Union());
   builder.Finish(opkt);
-  conn->write(builder);
+  conn_->write(builder);
 }
 
 void VideoReceiver::Stop() {
-  lock_guard<mutex> lock(stopped_mutex);
-  stopped = true;
+  std::lock_guard<std::mutex> lock(stopped_mutex_);
+  stopped_ = true;
 }
 
 VideoReceiver::~VideoReceiver () {
-  free(buffer_state);
-  free(buffer);
-  delete shm;
+  free(buffer_state_);
+  free(buffer_);
+  delete shm_;
 }
+
+} // namespace video
+} // namespace capsule

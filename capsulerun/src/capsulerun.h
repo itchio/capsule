@@ -25,8 +25,6 @@
 #include <sys/types.h>
 #endif // CAPSULERUN_LINUX || CAPSULERUN_OSX
 
-int capsulerun_main (capsule_args_t *args);
-
 typedef int (*receive_video_format_t)(void *private_data, video_format_t *vfmt);
 typedef int (*receive_video_frame_t)(void *private_data, uint8_t *buffer, size_t buffer_size, int64_t *timestamp);
 
@@ -55,3 +53,9 @@ void EncoderRun(capsule_args_t *args, encoder_params_t *params);
 #elif defined(CAPSULERUN_OSX)
 #include "capsulerun_macos.h"
 #endif // CAPSULERUN_LINUX
+
+namespace capsule {
+
+int Main (capsule_args_t *args);
+
+} // namespace capsule

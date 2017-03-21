@@ -113,7 +113,7 @@ bool PulseReceiver::ReadFromPa() {
 }
 
 int PulseReceiver::ReceiveFormat(audio_format_t *afmt) {
-  memcpy(afmt, &afmt_, sizeof(audio_format_t));
+  memcpy(afmt, &afmt_, sizeof(*afmt));
   return 0;
 }
 
