@@ -19,9 +19,9 @@
 
 #include <thread>
 
-namespace capsule {
-
 extern char **environ;
+
+namespace capsule {
 
 void MainThread (capsule_args_t *args) {
   auto libcapsule_path = std::string(args->libpath) + "/libcapsule.dylib";
