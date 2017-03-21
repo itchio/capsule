@@ -148,7 +148,7 @@ bool DcCaptureInit() {
     return false;
   }
 
-  std::thread dc_thread(dc_capture_loop);
+  std::thread dc_thread(DcCaptureLoop);
   dc_thread.detach();
   g_dc_thread = &dc_thread;
 

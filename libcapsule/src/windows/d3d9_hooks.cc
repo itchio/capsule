@@ -1,6 +1,6 @@
 
 #include <capsule.h>
-#include "win-capture.h"
+#include "win_capture.h"
 
 #include <d3d9.h>
 #include "d3d9_vtable_helpers.h"

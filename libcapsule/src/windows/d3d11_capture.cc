@@ -1,6 +1,6 @@
 
 #include <capsule.h>
-#include "win-capture.h"
+#include "win_capture.h"
 #include "dxgi-util.h"
 
 #include "./d3d11_shaders.h"

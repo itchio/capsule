@@ -24,13 +24,13 @@ namespace capsule {
 extern char **environ;
 
 void MainThread (capsule_args_t *args) {
-  auto libcapsule_path = string(args->libpath) + "/libcapsule.dylib";
+  auto libcapsule_path = std::string(args->libpath) + "/libcapsule.dylib";
 
   // TODO: respect outside DYLD_INSERT_LIBRARIES ?
   auto dyld_insert_var = "DYLD_INSERT_LIBRARIES=" + libcapsule_path;
 
-  string fifo_r_path = "/tmp/capsule.runr";
-  string fifo_w_path = "/tmp/capsule.runw";
+  std::string fifo_r_path = "/tmp/capsule.runr";
+  std::string fifo_w_path = "/tmp/capsule.runw";
 
   // swapped on purpose
   auto fifo_r_var = "CAPSULE_PIPE_R_PATH=" + fifo_w_path;

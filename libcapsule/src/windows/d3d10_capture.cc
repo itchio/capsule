@@ -1,6 +1,6 @@
 
 #include <capsule.h>
-#include "win-capture.h"
+#include "win_capture.h"
 
 // inspired by libobs
 struct d3d10_data {

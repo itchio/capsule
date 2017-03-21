@@ -2,7 +2,7 @@
 #include <capsule.h>
 #include "win_capture.h"
 
-#include "dxgi_vtable-helpers.h"
+#include "dxgi_vtable_helpers.h"
 #include "dxgi_util.h"
 
 typedef void (* dxgi_draw_overlay_func_t)(void);

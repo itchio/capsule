@@ -20,7 +20,7 @@ static wchar_t *GetPipePath (wchar_t *var_name) {
   wchar_t *pipe_path = (wchar_t*) calloc(pipe_path_len, sizeof(wchar_t));
   pipe_path[0] = '\0';
   GetEnvironmentVariable(var_name, pipe_path, pipe_path_len);
-  capsule_assert("Got pipe path", wcslen(pipe_path) > 0);
+  CapsuleAssert("Got pipe path", wcslen(pipe_path) > 0);
   return pipe_path;
 }
 #endif

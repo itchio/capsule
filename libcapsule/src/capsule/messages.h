@@ -94,10 +94,6 @@ static char *CapsuleHreadPacket (HANDLE handle) {
         0
     );
 
-    auto pkt = Capsule::Messages::GetPacket(buffer);
-    // fprintf(stdout, "read %d bytes packet, of type %s\n", pkt_size, Capsule::Messages::EnumNameMessage(pkt->message_type()));
-    // fflush(stdout);
-
     return buffer;
 }
 
