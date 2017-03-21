@@ -192,12 +192,12 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     auto shmem = shmem_builder.Finish();
 
     // TODO: support multiple linesizes (for planar formats)
-    intptr_t linesize[1];
+    long int linesize[1];
     linesize[0] = pitch;
     auto linesize_vec = builder.CreateVector(linesize, 1);
 
     // TODO: support multiple offsets (for planar formats)
-    intptr_t offset[1];
+    long int offset[1];
     offset[0] = 0;
     auto offset_vec = builder.CreateVector(offset, 1);
 
