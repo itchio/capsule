@@ -29,7 +29,7 @@ LIBHANDLE gl_handle;
 static inline bool gl_error(const char *func, const char *str) {
 	GLenum error = _glGetError();
 	if (error != 0) {
-		capsule_log("%s: %s: %lu", func, str, error);
+		capsule_log("%s: %s: %lu", func, str, (unsigned long) error);
 		return true;
 	}
 
