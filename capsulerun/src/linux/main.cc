@@ -36,7 +36,7 @@ static int exit_code = 0;
 int CapsuleHotkeyInit(MainLoop *ml);
 
 static AudioReceiver *audio_receiver_factory () {
-  return new PulseReceiver();
+  return new capsule::audio::PulseReceiver();
 }
 
 static void wait_for_child (int child_pid) {

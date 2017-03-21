@@ -7,12 +7,16 @@
 #include <thread>
 #include <mutex>
 
-#define AUDIO_NB_BUFFERS 16
-#define AUDIO_NB_SAMPLES 128
+namespace capsule {
+namespace audio {
 
-#define AUDIO_BUFFER_PROCESSED  0
-#define AUDIO_BUFFER_COMMITTED  1
-#define AUDIO_BUFFER_PROCESSING 2
+const int kAudioNbBuffers = 16;
+const int kAudioNbSamples = 128;
+
+// TODO: that's amore^Wan enum
+const int kBufferStateProcessed = 0;
+const int kBufferStateCommitted = 1;
+const int kBufferStateProcessing = 2;
 
 class PulseReceiver : public AudioReceiver {
   public:
@@ -26,20 +30,23 @@ class PulseReceiver : public AudioReceiver {
     bool ReadFromPa();
 
   private:
-    audio_format_t afmt;
-    pa_simple *ctx;
+    audio_format_t afmt_;
+    pa_simple *ctx_;
 
-    uint8_t *in_buffer;
+    uint8_t *in_buffer_;
 
-    uint8_t *buffers;
-    size_t buffer_size;
-    int buffer_state[AUDIO_NB_BUFFERS];
-    int commit_index = 0;
-    int process_index = 0;
+    uint8_t *buffers_;
+    size_t buffer_size_;
+    int buffer_state_[kAudioNbBuffers];
+    int commit_index_ = 0;
+    int process_index_ = 0;
 
-    std::thread *pa_thread;    
-    std::mutex buffer_mutex;
-    std::mutex pa_mutex;
+    std::thread *pa_thread_;
+    std::mutex buffer_mutex_;
+    std::mutex pa_mutex_;
 
-    bool overrun = false;
+    bool overrun_ = false;
 };
+
+}
+}

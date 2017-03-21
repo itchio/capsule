@@ -6,6 +6,9 @@
 
 using namespace std;
 
+namespace capsule {
+namespace audio {
+
 // TODO: use trick from http://stackoverflow.com/questions/10673585/start-thread-with-member-function
 // to avoid this.
 static void ReadLoop (PulseReceiver *pr) {
@@ -17,7 +20,7 @@ static void ReadLoop (PulseReceiver *pr) {
 }
 
 PulseReceiver::PulseReceiver() {
-  memset(&afmt, 0, sizeof(audio_format_t));
+  memset(&afmt_, 0, sizeof(audio_format_t));
 
   if (!capsule::pulse::Load()) {
     return;
@@ -34,7 +37,7 @@ PulseReceiver::PulseReceiver() {
   const char *dev = "alsa_output.pci-0000_00_1b.0.analog-stereo.monitor";
 
   int pa_err = 0;
-  ctx = capsule::pulse::New(NULL,             // server
+  ctx_ = capsule::pulse::New(NULL,             // server
                       "capsule",        // name
                       PA_STREAM_RECORD, // direction
                       dev,              // device
@@ -45,41 +48,40 @@ PulseReceiver::PulseReceiver() {
                       &pa_err           // error
                       );
 
-  if (!ctx) {
+  if (!ctx_) {
     fprintf(stderr, "Could not create pulseaudio context, error %d (%x)\n",
             pa_err, pa_err);
     return;
   }
 
-  afmt.channels = ss.channels;
-  afmt.samplerate = ss.rate;
-  afmt.samplewidth = 32;
-  buffer_size =
-      AUDIO_NB_SAMPLES * afmt.channels * (afmt.samplewidth / 8);
-  in_buffer = (uint8_t *) calloc(1, buffer_size);
-  buffers = (uint8_t *) calloc(AUDIO_NB_BUFFERS, buffer_size);
+  afmt_.channels = ss.channels;
+  afmt_.samplerate = ss.rate;
+  afmt_.samplewidth = 32;
+  buffer_size_ = kAudioNbSamples * afmt_.channels * (afmt_.samplewidth / 8);
+  in_buffer_ = (uint8_t *) calloc(1, buffer_size_);
+  buffers_ = (uint8_t *) calloc(kAudioNbBuffers, buffer_size_);
 
-  for (int i = 0; i < AUDIO_NB_BUFFERS; i++) {
-    buffer_state[i] = AUDIO_BUFFER_PROCESSED;
+  for (int i = 0; i < kAudioNbBuffers; i++) {
+    buffer_state_[i] = kBufferStateProcessed;
   }
-  commit_index = 0;
-  process_index = 0;
+  commit_index_ = 0;
+  process_index_ = 0;
 
   // start reading
-  pa_thread = new thread(ReadLoop, this);
+  pa_thread_ = new thread(ReadLoop, this);
 }
 
 bool PulseReceiver::ReadFromPa() {
   {
-    lock_guard<mutex> lock(pa_mutex);
+    lock_guard<mutex> lock(pa_mutex_);
 
-    if (!ctx) {
+    if (!ctx_) {
       // we're closed!
       return false;
     }
 
     int pa_err;
-    int ret = capsule::pulse::Read(ctx, in_buffer, buffer_size, &pa_err);
+    int ret = capsule::pulse::Read(ctx_, in_buffer_, buffer_size_, &pa_err);
     if (ret < 0) {
         fprintf(stderr, "Could not read from pulseaudio, error %d (%x)\n", pa_err, pa_err);
         return false;
@@ -88,38 +90,38 @@ bool PulseReceiver::ReadFromPa() {
 
   // cool, so we got a buffer, now let's find room for it.
   {
-    lock_guard<mutex> lock(buffer_mutex);
+    lock_guard<mutex> lock(buffer_mutex_);
 
-    if (buffer_state[commit_index] != AUDIO_BUFFER_PROCESSED) {
+    if (buffer_state_[commit_index_] != kBufferStateProcessed) {
       // no room for it, just skip those then
-      if (!overrun) {
-        overrun = true;
+      if (!overrun_) {
+        overrun_ = true;
         fprintf(stderr, "PulseReceiver: buffer overrun (captured audio but nowhere to place it)\n");
       }
       // keep trying tho
       return true;
     }
 
-    overrun = false;
+    overrun_ = false;
 
-    uint8_t *target = buffers + (commit_index * buffer_size);
-    memcpy(target, in_buffer, buffer_size);
-    buffer_state[commit_index] = AUDIO_BUFFER_COMMITTED;
-    commit_index = (commit_index + 1) % AUDIO_NB_BUFFERS;
+    uint8_t *target = buffers_ + (commit_index_ * buffer_size_);
+    memcpy(target, in_buffer_, buffer_size_);
+    buffer_state_[commit_index_] = kBufferStateCommitted;
+    commit_index_ = (commit_index_ + 1) % kAudioNbBuffers;
   }
 
   return true;
 }
 
-int PulseReceiver::ReceiveFormat(audio_format_t *afmt_out) {
-  memcpy(afmt_out, &afmt, sizeof(audio_format_t));
+int PulseReceiver::ReceiveFormat(audio_format_t *afmt) {
+  memcpy(afmt, &afmt_, sizeof(audio_format_t));
   return 0;
 }
 
 void *PulseReceiver::ReceiveFrames(int *frames_received) {
-  lock_guard<mutex> lock(buffer_mutex);
+  lock_guard<mutex> lock(buffer_mutex_);
 
-  if (buffer_state[process_index] != AUDIO_BUFFER_COMMITTED) {
+  if (buffer_state_[process_index_] != kBufferStateCommitted) {
     // nothing to receive
     *frames_received = 0;
     return NULL;
@@ -127,36 +129,39 @@ void *PulseReceiver::ReceiveFrames(int *frames_received) {
     // ooh there's a buffer ready
 
     // if the previous one was processing, that means we've processed it.
-    auto prev_process_index = (process_index == 0) ? (AUDIO_NB_BUFFERS - 1) : (process_index - 1);
-    if (buffer_state[prev_process_index] == AUDIO_BUFFER_PROCESSING) {
-      buffer_state[prev_process_index] = AUDIO_BUFFER_PROCESSED;
+    auto prev_process_index = (process_index_ == 0) ? (kAudioNbBuffers - 1) : (process_index_ - 1);
+    if (buffer_state_[prev_process_index] == kBufferStateProcessing) {
+      buffer_state_[prev_process_index] = kBufferStateProcessed;
     }
 
-    uint8_t *source = buffers + (process_index * buffer_size);
-    *frames_received = AUDIO_NB_SAMPLES;
-    buffer_state[process_index] = AUDIO_BUFFER_PROCESSING;
-    process_index = (process_index + 1) % AUDIO_NB_BUFFERS;
+    uint8_t *source = buffers_ + (process_index_ * buffer_size_);
+    *frames_received = kAudioNbSamples;
+    buffer_state_[process_index_] = kBufferStateProcessing;
+    process_index_ = (process_index_ + 1) % kAudioNbBuffers;
     return source;
   }
 }
 
 void PulseReceiver::Stop() {
   {
-    lock_guard<mutex> lock(pa_mutex);
-    if (ctx) {
-      capsule::pulse::Free(ctx);
+    lock_guard<mutex> lock(pa_mutex_);
+    if (ctx_) {
+      capsule::pulse::Free(ctx_);
     }
-    ctx = nullptr;
+    ctx_ = nullptr;
   }
 
-  pa_thread->join();
+  pa_thread_->join();
 }
 
 PulseReceiver::~PulseReceiver() {
-  if (in_buffer) {
-    free(in_buffer);
+  if (in_buffer_) {
+    free(in_buffer_);
   }
-  if (buffers) {
-    free(buffers);
+  if (buffers_) {
+    free(buffers_);
   }
+}
+
+}
 }
