@@ -2,10 +2,7 @@
 
 #include "../shared/AudioReceiver.h"
 
-// pulseaudio
-#include <pulse/simple.h>
-#include <pulse/error.h>
-#include <pulse/gccmacro.h>
+#include "pulse-dynamic.h"
 
 #include <thread>
 #include <mutex>
@@ -16,8 +13,6 @@
 #define AUDIO_BUFFER_PROCESSED  0
 #define AUDIO_BUFFER_COMMITTED  1
 #define AUDIO_BUFFER_PROCESSING 2
-
-// #define CAPSULE_PULSE_PROFILE
 
 class PulseReceiver : public AudioReceiver {
   public:

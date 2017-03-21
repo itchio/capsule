@@ -56,6 +56,7 @@ endif()
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   list(APPEND capsulerun_SRC
     ${capsulerun_SOURCE_DIR}/shared/env.cpp
+    ${capsulerun_SOURCE_DIR}/linux/pulse-dynamic.cc
     ${capsulerun_SOURCE_DIR}/linux/PulseReceiver.cpp
     ${capsulerun_SOURCE_DIR}/linux/hotkey.cpp
     ${capsulerun_SOURCE_DIR}/linux/main.cpp
@@ -98,15 +99,17 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   include(FindPkgConfig)
   set(ENV{PKG_CONFIG_PATH} "$ENV{HOME}/Dev/ffmpeg-prefix/lib/pkgconfig:${CAPSULE_FFMPEG_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 
-  foreach(NEEDED_LIB libavutil libavcodec libavformat libswscale libswresample x264 libpulse libpulse-simple)
+  foreach(NEEDED_LIB libavutil libavcodec libavformat libswscale libswresample x264)
     PKG_CHECK_MODULES(${NEEDED_LIB}_PKG ${NEEDED_LIB})
     include_directories(${${NEEDED_LIB}_PKG_INCLUDE_DIRS})
     target_link_libraries(capsulerun ${${NEEDED_LIB}_PKG_LDFLAGS} ${${NEEDED_LIB}_PKG_LIBRARIES})
   endforeach(NEEDED_LIB)
 
-  # needed on old Debian for reasons? (probably because of libpulse-simple?)
-  target_link_libraries(capsulerun -lpthread)
+  PKG_CHECK_MODULES(libpulse-simple_PKG libpulse-simple)
+  include_directories(${libpulse-simple_PKG_INCLUDE_DIRS})
+
   target_link_libraries(capsulerun -lX11)
+  target_link_libraries(capsulerun -ldl)
 endif()
 
 install(TARGETS capsulerun

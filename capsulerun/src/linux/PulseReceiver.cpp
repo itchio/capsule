@@ -1,6 +1,5 @@
 #include "PulseReceiver.h"
 
-#include <stdexcept>
 #include <chrono>
 
 #include <string.h> // memset, memcpy
@@ -18,6 +17,10 @@ static void read_loop (PulseReceiver *pr) {
 PulseReceiver::PulseReceiver() {
   memset(&afmt, 0, sizeof(audio_format_t));
 
+  if (!capsule_pulse_init()) {
+    return;
+  }
+
   /* The sample type to use */
   static const pa_sample_spec ss = {
       .format = PA_SAMPLE_FLOAT32LE, .rate = 44100, .channels = 2};
@@ -26,7 +29,7 @@ PulseReceiver::PulseReceiver() {
   const char *dev = "alsa_output.pci-0000_00_1b.0.analog-stereo.monitor";
 
   int pa_err = 0;
-  ctx = pa_simple_new(NULL,             // server
+  ctx = _pa_simple_new(NULL,             // server
                       "capsule",        // name
                       PA_STREAM_RECORD, // direction
                       dev,              // device
@@ -40,7 +43,7 @@ PulseReceiver::PulseReceiver() {
   if (!ctx) {
     fprintf(stderr, "Could not create pulseaudio context, error %d (%x)\n",
             pa_err, pa_err);
-    throw runtime_error("could not create pulseaudio context");
+    return;
   }
 
   afmt.channels = ss.channels;
@@ -70,21 +73,12 @@ bool PulseReceiver::read_from_pa() {
       return false;
     }
 
-#if defined(CAPSULE_PULSE_PROFILE)
-    auto tt1 = chrono::steady_clock::now();
-#endif
-
     int pa_err;
-    int ret = pa_simple_read(ctx, in_buffer, buffer_size, &pa_err);
+    int ret = _pa_simple_read(ctx, in_buffer, buffer_size, &pa_err);
     if (ret < 0) {
         fprintf(stderr, "Could not read from pulseaudio, error %d (%x)\n", pa_err, pa_err);
         return false;
     }
-
-#if defined(CAPSULE_PULSE_PROFILE)
-    auto tt2 = chrono::steady_clock::now();
-    capsule_log("pa_simple_read took %.3f ms", (double) (chrono::duration_cast<chrono::microseconds>(tt2 - tt1).count()) / 1000.0);
-#endif
   }
 
   // cool, so we got a buffer, now let's find room for it.
@@ -144,9 +138,9 @@ void *PulseReceiver::receive_frames(int *frames_received) {
 void PulseReceiver::stop() {
   {
     lock_guard<mutex> lock(pa_mutex);
-
-    // TODO: what about concurrency?
-    pa_simple_free(ctx);
+    if (ctx) {
+      _pa_simple_free(ctx);
+    }
     ctx = nullptr;
   }
 
@@ -154,6 +148,10 @@ void PulseReceiver::stop() {
 }
 
 PulseReceiver::~PulseReceiver() {
-  free(in_buffer);
-  free(buffers);
+  if (in_buffer) {
+    free(in_buffer);
+  }
+  if (buffers) {
+    free(buffers);
+  }
 }
