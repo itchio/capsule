@@ -8,7 +8,8 @@
 // ArgvQuote
 #include "quote.h"
 
-#include "capsulerun.h"
+#include <capsulerun.h>
+#include <capsulerun_hotkey.h>
 
 #include "../shared/main_loop.h"
 #include "./wasapi_receiver.h"

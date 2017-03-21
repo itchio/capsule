@@ -51,9 +51,9 @@ if(WIN32)
     ${libcapsule_SOURCE_DIR}/windows/hooks.cc
     ${libcapsule_SOURCE_DIR}/windows/process_hooks.cc
     ${libcapsule_SOURCE_DIR}/windows/dxgi_hooks.cc
-    ${libcapsule_SOURCE_DIR}/windows/dxgi_vtable-helpers.cc
+    ${libcapsule_SOURCE_DIR}/windows/dxgi_vtable_helpers.cc
     ${libcapsule_SOURCE_DIR}/windows/d3d9_hooks.cc
-    ${libcapsule_SOURCE_DIR}/windows/d3d9_vtable-helpers.cc
+    ${libcapsule_SOURCE_DIR}/windows/d3d9_vtable_helpers.cc
     ${libcapsule_SOURCE_DIR}/windows/d3d9_capture.cc
     ${libcapsule_SOURCE_DIR}/windows/d3d10_capture.cc
     ${libcapsule_SOURCE_DIR}/windows/d3d11_capture.cc
