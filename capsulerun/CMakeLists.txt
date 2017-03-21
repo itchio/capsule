@@ -7,10 +7,10 @@ endif()
 
 set(capsulerun_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(libcapsule_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/src)
-set(capsulerun_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(capsulerun_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(capsulerun_INCLUDE_DIRS SYSTEM)
 
-set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/include)
+set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/src)
 
 include_directories(
   ${shoom_INCLUDE_DIR}

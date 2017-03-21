@@ -4,7 +4,7 @@
 // strstr, strcmp
 #include <string.h>
 
-#include "gl-decs.h"
+#include "gl_decs.h"
 
 // inspired by libobs
 struct gl_data {

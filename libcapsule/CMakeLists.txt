@@ -6,7 +6,7 @@ if(APPLE)
 endif()
 
 set(libcapsule_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 if(WIN32)
     find_package(OpenGL REQUIRED)
