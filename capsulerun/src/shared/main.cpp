@@ -154,13 +154,18 @@ int main (int argc, char **argv) {
   fromWideChar(file_name, &utf8_file_name);
   free(file_name);
   exe_path = std::string(utf8_file_name);
+  free(utf8_file_name);
 #elif defined(CAPSULE_MACOS)
+  uint32_t mac_file_name_characters = file_name_characters;
   char *utf8_file_name = reinterpret_cast<char *>(calloc(file_name_characters, sizeof(char)));
-  if (_NSGetExecutablePath(utf8_file_name, file_name_characters) != 0) {
+  if (_NSGetExecutablePath(utf8_file_name, &mac_file_name_characters) != 0) {
     capsule_log("Could not get our own executable path, bailing out");
     exit(1);
   }
-  exe_path = std::string(utf8_file_name);
+  char *utf8_absolute_file_name = realpath(utf8_file_name, nullptr);
+  free(utf8_file_name);
+  exe_path = std::string(utf8_absolute_file_name);
+  free(utf8_absolute_file_name);
 #elif defined(CAPSULE_LINUX)
   char *utf8_file_name = reinterpret_cast<char *>(calloc(file_name_characters, sizeof(char)));
   ssize_t dest_num_characters = readlink("/proc/self/exe", utf8_file_name, file_name_characters);
@@ -169,6 +174,7 @@ int main (int argc, char **argv) {
   char *utf8_absolute_file_name = realpath(utf8_file_name, nullptr);
   free(utf8_file_name);
   exe_path = std::string(utf8_absolute_file_name);
+  free(utf8_absolute_file_name);
 #endif
 
   capsule_log("Running from: %s", exe_path.c_str());
