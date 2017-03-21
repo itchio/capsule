@@ -153,7 +153,7 @@ int capsulerun_main (capsule_args_t *args) {
 
     capsule_hotkey_init(&ml);
 
-    ml.run();
+    ml.Run();
   } else {
     capsule_log("Error %lu: Cannot launch process and inject dll.", err);
     return 127;

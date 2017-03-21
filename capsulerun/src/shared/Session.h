@@ -2,7 +2,6 @@
 
 #include "AudioReceiver.h"
 #include "VideoReceiver.h"
-#include "OverlayRenderer.h"
 
 #include <thread>
 
@@ -13,9 +12,9 @@ class Session {
       video(video),
       audio(audio) {};
     ~Session();
-    void start();
-    void stop();
-    void join();
+    void Start();
+    void Stop();
+    void Join();
 
     struct encoder_params_s encoder_params;
 
@@ -27,5 +26,4 @@ class Session {
   private:
     std::thread *encoder_thread;
     capsule_args_t *args;
-    OverlayRenderer *overlay_renderer;
 };

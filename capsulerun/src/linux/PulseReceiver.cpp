@@ -6,9 +6,11 @@
 
 using namespace std;
 
-static void read_loop (PulseReceiver *pr) {
+// TODO: use trick from http://stackoverflow.com/questions/10673585/start-thread-with-member-function
+// to avoid this.
+static void ReadLoop (PulseReceiver *pr) {
   while (true) {
-    if (!pr->read_from_pa()) {
+    if (!pr->ReadFromPa()) {
       return;
     }
   }
@@ -61,10 +63,10 @@ PulseReceiver::PulseReceiver() {
   process_index = 0;
 
   // start reading
-  pa_thread = new thread(read_loop, this);
+  pa_thread = new thread(ReadLoop, this);
 }
 
-bool PulseReceiver::read_from_pa() {
+bool PulseReceiver::ReadFromPa() {
   {
     lock_guard<mutex> lock(pa_mutex);
 
@@ -106,12 +108,12 @@ bool PulseReceiver::read_from_pa() {
   return true;
 }
 
-int PulseReceiver::receive_format(audio_format_t *afmt_out) {
+int PulseReceiver::ReceiveFormat(audio_format_t *afmt_out) {
   memcpy(afmt_out, &afmt, sizeof(audio_format_t));
   return 0;
 }
 
-void *PulseReceiver::receive_frames(int *frames_received) {
+void *PulseReceiver::ReceiveFrames(int *frames_received) {
   lock_guard<mutex> lock(buffer_mutex);
 
   if (buffer_state[process_index] != AUDIO_BUFFER_COMMITTED) {
@@ -135,7 +137,7 @@ void *PulseReceiver::receive_frames(int *frames_received) {
   }
 }
 
-void PulseReceiver::stop() {
+void PulseReceiver::Stop() {
   {
     lock_guard<mutex> lock(pa_mutex);
     if (ctx) {

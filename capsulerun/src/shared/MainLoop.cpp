@@ -13,9 +13,9 @@ MICROPROFILE_DEFINE(MainLoopCycle, "MainLoop", "Cycle", 0xff00ff38);
 MICROPROFILE_DEFINE(MainLoopRead, "MainLoop", "Read", 0xff00ff00);
 MICROPROFILE_DEFINE(MainLoopProcess, "MainLoop", "Process", 0xff773744);
 
-void MainLoop::run () {
+void MainLoop::Run () {
   MICROPROFILE_SCOPE(MainLoopCycle);
-  capsule_log("In MainLoop::run, exec is %s", args->exec);
+  capsule_log("In MainLoop::Run, exec is %s", args->exec);
 
   while (true) {
     MICROPROFILE_SCOPE(MainLoopCycle);
@@ -27,7 +27,7 @@ void MainLoop::run () {
       MICROPROFILE_SCOPE(MainLoopRead);
       buf = conn->read();
       if (!buf) {
-        capsule_log("MainLoop::run: pipe closed");
+        capsule_log("MainLoop::Run: pipe closed");
         break;
       }
     }
@@ -38,20 +38,20 @@ void MainLoop::run () {
       switch (pkt->message_type()) {
         case Message_VideoSetup: {
           auto vs = static_cast<const VideoSetup*>(pkt->message());
-          start_session(vs);
+          StartSession(vs);
           break;
         }
         case Message_VideoFrameCommitted: {
           auto vfc = static_cast<const VideoFrameCommitted*>(pkt->message());
           if (session && session->video) {
-            session->video->frame_committed(vfc->index(), vfc->timestamp());
+            session->video->FrameCommitted(vfc->index(), vfc->timestamp());
           } else {
             capsule_log("no session, ignoring VideoFrameCommitted")
           }
           break;
         }
         default: {
-          capsule_log("MainLoop::run: received %s - not sure what to do", EnumNameMessage(pkt->message_type()));
+          capsule_log("MainLoop::Run: received %s - not sure what to do", EnumNameMessage(pkt->message_type()));
           break;
         }
       }
@@ -60,21 +60,21 @@ void MainLoop::run () {
     delete[] buf;
   }
 
-  end_session();  
-  join_sessions();
+  EndSession();  
+  JoinSessions();
 }
 
-void MainLoop::capture_flip () {
-  capsule_log("MainLoop::capture_flip")
+void MainLoop::CaptureFlip () {
+  capsule_log("MainLoop::CaptureFlip")
   if (session) {
-    capture_stop();
+    CaptureStop();
   } else {
-    // TODO: ignore subsequent capture_start until the capture actually started
-    capture_start();
+    // TODO: ignore subsequent CaptureStart until the capture actually started
+    CaptureStart();
   }
 }
 
-void MainLoop::capture_start () {
+void MainLoop::CaptureStart () {
   flatbuffers::FlatBufferBuilder builder(1024);
   auto cps = CreateCaptureStart(builder, args->fps, args->size_divider, args->gpu_color_conv);
   auto opkt = CreatePacket(builder, Message_CaptureStart, cps.Union());
@@ -82,7 +82,7 @@ void MainLoop::capture_start () {
   conn->write(builder);
 }
 
-void MainLoop::end_session () {
+void MainLoop::EndSession () {
   if (!session) {
     capsule_log("MainLoop::end_session: no session to end")
     return;
@@ -91,23 +91,23 @@ void MainLoop::end_session () {
   capsule_log("MainLoop::end_session: ending %p", session)
   auto old_session = session;
   session = nullptr;
-  old_session->stop();
+  old_session->Stop();
   old_sessions.push_back(old_session);
 }
 
-void MainLoop::join_sessions () {
+void MainLoop::JoinSessions () {
   capsule_log("MainLoop::join_sessions: joining %d sessions", old_sessions.size())
 
   for (Session *session: old_sessions) {
     capsule_log("MainLoop::join_sessions: joining session %p", session)
-    session->join();
+    session->Join();
   }
 
   capsule_log("MainLoop::join_sessions: joined all sessions!")
 }
 
-void MainLoop::capture_stop () {
-  end_session();
+void MainLoop::CaptureStop () {
+  EndSession();
 
   flatbuffers::FlatBufferBuilder builder(1024);
   auto cps = CreateCaptureStop(builder);
@@ -116,7 +116,7 @@ void MainLoop::capture_stop () {
   conn->write(builder);
 }
 
-void MainLoop::start_session (const VideoSetup *vs) {
+void MainLoop::StartSession (const VideoSetup *vs) {
   capsule_log("Setting up encoder");
 
   video_format_t vfmt;
@@ -151,5 +151,5 @@ void MainLoop::start_session (const VideoSetup *vs) {
   }
 
   session = new Session(args, video, audio);
-  session->start();
+  session->Start();
 }

@@ -20,7 +20,7 @@ static void capsule_hotkey_poll (MainLoop *ml) {
 
         switch (ev.type) {
             case KeyPress:
-                ml->capture_flip();
+                ml->CaptureFlip();
             default:
                 break;
         }

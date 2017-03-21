@@ -22,18 +22,18 @@ class MainLoop {
       args(args),
       conn(conn)
       {};
-    void run(void);
-    void capture_flip();
+    void Run(void);
+    void CaptureFlip();
 
     audio_receiver_factory_t audio_receiver_factory = nullptr;
 
   private:
-    void end_session();
-    void join_sessions();
+    void EndSession();
+    void JoinSessions();
 
-    void capture_start();
-    void capture_stop();
-    void start_session(const Capsule::Messages::VideoSetup *vs);
+    void CaptureStart();
+    void CaptureStop();
+    void StartSession(const Capsule::Messages::VideoSetup *vs);
 
     capsule_args_t *args;
 

@@ -124,7 +124,7 @@ int capsulerun_main (capsule_args_t *args) {
   ml.audio_receiver_factory = audio_receiver_factory;
 
   capsule_hotkey_init(&ml);
-  ml.run();
+  ml.Run();
 
   return exit_code;
 }

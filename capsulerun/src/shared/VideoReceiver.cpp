@@ -38,12 +38,12 @@ VideoReceiver::VideoReceiver (Connection *conn_in, video_format_t vfmt_in, shoom
   commit_index = 0;
 }
 
-int VideoReceiver::receive_format(video_format_t *vfmt_out) {
+int VideoReceiver::ReceiveFormat(video_format_t *vfmt_out) {
   memcpy(vfmt_out, &vfmt, sizeof(video_format_t));
   return 0;
 }
 
-int VideoReceiver::receive_frame(uint8_t *buffer_out, size_t buffer_size_out, int64_t *timestamp_out) {
+int VideoReceiver::ReceiveFrame(uint8_t *buffer_out, size_t buffer_size_out, int64_t *timestamp_out) {
   FrameInfo info {};
 
   while (true) {
@@ -109,7 +109,7 @@ int VideoReceiver::receive_frame(uint8_t *buffer_out, size_t buffer_size_out, in
   return buffer_size_out;
 }
 
-void VideoReceiver::frame_committed(int index, int64_t timestamp) {
+void VideoReceiver::FrameCommitted(int index, int64_t timestamp) {
   {
     lock_guard<mutex> lock(stopped_mutex);
     if (stopped) {
@@ -159,7 +159,7 @@ void VideoReceiver::frame_committed(int index, int64_t timestamp) {
   conn->write(builder);
 }
 
-void VideoReceiver::stop() {
+void VideoReceiver::Stop() {
   lock_guard<mutex> lock(stopped_mutex);
   stopped = true;
 }

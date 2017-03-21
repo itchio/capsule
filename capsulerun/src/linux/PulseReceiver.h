@@ -19,11 +19,11 @@ class PulseReceiver : public AudioReceiver {
     PulseReceiver();
     virtual ~PulseReceiver();
 
-    virtual int receive_format(audio_format_t *afmt);
-    virtual void *receive_frames(int *frames_received);
-    virtual void stop();
+    virtual int ReceiveFormat(audio_format_t *afmt);
+    virtual void *ReceiveFrames(int *frames_received);
+    virtual void Stop();
 
-    bool read_from_pa();
+    bool ReadFromPa();
 
   private:
     audio_format_t afmt;

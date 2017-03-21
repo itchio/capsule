@@ -22,9 +22,9 @@ class WasapiReceiver : public AudioReceiver {
     WasapiReceiver();
     virtual ~WasapiReceiver();
 
-    virtual int receive_format(audio_format_t *afmt);
-    virtual void *receive_frames(int *frames_received);
-    virtual void stop();
+    virtual int ReceiveFormat(audio_format_t *afmt);
+    virtual void *ReceiveFrames(int *frames_received);
+    virtual void Stop();
 
   private:
     audio_format_t afmt;

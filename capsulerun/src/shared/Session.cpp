@@ -9,22 +9,22 @@
 using namespace std;
 
 static int receive_video_format (Session *s, video_format_t *vfmt) {
-  return s->video->receive_format(vfmt);
+  return s->video->ReceiveFormat(vfmt);
 }
 
 static int receive_video_frame (Session *s, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
-  return s->video->receive_frame(buffer, buffer_size, timestamp);
+  return s->video->ReceiveFrame(buffer, buffer_size, timestamp);
 }
 
 static int receive_audio_format (Session *s, audio_format_t *afmt) {
-  return s->audio->receive_format(afmt);
+  return s->audio->ReceiveFormat(afmt);
 }
 
 static void *receive_audio_frames (Session *s, int *frames_received) {
-  return s->audio->receive_frames(frames_received);
+  return s->audio->ReceiveFrames(frames_received);
 }
 
-void Session::start () {
+void Session::Start () {
   memset(&encoder_params, 0, sizeof(encoder_params));
   encoder_params.private_data = this;
   encoder_params.receive_video_format = (receive_video_format_t) receive_video_format;
@@ -39,22 +39,19 @@ void Session::start () {
   }
 
   encoder_thread = new thread(encoder_run, args, &encoder_params);
-
-  capsule_log("Initializing overlay renderer...");
-  overlay_renderer = new OverlayRenderer(args);
 }
 
-void Session::stop () {
+void Session::Stop () {
   if (video) {
-    video->stop();
+    video->Stop();
   }
 
   if (audio) {
-    audio->stop();
+    audio->Stop();
   }
 }
 
-void Session::join () {
+void Session::Join () {
   capsule_log("Waiting for encoder thread...");
   encoder_thread->join();
 }

@@ -67,7 +67,7 @@ void capsulerun_main_thread (capsule_args_t *args) {
 
   MainLoop ml {args, conn};
   capsule_hotkey_init(&ml);
-  ml.run();
+  ml.Run();
 
   int child_status;
   pid_t wait_result;

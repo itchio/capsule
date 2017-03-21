@@ -118,14 +118,14 @@ WasapiReceiver::WasapiReceiver() {
   }
 }
 
-int WasapiReceiver::receive_format(audio_format_t *afmt_out) {
+int WasapiReceiver::ReceiveFormat(audio_format_t *afmt_out) {
   MICROPROFILE_SCOPE(WasapiReceiveFormat);
 
   memcpy(afmt_out, &afmt, sizeof(audio_format_t));
   return 0;
 }
 
-void *WasapiReceiver::receive_frames(int *frames_received) {
+void *WasapiReceiver::ReceiveFrames(int *frames_received) {
   MICROPROFILE_SCOPE(WasapiReceiveFrames);
 
   lock_guard<mutex> lock(stopped_mutex);
@@ -177,7 +177,7 @@ void *WasapiReceiver::receive_frames(int *frames_received) {
   return buffer;
 }
 
-void WasapiReceiver::stop() {
+void WasapiReceiver::Stop() {
   lock_guard<mutex> lock(stopped_mutex);
 
   HRESULT hr = audio_client->Stop();

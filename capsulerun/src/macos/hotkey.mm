@@ -19,7 +19,7 @@ int capsule_hotkey_init(MainLoop *ml) {
 
   capsule_log("capsule_hotkey_init: kVK_F9 is %d", kVK_F9);
   DDHotKey *hotKey = [[DDHotKeyCenter sharedHotKeyCenter] registerHotKeyWithKeyCode:kVK_F9 modifierFlags:0 task:^(NSEvent *ev) {
-    ml->capture_flip();
+    ml->CaptureFlip();
   }];
 
   if (hotKey == nil) {

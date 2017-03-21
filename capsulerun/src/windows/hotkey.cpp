@@ -20,7 +20,7 @@ static void capsule_hotkey_poll(MainLoop *ml) {
   while (GetMessage(&msg, NULL, 0, 0) != 0) {
     if (msg.message = WM_HOTKEY) {
       capsule_log("capsule_hotkey_poll: Starting capture!");
-      ml->capture_flip();
+      ml->CaptureFlip();
     }
   }
 }
