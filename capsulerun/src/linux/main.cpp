@@ -37,17 +37,13 @@ static AudioReceiver *audio_receiver_factory () {
 }
 
 int capsulerun_main (capsule_args_t *args) {
-  char libcapsule_path[CAPSULE_MAX_PATH_LENGTH];
-  const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s/libcapsule.so", args->libpath);
-
-  if (libcapsule_path_length > CAPSULE_MAX_PATH_LENGTH) {
-    capsule_log("libcapsule path too long (%d > %d)", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
-    exit(1);
-  }
+  std::string libcapsule32_path = std::string(args->libpath) + "/libcapsule32.so";
+  std::string libcapsule64_path = std::string(args->libpath) + "/libcapsule64.so";
+  std::string ldpreload = libcapsule32_path + ":" + libcapsule64_path;
 
   pid_t child_pid;
 
-  if (setenv("LD_PRELOAD", libcapsule_path, 1 /* replace */) != 0) {
+  if (setenv("LD_PRELOAD", ldpreload.c_str(), 1 /* replace */) != 0) {
     capsule_log("couldn't set LD_PRELOAD'");
     exit(1);
   }

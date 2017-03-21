@@ -49,7 +49,7 @@ calls to them so that it may capture video and audio frames.
       * [x] H264 veryfast encode at variable fps
       * [x] AAC sample conversion + encoding
       * [x] Muxing into MP4
-      * [ ] Encoder-side frame buffer / async frame download
+      * [x] Encoder-side frame buffer / async frame download
 
 ### Linux
 
@@ -61,7 +61,7 @@ calls to them so that it may capture video and audio frames.
     * [x] capsulerun relays stdout/stderr
     * [x] capsulerun relays exit code
     * [x] Interposing via `LD_PRELOAD` dlopen/dlsym
-      * [ ] capsulerun picks correct library architecture to inject
+      * [x] capsulerun picks correct library architecture to inject
     * [x] Interposing dlopen/dlsym
     * [x] Communicate by fifo
     * [x] Shared memory
