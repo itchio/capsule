@@ -20,8 +20,6 @@
 
 int CapsuleHotkeyInit(MainLoop *ml);
 
-using namespace std;
-
 extern char **environ;
 
 void CapsulerunMainThread (capsule_args_t *args) {
@@ -94,7 +92,7 @@ void CapsulerunMainThread (capsule_args_t *args) {
 }
 
 int CapsulerunMain (capsule_args_t *args) {
-  thread main_thread(CapsulerunMainThread, args);
+  std::thread main_thread(CapsulerunMainThread, args);
   CapsuleRunApp();
   return 0;
 }
