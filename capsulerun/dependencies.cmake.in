@@ -2,7 +2,7 @@ include(GetPrerequisites)
 get_prerequisites(
   @CAPSULERUN_BINARY_PATH@
   DEPENDENCIES
-  1 # exclude system
+  0 # exclude system
   1 # recurse
   "" # exepath
   "@CAPSULERUN_LIBRARY_DIRS@" #dirs
@@ -18,9 +18,11 @@ gp_resolve_item(
 )
 get_filename_component(DEPENDENCY_NAME "${DEPENDENCY_RESOLVED}" NAME)
 get_filename_component(DEPENDENCY_REALPATH "${DEPENDENCY_RESOLVED}" REALPATH)
+if("${DEPENDENCY_NAME}" MATCHES "^(lib)?(av|sw|x264)")
 file(INSTALL
   FILES "${DEPENDENCY_REALPATH}"
   DESTINATION "${CMAKE_BINARY_DIR}/dist"
   RENAME "${DEPENDENCY_NAME}"
 )
+endif()
 endforeach() # capsulerun_dependency
