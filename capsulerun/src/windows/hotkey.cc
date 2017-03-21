@@ -5,9 +5,7 @@
 
 #include <thread>
 
-using namespace std;
-
-static void capsule_hotkey_poll(MainLoop *ml) {
+static void CapsuleHotkeyPoll(MainLoop *ml) {
   BOOL success = RegisterHotKey(NULL, 1, MOD_NOREPEAT, VK_F9);
 
   if (!success) {
@@ -25,11 +23,11 @@ static void capsule_hotkey_poll(MainLoop *ml) {
   }
 }
 
-int capsule_hotkey_init(MainLoop *ml) {
+int CapsuleHotkeyInit(MainLoop *ml) {
   // we must register from the same thread we use to poll,
   // since we don't register it for a specific hwnd.
   // That's how Win32 message queues work!
-  thread poll_thread(capsule_hotkey_poll, ml);
+  std::thread poll_thread(capsule_hotkey_poll, ml);
   poll_thread.detach();
 
   return 0;

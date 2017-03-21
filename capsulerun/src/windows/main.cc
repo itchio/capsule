@@ -15,18 +15,16 @@
 
 #include "strings.h"
 
-using namespace std;
-
 static bool connected = false;
 static DWORD exitCode = 0;
 
-int capsule_hotkey_init(MainLoop *ml);
+int CapsuleHotkeyInit(MainLoop *ml);
 
-AudioReceiver *audio_receiver_factory() {
+AudioReceiver *AudioReceiverFactory() {
   return new WasapiReceiver();
 }
 
-static void wait_for_child (HANDLE hProcess) {
+static void WaitForChild (HANDLE hProcess) {
   LONG platform = NktHookLibHelpers::GetProcessPlatform(hProcess);
   if (platform == NKTHOOKLIB_ProcessPlatformX86) {
     cdprintf("Child is 32-bit!");
@@ -142,14 +140,14 @@ int capsulerun_main (capsule_args_t *args) {
   if (err == ERROR_SUCCESS) {
     CapsuleLog("Process #%lu successfully launched with dll injected!", pi.dwProcessId);
 
-    thread child_thread(wait_for_child, pi.hProcess);
+    std::thread child_thread(WaitForChild, pi.hProcess);
     child_thread.detach();
 
     conn->connect();
     connected = true;
 
     MainLoop ml {args, conn};
-    ml.audio_receiver_factory = audio_receiver_factory;
+    ml.audio_receiver_factory = AudioReceiverFactory;
 
     capsule_hotkey_init(&ml);
 
