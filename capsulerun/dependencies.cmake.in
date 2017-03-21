@@ -2,10 +2,10 @@ include(GetPrerequisites)
 get_prerequisites(
   @CAPSULERUN_BINARY_PATH@
   DEPENDENCIES
-  0 # exclude system
+  @CAPSULERUN_GP_EXCLUDE_SYSTEM@ # exclude system
   1 # recurse
   "" # exepath
-  "@CAPSULERUN_LIBRARY_DIRS@" #dirs
+  @CAPSULERUN_LIBRARY_DIRS@ #dirs
 )
 
 foreach(DEPENDENCY ${DEPENDENCIES})
