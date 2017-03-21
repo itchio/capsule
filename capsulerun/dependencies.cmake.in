@@ -9,6 +9,7 @@ get_prerequisites(
 )
 
 foreach(DEPENDENCY ${DEPENDENCIES})
+if("${DEPENDENCY}" MATCHES "^(lib)?(av|sw|x264)")
 gp_resolve_item(
   @CAPSULERUN_BINARY_PATH@
   "${DEPENDENCY}"
@@ -18,7 +19,6 @@ gp_resolve_item(
 )
 get_filename_component(DEPENDENCY_NAME "${DEPENDENCY_RESOLVED}" NAME)
 get_filename_component(DEPENDENCY_REALPATH "${DEPENDENCY_RESOLVED}" REALPATH)
-if("${DEPENDENCY_NAME}" MATCHES "^(lib)?(av|sw|x264)")
 file(INSTALL
   FILES "${DEPENDENCY_REALPATH}"
   DESTINATION "${CMAKE_BINARY_DIR}/dist"
