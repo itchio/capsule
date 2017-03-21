@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../shared/AudioReceiver.h"
+#include "../shared/audio_receiver.h"
 
-#include "pulse-dynamic.h"
+#include "pulse_dynamic.h"
 
 #include <thread>
 #include <mutex>

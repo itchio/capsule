@@ -2,7 +2,7 @@
 #include <capsule/messages.h>
 #include <capsule/logging.h>
 
-#include "VideoReceiver.h"
+#include "video_receiver.h"
 
 using namespace Capsule::Messages;
 using namespace std;

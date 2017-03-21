@@ -3,7 +3,7 @@
 #include "win-capture.h"
 
 #include <d3d9.h>
-#include "d3d9-vtable-helpers.h"
+#include "d3d9_vtable_helpers.h"
 
 /* this is used just in case Present calls PresentEx or vice versa. */
 static int present_recurse = 0;

@@ -1,5 +1,5 @@
 
-#include "FPSCounter.h"
+#include "fps_counter.h"
 
 using namespace std;
 

@@ -1,5 +1,5 @@
 
-#include "pulse-dynamic.h"
+#include "pulse_dynamic.h"
 
 #include <dlfcn.h>
 

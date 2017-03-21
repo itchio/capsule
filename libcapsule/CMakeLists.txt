@@ -25,7 +25,7 @@ add_definitions(-DBUILD_CAPSULE_DLL)
 
 set(libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/shared/capsule.cc
-    ${libcapsule_SOURCE_DIR}/shared/gl-capture.cc
+    ${libcapsule_SOURCE_DIR}/shared/gl_capture.cc
     ${libcapsule_SOURCE_DIR}/shared/io.cc
     ${libcapsule_SOURCE_DIR}/shared/timer.cc
     ${libcapsule_SOURCE_DIR}/shared/logging.cc
@@ -49,18 +49,18 @@ endif()
 if(WIN32)
   list(APPEND libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/windows/hooks.cc
-    ${libcapsule_SOURCE_DIR}/windows/process-hooks.cc
-    ${libcapsule_SOURCE_DIR}/windows/dxgi-hooks.cc
-    ${libcapsule_SOURCE_DIR}/windows/dxgi-vtable-helpers.cc
-    ${libcapsule_SOURCE_DIR}/windows/d3d9-hooks.cc
-    ${libcapsule_SOURCE_DIR}/windows/d3d9-vtable-helpers.cc
-    ${libcapsule_SOURCE_DIR}/windows/d3d9-capture.cc
-    ${libcapsule_SOURCE_DIR}/windows/d3d10-capture.cc
-    ${libcapsule_SOURCE_DIR}/windows/d3d11-capture.cc
-    ${libcapsule_SOURCE_DIR}/windows/gl-capture.cc
-    ${libcapsule_SOURCE_DIR}/windows/ddraw-hooks.cc
-    ${libcapsule_SOURCE_DIR}/windows/ddraw-capture.cc
-    ${libcapsule_SOURCE_DIR}/windows/dc-capture.cc
+    ${libcapsule_SOURCE_DIR}/windows/process_hooks.cc
+    ${libcapsule_SOURCE_DIR}/windows/dxgi_hooks.cc
+    ${libcapsule_SOURCE_DIR}/windows/dxgi_vtable-helpers.cc
+    ${libcapsule_SOURCE_DIR}/windows/d3d9_hooks.cc
+    ${libcapsule_SOURCE_DIR}/windows/d3d9_vtable-helpers.cc
+    ${libcapsule_SOURCE_DIR}/windows/d3d9_capture.cc
+    ${libcapsule_SOURCE_DIR}/windows/d3d10_capture.cc
+    ${libcapsule_SOURCE_DIR}/windows/d3d11_capture.cc
+    ${libcapsule_SOURCE_DIR}/windows/gl_capture.cc
+    ${libcapsule_SOURCE_DIR}/windows/ddraw_hooks.cc
+    ${libcapsule_SOURCE_DIR}/windows/ddraw_capture.cc
+    ${libcapsule_SOURCE_DIR}/windows/dc_capture.cc
   )
 endif()
 

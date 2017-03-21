@@ -9,10 +9,10 @@
 #include <capsulerun.h>
 #include <capsulerun_args.h>
 
-#include "VideoReceiver.h"
-#include "AudioReceiver.h"
-#include "Session.h"
-#include "Connection.h"
+#include "video_receiver.h"
+#include "audio_receiver.h"
+#include "session.h"
+#include "connection.h"
 
 typedef AudioReceiver * (*audio_receiver_factory_t)();
 

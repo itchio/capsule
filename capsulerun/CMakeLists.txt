@@ -24,18 +24,18 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/shared/main.cc
   ${capsulerun_SOURCE_DIR}/shared/encoder.cc
   ${capsulerun_SOURCE_DIR}/shared/argparse.c
-  ${capsulerun_SOURCE_DIR}/shared/MainLoop.cc
-  ${capsulerun_SOURCE_DIR}/shared/VideoReceiver.cc
-  ${capsulerun_SOURCE_DIR}/shared/Session.cc
-  ${capsulerun_SOURCE_DIR}/shared/Connection.cc
-  ${capsulerun_SOURCE_DIR}/shared/FPSCounter.cc
+  ${capsulerun_SOURCE_DIR}/shared/main_loop.cc
+  ${capsulerun_SOURCE_DIR}/shared/video_receiver.cc
+  ${capsulerun_SOURCE_DIR}/shared/session.cc
+  ${capsulerun_SOURCE_DIR}/shared/connection.cc
+  ${capsulerun_SOURCE_DIR}/shared/fps_counter.cc
   ${microprofile_SOURCE_DIR}/microprofile.cpp
 )
 
 if(WIN32)
   list(APPEND capsulerun_SRC
     ${capsulerun_SOURCE_DIR}/windows/strings.cc
-    ${capsulerun_SOURCE_DIR}/windows/WasapiReceiver.cc
+    ${capsulerun_SOURCE_DIR}/windows/wasapi_receiver.cc
     ${capsulerun_SOURCE_DIR}/windows/quote.cc
     ${capsulerun_SOURCE_DIR}/windows/hotkey.cc
     ${capsulerun_SOURCE_DIR}/windows/main.cc
@@ -55,8 +55,8 @@ endif()
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   list(APPEND capsulerun_SRC
     ${capsulerun_SOURCE_DIR}/shared/env.cc
-    ${capsulerun_SOURCE_DIR}/linux/pulse-dynamic.cc
-    ${capsulerun_SOURCE_DIR}/linux/PulseReceiver.cc
+    ${capsulerun_SOURCE_DIR}/linux/pulse_dynamic.cc
+    ${capsulerun_SOURCE_DIR}/linux/pulse_receiver.cc
     ${capsulerun_SOURCE_DIR}/linux/hotkey.cc
     ${capsulerun_SOURCE_DIR}/linux/main.cc
   )

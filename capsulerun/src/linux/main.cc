@@ -3,8 +3,8 @@
 
 #include "../shared/env.h"
 
-#include "../shared/MainLoop.h"
-#include "./PulseReceiver.h"
+#include "../shared/main_loop.h"
+#include "./pulse_receiver.h"
 
 #include <stdio.h>
 #include <stdlib.h>

@@ -127,7 +127,7 @@ BOOL CAPSULE_STDCALL CreateProcessW_hook (
   return success;
 }
 
-void capsule_install_process_hooks () {
+void CapsuleInstallProcessHooks () {
   DWORD err;
 
   HMODULE kernel = LoadLibrary(L"kernel32.dll");

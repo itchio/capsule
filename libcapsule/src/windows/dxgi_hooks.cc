@@ -1,9 +1,9 @@
 
 #include <capsule.h>
-#include "win-capture.h"
+#include "win_capture.h"
 
-#include "dxgi-vtable-helpers.h"
-#include "dxgi-util.h"
+#include "dxgi_vtable-helpers.h"
+#include "dxgi_util.h"
 
 typedef void (* dxgi_draw_overlay_func_t)(void);
 typedef void (* dxgi_capture_func_t)(void *swap_ptr, void *backbuffer_ptr);

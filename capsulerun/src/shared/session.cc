@@ -1,8 +1,8 @@
 
-#include "Session.h"
+#include "session.h"
 
-#include "VideoReceiver.h"
-#include "AudioReceiver.h"
+#include "video_receiver.h"
+#include "audio_receiver.h"
 
 #include <capsulerun.h>
 

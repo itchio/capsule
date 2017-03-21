@@ -3,7 +3,7 @@
 #include "win-capture.h"
 #include "dxgi-util.h"
 
-#include "./d3d11-shaders.h"
+#include "./d3d11_shaders.h"
 
 #include <d3d11.h>
 #include <d3dcompiler.h>

@@ -1,4 +1,4 @@
-#include "Connection.h"
+#include "connection.h"
 
 #if defined(CAPSULE_LINUX)
 #include <sys/mman.h>

@@ -14,7 +14,7 @@ extern "C" {
     #include <libswresample/swresample.h>
 }
 
-#include "./FPSCounter.h"
+#include "./fps_counter.h"
 
 #include <chrono>
 

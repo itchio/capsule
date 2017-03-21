@@ -4,7 +4,7 @@
 
 #include <d3d9.h>
 #include <dxgi.h>
-#include "dxgi-util.h"
+#include "dxgi_util.h"
 
 // inspired by libobs
 struct d3d9_data {

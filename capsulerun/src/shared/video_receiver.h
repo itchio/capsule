@@ -5,8 +5,8 @@
 #include <shoom.h>
 
 #include <capsulerun.h>
-#include "LockingQueue.h"
-#include "Connection.h"
+#include "locking_queue.h"
+#include "connection.h"
 
 struct FrameInfo {
   int index;

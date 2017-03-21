@@ -1,7 +1,7 @@
 
-#include <capsule/messages.h>
+#include "main_loop.h"
 
-#include "MainLoop.h"
+#include <capsule/messages.h>
 
 #include <microprofile.h>
 

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "AudioReceiver.h"
-#include "VideoReceiver.h"
+#include "audio_receiver.h"
+#include "video_receiver.h"
 
 #include <thread>
 

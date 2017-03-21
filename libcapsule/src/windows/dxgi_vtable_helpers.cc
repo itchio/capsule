@@ -5,7 +5,7 @@
 #include <dxgi1_3.h>
 #undef CINTERFACE
 
-#include "dxgi-vtable-helpers.h"
+#include "dxgi_vtable_helpers.h"
 
 void *capsule_get_IDXGIFactory_CreateSwapChain_address (void *pFactory) {
   IDXGIFactory *factory = (IDXGIFactory *) pFactory;
