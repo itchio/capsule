@@ -20,14 +20,13 @@ const IID IID_IAudioCaptureClient = __uuidof(IAudioCaptureClient);
               if ((punk) != NULL)  \
                 { (punk)->Release(); (punk) = NULL; }
 
+// TODO: signal errors without exceptions
 #include <stdexcept>
 
 #include <microprofile.h>
 
 MICROPROFILE_DEFINE(WasapiReceiveFormat, "Wasapi", "WasapiReceiveFormat", 0xff00ff38);
 MICROPROFILE_DEFINE(WasapiReceiveFrames, "Wasapi", "WasapiReceiveFrames", 0xff00ff00);
-
-using namespace std;
 
 WasapiReceiver::WasapiReceiver() {
   memset(&afmt, 0, sizeof(audio_format_t));
