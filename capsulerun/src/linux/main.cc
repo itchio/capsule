@@ -39,7 +39,7 @@ static AudioReceiver *audio_receiver_factory () {
   return new capsule::audio::PulseReceiver();
 }
 
-static void wait_for_child (int child_pid) {
+static void WaitForChild (int child_pid) {
   int child_status;
   pid_t wait_result;
 
@@ -113,7 +113,7 @@ int capsulerun_main (capsule_args_t *args) {
 
     CapsuleLog("pid %d given to child %s", child_pid, args->exec);
 
-    thread child_thread(wait_for_child, child_pid);
+    thread child_thread(WaitForChild, child_pid);
     child_thread.detach();
   }
 
@@ -123,7 +123,7 @@ int capsulerun_main (capsule_args_t *args) {
   MainLoop ml {args, conn};
   ml.audio_receiver_factory = audio_receiver_factory;
 
-    CapsuleHotkeyInit(&ml);
+  CapsuleHotkeyInit(&ml);
   ml.Run();
 
   return exit_code;
