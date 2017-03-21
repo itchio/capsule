@@ -33,7 +33,7 @@ using namespace std;
 static bool connected = false;
 static int exit_code = 0;
 
-int capsule_hotkey_init(MainLoop *ml);
+int CapsuleHotkeyInit(MainLoop *ml);
 
 static AudioReceiver *audio_receiver_factory () {
   return new PulseReceiver();
@@ -123,7 +123,7 @@ int capsulerun_main (capsule_args_t *args) {
   MainLoop ml {args, conn};
   ml.audio_receiver_factory = audio_receiver_factory;
 
-  capsule_hotkey_init(&ml);
+    CapsuleHotkeyInit(&ml);
   ml.Run();
 
   return exit_code;

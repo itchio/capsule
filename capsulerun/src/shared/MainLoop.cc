@@ -25,7 +25,7 @@ void MainLoop::Run () {
 
     {
       MICROPROFILE_SCOPE(MainLoopRead);
-      buf = conn->read();
+      buf = conn_->read();
       if (!buf) {
         CapsuleLog("MainLoop::Run: pipe closed");
         break;
@@ -43,8 +43,8 @@ void MainLoop::Run () {
         }
         case Message_VideoFrameCommitted: {
           auto vfc = static_cast<const VideoFrameCommitted*>(pkt->message());
-          if (session && session->video) {
-            session->video->FrameCommitted(vfc->index(), vfc->timestamp());
+          if (session_ && session_->video) {
+            session_->video->FrameCommitted(vfc->index(), vfc->timestamp());
           } else {
             CapsuleLog("no session, ignoring VideoFrameCommitted")
           }
@@ -66,7 +66,7 @@ void MainLoop::Run () {
 
 void MainLoop::CaptureFlip () {
   CapsuleLog("MainLoop::CaptureFlip")
-  if (session) {
+  if (session_) {
     CaptureStop();
   } else {
     // TODO: ignore subsequent CaptureStart until the capture actually started
@@ -79,18 +79,18 @@ void MainLoop::CaptureStart () {
   auto cps = CreateCaptureStart(builder, args->fps, args->size_divider, args->gpu_color_conv);
   auto opkt = CreatePacket(builder, Message_CaptureStart, cps.Union());
   builder.Finish(opkt);
-  conn->write(builder);
+  conn_->write(builder);
 }
 
 void MainLoop::EndSession () {
-  if (!session) {
+  if (!session_) {
     CapsuleLog("MainLoop::end_session: no session to end")
     return;
   }
 
-  CapsuleLog("MainLoop::end_session: ending %p", session)
-  auto old_session = session;
-  session = nullptr;
+  CapsuleLog("MainLoop::end_session: ending %p", session_)
+  auto old_session = session_;
+  session_ = nullptr;
   old_session->Stop();
   old_sessions.push_back(old_session);
 }
@@ -99,7 +99,7 @@ void MainLoop::JoinSessions () {
   CapsuleLog("MainLoop::join_sessions: joining %d sessions", old_sessions.size())
 
   for (Session *session: old_sessions) {
-    CapsuleLog("MainLoop::join_sessions: joining session %p", session)
+    CapsuleLog("MainLoop::join_sessions: joining session_ %p", session)
     session->Join();
   }
 
@@ -113,7 +113,7 @@ void MainLoop::CaptureStop () {
   auto cps = CreateCaptureStop(builder);
   auto opkt = CreatePacket(builder, Message_CaptureStop, cps.Union());
   builder.Finish(opkt);
-  conn->write(builder);
+  conn_->write(builder);
 }
 
 void MainLoop::StartSession (const VideoSetup *vs) {
@@ -144,12 +144,12 @@ void MainLoop::StartSession (const VideoSetup *vs) {
     num_buffered_frames = args->buffered_frames;
   }
 
-  auto video = new VideoReceiver(conn, vfmt, shm, num_buffered_frames);
+  auto video = new VideoReceiver(conn_, vfmt, shm, num_buffered_frames);
   AudioReceiver *audio = nullptr;
   if (audio_receiver_factory && !args->no_audio) {
     audio = audio_receiver_factory();
   }
 
-  session = new Session(args, video, audio);
-  session->Start();
+  session_ = new Session(args, video, audio);
+  session_->Start();
 }

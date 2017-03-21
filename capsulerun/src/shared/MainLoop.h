@@ -20,7 +20,7 @@ class MainLoop {
   public:
     MainLoop(capsule_args_t *args, Connection *conn) :
       args(args),
-      conn(conn)
+      conn_(conn)
       {};
     void Run(void);
     void CaptureFlip();
@@ -37,7 +37,7 @@ class MainLoop {
 
     capsule_args_t *args;
 
-    Connection *conn;
-    Session *session = nullptr;
+    Connection *conn_;
+    Session *session_ = nullptr;
     std::vector<Session *> old_sessions;
 };
