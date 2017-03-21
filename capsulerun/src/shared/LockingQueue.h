@@ -7,62 +7,62 @@ template<typename T>
 class LockingQueue
 {
 public:
-    void push(T const& _data)
+    void Push(T const& data)
     {
         {
-            std::lock_guard<std::mutex> lock(guard);
-            queue.push(_data);
+            std::lock_guard<std::mutex> lock(guard_);
+            queue_.push(data);
         }
-        signal.notify_one();
+        signal_.notify_one();
     }
 
-    bool empty() const
+    bool Empty() const
     {
-        std::lock_guard<std::mutex> lock(guard);
-        return queue.empty();
+        std::lock_guard<std::mutex> lock(guard_);
+        return queue_.empty();
     }
 
-    bool tryPop(T& _value)
+    bool TryPop(T& value)
     {
-        std::lock_guard<std::mutex> lock(guard);
-        if (queue.empty())
+        std::lock_guard<std::mutex> lock(guard_);
+        if (queue_.empty())
         {
             return false;
         }
 
-        _value = queue.front();
-        queue.pop();
+        value = queue_.front();
+        queue_.pop();
         return true;
     }
 
-    void waitAndPop(T& _value)
+    void WaitAndPop(T& value)
     {
-        std::unique_lock<std::mutex> lock(guard);
-        while (queue.empty())
+        std::unique_lock<std::mutex> lock(guard_);
+        while (queue_.empty())
         {
-            signal.wait(lock);
+            signal_.wait(lock);
         }
 
-        _value = queue.front();
-        queue.pop();
+        value = queue_.front();
+        queue_.pop();
     }
 
-    bool tryWaitAndPop(T& _value, int _milli)
+    bool TryWaitAndPop(T& value, int milli)
     {
-        std::unique_lock<std::mutex> lock(guard);
-        while (queue.empty())
+        std::unique_lock<std::mutex> lock(guard_);
+        while (queue_.empty())
         {
-            signal.wait_for(lock, std::chrono::milliseconds(_milli));
+            signal_.wait_for(lock, std::chrono::milliseconds(milli));
             return false;
         }
 
-        _value = queue.front();
-        queue.pop();
+        value = queue_.front();
+        queue_.pop();
         return true;
     }
 
 private:
-    std::queue<T> queue;
-    mutable std::mutex guard;
-    std::condition_variable signal;
+    std::queue<T> queue_;
+    mutable std::mutex guard_;
+    std::condition_variable signal_;
 };

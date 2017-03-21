@@ -49,7 +49,7 @@ int VideoReceiver::ReceiveFrame(uint8_t *buffer_out, size_t buffer_size_out, int
   while (true) {
     {
       MICROPROFILE_SCOPE(VideoReceiverWait);
-      if (queue.tryWaitAndPop(info, 200)) {
+      if (queue.TryWaitAndPop(info, 200)) {
         // got a frame!
         break;
       }
@@ -141,7 +141,7 @@ void VideoReceiver::FrameCommitted(int index, int64_t timestamp) {
       }
 
       FrameInfo info {commit_index, timestamp};
-      queue.push(info);
+      queue.Push(info);
 
       {
         lock_guard<mutex> lock(buffer_mutex);
