@@ -6,8 +6,6 @@
 
 #include <thread>
 
-using namespace std;
-
 Display *capsule_x11_dpy;
 Window capsule_x11_root;
 
@@ -58,7 +56,7 @@ int CapsuleHotkeyInit(MainLoop *ml) {
     }
     XSelectInput(capsule_x11_dpy, capsule_x11_root, KeyPressMask);
 
-    thread poll_thread(CapsuleHotkeyPoll, ml);
+    std::thread poll_thread(CapsuleHotkeyPoll, ml);
     poll_thread.detach();
 
     return 0;
