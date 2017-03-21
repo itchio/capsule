@@ -10,7 +10,7 @@
 struct gl_data {
   int                     cx;
   int                     cy;
-  intptr_t                pitch;
+  int64_t                 pitch;
   GLuint                  fbo;
 
   int                     cur_tex;

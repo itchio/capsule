@@ -164,7 +164,7 @@ static void poll_infile() {
     }
 }
 
-void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, bool vflip, intptr_t pitch) {
+void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int format, bool vflip, int64_t pitch) {
     capsule_log("writing video format");
     for (int i = 0; i < NUM_BUFFERS; i++) {
         frame_locked[i] = false;
@@ -173,9 +173,9 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     flatbuffers::FlatBufferBuilder builder(1024);
 
     size_t frame_size = height * pitch;
-    capsule_log("Frame size: %d bytes", frame_size);
+    capsule_log("Frame size: %" PRIdS " bytes", frame_size);
     size_t shmem_size = frame_size * NUM_BUFFERS;
-    capsule_log("Should allocate %d bytes of shmem area", shmem_size);
+    capsule_log("Should allocate %" PRIdS " bytes of shmem area", shmem_size);
 
     string shmem_path = "capsule.shm";
     shm = new shoom::Shm(shmem_path, shmem_size);
@@ -192,12 +192,12 @@ void CAPSULE_STDCALL capsule_write_video_format(int width, int height, int forma
     auto shmem = shmem_builder.Finish();
 
     // TODO: support multiple linesizes (for planar formats)
-    long int linesize[1];
+    int64_t linesize[1];
     linesize[0] = pitch;
     auto linesize_vec = builder.CreateVector(linesize, 1);
 
     // TODO: support multiple offsets (for planar formats)
-    long int offset[1];
+    int64_t offset[1];
     offset[0] = 0;
     auto offset_vec = builder.CreateVector(offset, 1);
 
@@ -236,7 +236,7 @@ void CAPSULE_STDCALL capsule_write_video_frame(int64_t timestamp, char *frame_da
 
     flatbuffers::FlatBufferBuilder builder(1024);
 
-    ptrdiff_t offset = (frame_data_size * next_frame_index);
+    int64_t offset = (frame_data_size * next_frame_index);
     char *target = reinterpret_cast<char*>(shm->Data() + offset);
     memcpy(target, frame_data, frame_data_size);
 

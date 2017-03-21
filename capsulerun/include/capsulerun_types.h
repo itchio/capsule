@@ -7,7 +7,7 @@ typedef struct video_format_s {
   int height;
   capsule_pix_fmt_t format;
   int vflip;
-  intptr_t pitch;
+  int64_t pitch;
 } video_format_t;
 
 typedef struct audio_format_s {
