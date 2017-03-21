@@ -1,3 +1,7 @@
 
-void CapsuleRunApp();
+namespace capsule {
+
+void RunApp();
+
+} // namespace capsule
 

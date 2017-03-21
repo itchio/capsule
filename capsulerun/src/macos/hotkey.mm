@@ -6,11 +6,15 @@
 
 #include "../shared/MainLoop.h"
 
-void CapsuleRunApp () {
+namespace capsule {
+
+void RunApp () {
   [[NSApplication sharedApplication] run];
 }
 
-int CapsuleHotkeyInit(MainLoop *ml) {
+namespace hotkey {
+
+int Init(MainLoop *ml) {
   CapsuleLog("CapsuleHotkeyInit: registering hotkey");
 
   CapsuleLog("CapsuleHotkeyInit: kVK_F9 is %d", kVK_F9);
@@ -26,3 +30,5 @@ int CapsuleHotkeyInit(MainLoop *ml) {
   return 0;
 }
 
+} // namespace hotkey
+} // namespace capsule

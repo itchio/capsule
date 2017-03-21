@@ -1,8 +1,9 @@
 
 #include <capsulerun.h>
+#include <capsulerun_hotkey.h>
 
 #include "../shared/env.h"
-#include "../shared/MainLoop.h"
+#include "../shared/main_loop.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -93,7 +94,7 @@ void MainThread (capsule_args_t *args) {
 
 int Main (capsule_args_t *args) {
   std::thread main_thread(CapsulerunMainThread, args);
-  CapsuleRunApp();
+  RunApp();
   return 0;
 }
 
