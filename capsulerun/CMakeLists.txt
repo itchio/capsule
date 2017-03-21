@@ -21,44 +21,44 @@ include_directories(
 )
 
 set(capsulerun_SRC
-  ${capsulerun_SOURCE_DIR}/shared/main.cpp
-  ${capsulerun_SOURCE_DIR}/shared/encoder.cpp
+  ${capsulerun_SOURCE_DIR}/shared/main.cc
+  ${capsulerun_SOURCE_DIR}/shared/encoder.cc
   ${capsulerun_SOURCE_DIR}/shared/argparse.c
-  ${capsulerun_SOURCE_DIR}/shared/MainLoop.cpp
-  ${capsulerun_SOURCE_DIR}/shared/VideoReceiver.cpp
-  ${capsulerun_SOURCE_DIR}/shared/Session.cpp
-  ${capsulerun_SOURCE_DIR}/shared/Connection.cpp
-  ${capsulerun_SOURCE_DIR}/shared/FPSCounter.cpp
+  ${capsulerun_SOURCE_DIR}/shared/MainLoop.cc
+  ${capsulerun_SOURCE_DIR}/shared/VideoReceiver.cc
+  ${capsulerun_SOURCE_DIR}/shared/Session.cc
+  ${capsulerun_SOURCE_DIR}/shared/Connection.cc
+  ${capsulerun_SOURCE_DIR}/shared/FPSCounter.cc
   ${microprofile_SOURCE_DIR}/microprofile.cpp
 )
 
 if(WIN32)
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/windows/strings.cpp
-    ${capsulerun_SOURCE_DIR}/windows/WasapiReceiver.cpp
-    ${capsulerun_SOURCE_DIR}/windows/quote.cpp
-    ${capsulerun_SOURCE_DIR}/windows/hotkey.cpp
-    ${capsulerun_SOURCE_DIR}/windows/main.cpp
+    ${capsulerun_SOURCE_DIR}/windows/strings.cc
+    ${capsulerun_SOURCE_DIR}/windows/WasapiReceiver.cc
+    ${capsulerun_SOURCE_DIR}/windows/quote.cc
+    ${capsulerun_SOURCE_DIR}/windows/hotkey.cc
+    ${capsulerun_SOURCE_DIR}/windows/main.cc
   )
 endif()
 
 if(APPLE)
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/shared/env.cpp
+    ${capsulerun_SOURCE_DIR}/shared/env.cc
     ${capsulerun_SOURCE_DIR}/macos/DDHotKeyCenter.m
     ${capsulerun_SOURCE_DIR}/macos/DDHotKeyUtilities.m
     ${capsulerun_SOURCE_DIR}/macos/hotkey.mm
-    ${capsulerun_SOURCE_DIR}/macos/main.cpp
+    ${capsulerun_SOURCE_DIR}/macos/main.cc
   )
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/shared/env.cpp
+    ${capsulerun_SOURCE_DIR}/shared/env.cc
     ${capsulerun_SOURCE_DIR}/linux/pulse-dynamic.cc
-    ${capsulerun_SOURCE_DIR}/linux/PulseReceiver.cpp
-    ${capsulerun_SOURCE_DIR}/linux/hotkey.cpp
-    ${capsulerun_SOURCE_DIR}/linux/main.cpp
+    ${capsulerun_SOURCE_DIR}/linux/PulseReceiver.cc
+    ${capsulerun_SOURCE_DIR}/linux/hotkey.cc
+    ${capsulerun_SOURCE_DIR}/linux/main.cc
   )
   add_definitions(-D__STDC_CONSTANT_MACROS)
 endif()

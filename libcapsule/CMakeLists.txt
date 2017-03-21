@@ -24,11 +24,11 @@ include_directories(
 add_definitions(-DBUILD_CAPSULE_DLL)
 
 set(libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/shared/capsule.cpp
-    ${libcapsule_SOURCE_DIR}/shared/gl-capture.cpp
-    ${libcapsule_SOURCE_DIR}/shared/io.cpp
-    ${libcapsule_SOURCE_DIR}/shared/timer.cpp
-    ${libcapsule_SOURCE_DIR}/shared/logging.cpp
+    ${libcapsule_SOURCE_DIR}/shared/capsule.cc
+    ${libcapsule_SOURCE_DIR}/shared/gl-capture.cc
+    ${libcapsule_SOURCE_DIR}/shared/io.cc
+    ${libcapsule_SOURCE_DIR}/shared/timer.cc
+    ${libcapsule_SOURCE_DIR}/shared/logging.cc
 )
 
 if(APPLE)
@@ -39,28 +39,28 @@ if(APPLE)
     ${libcapsule_SOURCE_DIR}/macos/capsule_CGL.mm
     ${libcapsule_SOURCE_DIR}/macos/capsule_CoreAudio.mm
 
-    ${libcapsule_SOURCE_DIR}/macos/playthrough/CAPlayThrough.cpp
-    ${libcapsule_SOURCE_DIR}/macos/playthrough/CARingBuffer.cpp
-    ${libcapsule_SOURCE_DIR}/macos/playthrough/CAStreamBasicDescription.cpp
-    ${libcapsule_SOURCE_DIR}/macos/playthrough/AudioDevice.cpp
+    ${libcapsule_SOURCE_DIR}/macos/playthrough/CAPlayThrough.cc
+    ${libcapsule_SOURCE_DIR}/macos/playthrough/CARingBuffer.cc
+    ${libcapsule_SOURCE_DIR}/macos/playthrough/CAStreamBasicDescription.cc
+    ${libcapsule_SOURCE_DIR}/macos/playthrough/AudioDevice.cc
   )
 endif()
 
 if(WIN32)
   list(APPEND libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/windows/hooks.cpp
-    ${libcapsule_SOURCE_DIR}/windows/process-hooks.cpp
-    ${libcapsule_SOURCE_DIR}/windows/dxgi-hooks.cpp
-    ${libcapsule_SOURCE_DIR}/windows/dxgi-vtable-helpers.cpp
-    ${libcapsule_SOURCE_DIR}/windows/d3d9-hooks.cpp
-    ${libcapsule_SOURCE_DIR}/windows/d3d9-vtable-helpers.cpp
-    ${libcapsule_SOURCE_DIR}/windows/d3d9-capture.cpp
-    ${libcapsule_SOURCE_DIR}/windows/d3d10-capture.cpp
-    ${libcapsule_SOURCE_DIR}/windows/d3d11-capture.cpp
-    ${libcapsule_SOURCE_DIR}/windows/gl-capture.cpp
-    ${libcapsule_SOURCE_DIR}/windows/ddraw-hooks.cpp
-    ${libcapsule_SOURCE_DIR}/windows/ddraw-capture.cpp
-    ${libcapsule_SOURCE_DIR}/windows/dc-capture.cpp
+    ${libcapsule_SOURCE_DIR}/windows/hooks.cc
+    ${libcapsule_SOURCE_DIR}/windows/process-hooks.cc
+    ${libcapsule_SOURCE_DIR}/windows/dxgi-hooks.cc
+    ${libcapsule_SOURCE_DIR}/windows/dxgi-vtable-helpers.cc
+    ${libcapsule_SOURCE_DIR}/windows/d3d9-hooks.cc
+    ${libcapsule_SOURCE_DIR}/windows/d3d9-vtable-helpers.cc
+    ${libcapsule_SOURCE_DIR}/windows/d3d9-capture.cc
+    ${libcapsule_SOURCE_DIR}/windows/d3d10-capture.cc
+    ${libcapsule_SOURCE_DIR}/windows/d3d11-capture.cc
+    ${libcapsule_SOURCE_DIR}/windows/gl-capture.cc
+    ${libcapsule_SOURCE_DIR}/windows/ddraw-hooks.cc
+    ${libcapsule_SOURCE_DIR}/windows/ddraw-capture.cc
+    ${libcapsule_SOURCE_DIR}/windows/dc-capture.cc
   )
 endif()
 
