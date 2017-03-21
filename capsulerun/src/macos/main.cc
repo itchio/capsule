@@ -93,7 +93,7 @@ void MainThread (capsule_args_t *args) {
 }
 
 int Main (capsule_args_t *args) {
-  std::thread main_thread(CapsulerunMainThread, args);
+  std::thread main_thread(MainThread, args);
   RunApp();
   return 0;
 }
