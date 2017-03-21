@@ -19,19 +19,22 @@ static void ReadLoop (PulseReceiver *pr) {
 PulseReceiver::PulseReceiver() {
   memset(&afmt, 0, sizeof(audio_format_t));
 
-  if (!capsule_pulse_init()) {
+  if (!capsule::pulse::Load()) {
     return;
   }
 
   /* The sample type to use */
   static const pa_sample_spec ss = {
-      .format = PA_SAMPLE_FLOAT32LE, .rate = 44100, .channels = 2};
+      .format = PA_SAMPLE_FLOAT32LE,
+      .rate = 44100,
+      .channels = 2
+  };
 
   // TODO: list devices instead
   const char *dev = "alsa_output.pci-0000_00_1b.0.analog-stereo.monitor";
 
   int pa_err = 0;
-  ctx = _pa_simple_new(NULL,             // server
+  ctx = capsule::pulse::New(NULL,             // server
                       "capsule",        // name
                       PA_STREAM_RECORD, // direction
                       dev,              // device
@@ -76,7 +79,7 @@ bool PulseReceiver::ReadFromPa() {
     }
 
     int pa_err;
-    int ret = _pa_simple_read(ctx, in_buffer, buffer_size, &pa_err);
+    int ret = capsule::pulse::Read(ctx, in_buffer, buffer_size, &pa_err);
     if (ret < 0) {
         fprintf(stderr, "Could not read from pulseaudio, error %d (%x)\n", pa_err, pa_err);
         return false;
@@ -141,7 +144,7 @@ void PulseReceiver::Stop() {
   {
     lock_guard<mutex> lock(pa_mutex);
     if (ctx) {
-      _pa_simple_free(ctx);
+      capsule::pulse::Free(ctx);
     }
     ctx = nullptr;
   }

@@ -4,6 +4,9 @@
 #include <pulse/error.h>
 #include <pulse/gccmacro.h>
 
+namespace capsule {
+namespace pulse {
+
 typedef pa_simple* (*pa_simple_new_t)(
   const char *server,
   const char *name,
@@ -15,7 +18,7 @@ typedef pa_simple* (*pa_simple_new_t)(
   const pa_buffer_attr *attr,
   int *error
 );
-extern pa_simple_new_t _pa_simple_new;
+extern pa_simple_new_t New;
 
 typedef int (*pa_simple_read_t)(
   pa_simple *s,
@@ -23,11 +26,14 @@ typedef int (*pa_simple_read_t)(
   size_t bytes,
   int *error
 );
-extern pa_simple_read_t _pa_simple_read;
+extern pa_simple_read_t Read;
 
 typedef int (*pa_simple_free_t)(
   pa_simple *s
 );
-extern pa_simple_free_t _pa_simple_free;
+extern pa_simple_free_t Free;
 
-bool capsule_pulse_init();
+bool Load();
+
+}
+}

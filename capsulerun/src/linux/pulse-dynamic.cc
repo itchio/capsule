@@ -3,12 +3,15 @@
 
 #include <dlfcn.h>
 
-static bool loaded = false;
-pa_simple_new_t _pa_simple_new = nullptr;
-pa_simple_read_t _pa_simple_read = nullptr;
-pa_simple_free_t _pa_simple_free = nullptr;
+namespace capsule {
+namespace pulse {
 
-bool capsule_pulse_init() {
+static bool loaded;
+pa_simple_new_t New;
+pa_simple_read_t Read;
+pa_simple_free_t Free;
+
+bool Load() {
   if (loaded) {
     return true;
   }
@@ -21,12 +24,15 @@ bool capsule_pulse_init() {
     return false;
   }
 
-  _pa_simple_new = reinterpret_cast<pa_simple_new_t>(dlsym(handle, "pa_simple_new"));
-  _pa_simple_read = reinterpret_cast<pa_simple_read_t>(dlsym(handle, "pa_simple_read"));
-  _pa_simple_free = reinterpret_cast<pa_simple_free_t>(dlsym(handle, "pa_simple_free"));
+  New = reinterpret_cast<pa_simple_new_t>(dlsym(handle, "pa_simple_new"));
+  Read = reinterpret_cast<pa_simple_read_t>(dlsym(handle, "pa_simple_read"));
+  Free = reinterpret_cast<pa_simple_free_t>(dlsym(handle, "pa_simple_free"));
 
   dlclose(handle);
 
-  loaded = (_pa_simple_new && _pa_simple_read && _pa_simple_free);
+  loaded = (New && Read && Free);
   return loaded;
+}
+
+}
 }
