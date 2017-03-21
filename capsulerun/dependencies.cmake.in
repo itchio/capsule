@@ -5,11 +5,11 @@ get_prerequisites(
   @CAPSULERUN_GP_EXCLUDE_SYSTEM@ # exclude system
   1 # recurse
   "" # exepath
-  @CAPSULERUN_LIBRARY_DIRS@ #dirs
+  "@CAPSULERUN_LIBRARY_DIRS@" #dirs
 )
 
 foreach(DEPENDENCY ${DEPENDENCIES})
-if("${DEPENDENCY}" MATCHES "^(lib)?(av|sw|x264)")
+if("${DEPENDENCY}" MATCHES "(lib)?(avcodec|avformat|avutil|swscale|swresample|x264)")
 gp_resolve_item(
   @CAPSULERUN_BINARY_PATH@
   "${DEPENDENCY}"
