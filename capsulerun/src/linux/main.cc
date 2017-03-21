@@ -28,8 +28,6 @@
 // thread
 #include <thread>
 
-using namespace std;
-
 static bool connected = false;
 static int exit_code = 0;
 
@@ -79,8 +77,8 @@ int capsulerun_main (capsule_args_t *args) {
     exit(1);
   }
 
-  auto fifo_r_path = string("/tmp/capsule.runr");
-  auto fifo_w_path = string("/tmp/capsule.runw");
+  auto fifo_r_path = std::string("/tmp/capsule.runr");
+  auto fifo_w_path = std::string("/tmp/capsule.runw");
 
   // swapped on purpose
   auto fifo_r_var = "CAPSULE_PIPE_R_PATH=" + fifo_w_path;
@@ -113,7 +111,7 @@ int capsulerun_main (capsule_args_t *args) {
 
     CapsuleLog("pid %d given to child %s", child_pid, args->exec);
 
-    thread child_thread(WaitForChild, child_pid);
+    std::thread child_thread(WaitForChild, child_pid);
     child_thread.detach();
   }
 
