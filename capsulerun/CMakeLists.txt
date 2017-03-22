@@ -54,7 +54,6 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/env.cc
     ${capsulerun_SOURCE_DIR}/linux/pulse_dynamic.cc
     ${capsulerun_SOURCE_DIR}/linux/pulse_receiver.cc
     ${capsulerun_SOURCE_DIR}/linux/hotkey.cc
