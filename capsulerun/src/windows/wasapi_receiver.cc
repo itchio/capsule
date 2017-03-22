@@ -9,6 +9,8 @@
 // TODO: signal errors without exceptions
 #include <stdexcept>
 
+#include "../macros.h"
+
 MICROPROFILE_DEFINE(WasapiReceiveFrames, "Wasapi", "WasapiReceiveFrames", 0xff00ff00);
 
 namespace capsule {
