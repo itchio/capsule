@@ -15,11 +15,11 @@ struct gl_data {
 
   int                     cur_tex;
   int                     copy_wait;
-  GLuint                  pbos[NUM_BUFFERS];
-  GLuint                  textures[NUM_BUFFERS];
-  bool                    texture_ready[NUM_BUFFERS];
-  bool                    texture_mapped[NUM_BUFFERS];
-  int64_t                 timestamps[NUM_BUFFERS];
+  GLuint                  pbos[capsule::kNumBuffers];
+  GLuint                  textures[capsule::kNumBuffers];
+  bool                    texture_ready[capsule::kNumBuffers];
+  bool                    texture_mapped[capsule::kNumBuffers];
+  int64_t                 timestamps[capsule::kNumBuffers];
 };
 
 static struct gl_data data = {};
@@ -87,7 +87,7 @@ bool LAB_STDCALL InitGlFunctions() {
 }
 
 static void GlFree() {
-  for (size_t i = 0; i < NUM_BUFFERS; i++) {
+  for (size_t i = 0; i < capsule::kNumBuffers; i++) {
     if (data.pbos[i]) {
       if (data.texture_mapped[i]) {
         _glBindBuffer(GL_PIXEL_PACK_BUFFER, data.pbos[i]);
@@ -247,12 +247,12 @@ static inline bool GlShmemInitBuffers(void) {
 	GLint last_pbo;
 	GLint last_tex;
 
-	_glGenBuffers(NUM_BUFFERS, data.pbos);
+	_glGenBuffers(capsule::kNumBuffers, data.pbos);
 	if (GlError("GlShmemInitBuffers", "failed to generate buffers")) {
 		return false;
 	}
 
-	_glGenTextures(NUM_BUFFERS, data.textures);
+	_glGenTextures(capsule::kNumBuffers, data.textures);
 	if (GlError("gl_shmem_init_buffers", "failed to generate textures")) {
 		return false;
 	}
@@ -268,7 +268,7 @@ static inline bool GlShmemInitBuffers(void) {
 		return false;
 	}
 
-	for (size_t i = 0; i < NUM_BUFFERS; i++) {
+	for (size_t i = 0; i < capsule::kNumBuffers; i++) {
 		if (!GlShmemInitData(i, size)) {
 			return false;
 		}
@@ -363,7 +363,7 @@ static void GlCopyBackbuffer(GLuint dst) {
 }
 
 static inline void GlShmemCaptureQueueCopy(void) {
-	for (int i = 0; i < NUM_BUFFERS; i++) {
+	for (int i = 0; i < capsule::kNumBuffers; i++) {
 		if (data.texture_ready[i]) {
 			GLvoid *buffer;
       auto timestamp = data.timestamps[i];
@@ -425,12 +425,12 @@ void GlShmemCapture () {
   // try to map & send all the textures that are ready
   GlShmemCaptureQueueCopy();
 
-  next_tex = (data.cur_tex + 1) % NUM_BUFFERS;
+  next_tex = (data.cur_tex + 1) % capsule::kNumBuffers;
 
   data.timestamps[next_tex] = timestamp;
   GlCopyBackbuffer(data.textures[next_tex]);
 
-  if (data.copy_wait < NUM_BUFFERS - 1) {
+  if (data.copy_wait < capsule::kNumBuffers - 1) {
     data.copy_wait++;
   } else {
     GLuint src = data.textures[next_tex];
@@ -490,7 +490,7 @@ void LAB_STDCALL GlCapture (int width, int height) {
       capsule::io::WriteVideoFormat(
         data.cx,
         data.cy,
-        CAPSULE_PIX_FMT_BGRA,
+        capsule::kPixFmtBgra,
         1 /* vflip */,
         data.pitch
       );

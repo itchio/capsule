@@ -16,18 +16,18 @@ struct d3d9_data {
 
   IDirect3DSurface9       *d3d9_copytex;
 
-  IDirect3DSurface9       *copy_surfaces[NUM_BUFFERS];
-  IDirect3DSurface9       *render_targets[NUM_BUFFERS];
-  IDirect3DQuery9         *queries[NUM_BUFFERS];
- 	bool                    texture_mapped[NUM_BUFFERS];
-	volatile bool           issued_queries[NUM_BUFFERS];
+  IDirect3DSurface9       *copy_surfaces[capsule::kNumBuffers];
+  IDirect3DSurface9       *render_targets[capsule::kNumBuffers];
+  IDirect3DQuery9         *queries[capsule::kNumBuffers];
+ 	bool                    texture_mapped[capsule::kNumBuffers];
+	volatile bool           issued_queries[capsule::kNumBuffers];
   intptr_t                pitch;
 };
 
 static struct d3d9_data data = {};
 
 void D3d9Free() {
-  for (size_t i = 0; i < NUM_BUFFERS; i++) {
+  for (size_t i = 0; i < capsule::kNumBuffers; i++) {
     if (data.copy_surfaces[i]) {
       if (data.texture_mapped[i]) {
         data.copy_surfaces[i]->UnlockRect();
@@ -175,7 +175,7 @@ static bool D3d9ShmemInitBuffers(size_t buffer) {
 }
 
 static bool D3d9ShmemInit() {
-  for (size_t i = 0; i < NUM_BUFFERS; i++) {
+  for (size_t i = 0; i < capsule::kNumBuffers; i++) {
     if (!D3d9ShmemInitBuffers(i)) {
       return false;
     }

@@ -16,6 +16,8 @@ extern "C" {
 
 #include "./fps_counter.h"
 
+#include <lab/logging.h>
+
 #include <chrono>
 
 #include <microprofile.h>
@@ -167,7 +169,7 @@ void EncoderRun(capsule_args_t *args, encoder_params_t *params) {
   }
 
   bool do_swscale = true;
-  if (vfmt_in.format == CAPSULE_PIX_FMT_YUV444P) {
+  if (vfmt_in.format == capsule::kPixFmtYuv444P) {
     CapsuleLog("GPU color conversion enabled, ignoring user output settings and picking yuv444p");
     vc->pix_fmt = AV_PIX_FMT_YUV444P;
     do_swscale = false;
@@ -321,16 +323,16 @@ void EncoderRun(capsule_args_t *args, encoder_params_t *params) {
 
   AVPixelFormat vpix_fmt;
   switch (vfmt_in.format) {
-    case CAPSULE_PIX_FMT_RGBA:
+    case capsule::kPixFmtRgba:
       vpix_fmt = AV_PIX_FMT_RGBA;
       break;
-    case CAPSULE_PIX_FMT_BGRA:
+    case capsule::kPixFmtBgra:
       vpix_fmt = AV_PIX_FMT_BGRA;
       break;
-    case CAPSULE_PIX_FMT_RGB10_A2:
+    case capsule::kPixFmtRgb10A2:
       vpix_fmt = AV_PIX_FMT_RGBA;
       break;
-    case CAPSULE_PIX_FMT_YUV444P:
+    case capsule::kPixFmtYuv444P:
       // no conversion actually required
       vpix_fmt = AV_PIX_FMT_YUV444P;
       break;
@@ -423,7 +425,7 @@ void EncoderRun(capsule_args_t *args, encoder_params_t *params) {
     vframe->linesize[2] = width * 4;
   }
 
-  CapsuleLog("initial offsets: %p %p (%d from first) %p (%d from first), linesize: %d %d %d",
+  CapsuleLog("initial offsets: %p %p (%" PRIdS " from first) %p (%" PRIdS " from first), linesize: %d %d %d",
     vframe->data[0],
     vframe->data[1], vframe->data[1] - vframe->data[0],
     vframe->data[2], vframe->data[2] - vframe->data[0],
@@ -527,7 +529,7 @@ void EncoderRun(capsule_args_t *args, encoder_params_t *params) {
       vframe->pts = vnext_pts;
 
       if (frame_count < 3) {
-        CapsuleLog("initial offsets: %p %p (%d from first) %p (%d from first), linesize: %d %d %d",
+        CapsuleLog("initial offsets: %p %p (%" PRIdS " from first) %p (%" PRIdS " from first), linesize: %d %d %d",
           vframe->data[0],
           vframe->data[1], vframe->data[1] - vframe->data[0],
           vframe->data[2], vframe->data[2] - vframe->data[0],

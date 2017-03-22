@@ -5,7 +5,7 @@
 typedef struct video_format_s {
   int width;
   int height;
-  capsule_pix_fmt_t format;
+  capsule::PixFmt format;
   int vflip;
   int64_t pitch;
 } video_format_t;

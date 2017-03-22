@@ -2,6 +2,8 @@
 #include <capsule/messages.h>
 #include <capsule/logging.h>
 
+#include <lab/logging.h>
+
 #include "video_receiver.h"
 
 #include <stdexcept>

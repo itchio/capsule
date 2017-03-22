@@ -8,6 +8,7 @@
 #include <capsule/messages.h>
 #include <capsule.h>
 
+#include <lab/logging.h>
 #include <lab/env.h>
 #include <lab/io.h>
 
@@ -35,7 +36,7 @@ FILE *EnsureInfile() {
   return in_file;
 }
 
-bool frame_locked[NUM_BUFFERS];
+bool frame_locked[kNumBuffers];
 std::mutex frame_locked_mutex;
 int next_frame_index = 0;
 
@@ -140,7 +141,7 @@ static void PollInfile() {
 
 void LAB_STDCALL WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch) {
     CapsuleLog("writing video format");
-    for (int i = 0; i < NUM_BUFFERS; i++) {
+    for (int i = 0; i < kNumBuffers; i++) {
         frame_locked[i] = false;
     }
 
@@ -148,7 +149,7 @@ void LAB_STDCALL WriteVideoFormat(int width, int height, int format, bool vflip,
 
     int64_t frame_size = height * pitch;
     CapsuleLog("Frame size: %" PRId64 " bytes", frame_size);
-    int64_t shmem_size = frame_size * NUM_BUFFERS;
+    int64_t shmem_size = frame_size * kNumBuffers;
     CapsuleLog("Should allocate %" PRId64 " bytes of shmem area", shmem_size);
 
     std::string shmem_path = "capsule.shm";
@@ -229,7 +230,7 @@ void LAB_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t fra
     LockFrame(next_frame_index);
     CapsuleFwritePacket(builder, out_file);
 
-    next_frame_index = (next_frame_index + 1) % NUM_BUFFERS;
+    next_frame_index = (next_frame_index + 1) % kNumBuffers;
 }
 
 void LAB_STDCALL Init () {

@@ -40,12 +40,12 @@ struct d3d11_data {
   ID3D11Buffer                   *vertex_buffer;
   ID3D11Buffer                   *constants;
 
-  ID3D11Texture2D                *copy_surfaces[NUM_BUFFERS]; // staging, CPU_READ_ACCESS
-  ID3D11Texture2D                *textures[NUM_BUFFERS]; // default (in-GPU), useful to resolve multisampled backbuffers
-  ID3D11RenderTargetView         *render_targets[NUM_BUFFERS];
-  bool                           texture_ready[NUM_BUFFERS];
-  bool                           texture_mapped[NUM_BUFFERS];
-  int64_t                        timestamps[NUM_BUFFERS];
+  ID3D11Texture2D                *copy_surfaces[capsule::kNumBuffers]; // staging, CPU_READ_ACCESS
+  ID3D11Texture2D                *textures[capsule::kNumBuffers]; // default (in-GPU), useful to resolve multisampled backbuffers
+  ID3D11RenderTargetView         *render_targets[capsule::kNumBuffers];
+  bool                           texture_ready[capsule::kNumBuffers];
+  bool                           texture_mapped[capsule::kNumBuffers];
+  int64_t                        timestamps[capsule::kNumBuffers];
   int                            cur_tex;
   int                            copy_wait;
 
@@ -223,7 +223,7 @@ static bool D3d11ShmemInitBuffers(size_t idx) {
 }
 
 static bool D3d11ShmemInit(HWND window) {
-  for (size_t i = 0; i < NUM_BUFFERS; i++) {
+  for (size_t i = 0; i < capsule::kNumBuffers; i++) {
     if (!D3d11ShmemInitBuffers(i)) {
       return false;
     }
@@ -912,7 +912,7 @@ static inline void D3d11DrawOverlayInternal() {
 }
 
 static inline void D3d11ShmemQueueCopy() {
-	for (size_t i = 0; i < NUM_BUFFERS; i++) {
+	for (size_t i = 0; i < capsule::kNumBuffers; i++) {
 		D3D11_MAPPED_SUBRESOURCE map;
 		HRESULT hr;
 
@@ -936,7 +936,7 @@ static inline void D3d11ShmemCapture (ID3D11Resource* backbuffer) {
 
   D3d11ShmemQueueCopy();
 
-  next_tex = (data.cur_tex + 1) % NUM_BUFFERS;
+  next_tex = (data.cur_tex + 1) % capsule::kNumBuffers;
 
   data.timestamps[data.cur_tex] = capsule::FrameTimestamp();
 
@@ -944,7 +944,7 @@ static inline void D3d11ShmemCapture (ID3D11Resource* backbuffer) {
   D3d11CopyTexture(data.scale_tex, backbuffer);
   D3d11ScaleTexture(data.render_targets[data.cur_tex], data.scale_resource);
 
-  if (data.copy_wait < NUM_BUFFERS - 1) {
+  if (data.copy_wait < capsule::kNumBuffers - 1) {
     data.copy_wait++;
   } else {
     ID3D11Texture2D *src = data.textures[next_tex];
@@ -991,9 +991,9 @@ void D3d11Capture(void *swap_ptr, void *backbuffer_ptr) {
   }
 
   if (first_frame) {
-    capsule_pix_fmt_t pix_fmt;
+    capsule::PixFmt pix_fmt;
     if (data.gpu_color_conv) {
-      pix_fmt = CAPSULE_PIX_FMT_YUV444P;
+      pix_fmt = kPixFmtYuv444P;
     } else {
       pix_fmt = DxgiFormatToPixFmt(data.format);
     }
@@ -1032,7 +1032,7 @@ void D3d11Free() {
   SafeRelease(data.vertex_buffer);
   SafeRelease(data.constants);
 
-  for (size_t i = 0; i < NUM_BUFFERS; i++) {
+  for (size_t i = 0; i < capsule::kNumBuffers; i++) {
     if (data.copy_surfaces[i]) {
       if (data.texture_mapped[i]) {
         data.context->Unmap(data.copy_surfaces[i], 0);

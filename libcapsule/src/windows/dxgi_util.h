@@ -276,19 +276,19 @@ static inline DXGI_FORMAT FixDxgiFormat(DXGI_FORMAT format) {
 	return format;
 }
 
-static inline capsule_pix_fmt_t DxgiFormatToPixFmt(DXGI_FORMAT format) {
+static inline capsule::PixFmt DxgiFormatToPixFmt(DXGI_FORMAT format) {
   switch (FixDxgiFormat(format)) {
     case DXGI_FORMAT_B8G8R8A8_UNORM:
-      return CAPSULE_PIX_FMT_BGRA;
+      return capsule::kPixFmtBgra;
     case DXGI_FORMAT_B8G8R8X8_UNORM:
-      return CAPSULE_PIX_FMT_BGRA;
+      return capsule::kPixFmtBgra;
     case DXGI_FORMAT_R8G8B8A8_UNORM:
-      return CAPSULE_PIX_FMT_RGBA;
+      return capsule::kPixFmtRgba;
     case DXGI_FORMAT_R10G10B10A2_UNORM:
-      return CAPSULE_PIX_FMT_RGB10_A2;
+      return capsule::kPixFmtRgb10A2;
     default:
       CapsuleLog("Unsupported DXGI format %s", NameFromDxgiFormat(format).c_str());
-      return CAPSULE_PIX_FMT_UNKNOWN;
+      return capsule::kPixFmtUnknown;
   }
 }
 

@@ -121,7 +121,7 @@ void MainLoop::StartSession (const messages::VideoSetup *vs) {
   video_format_t vfmt;
   vfmt.width = vs->width();
   vfmt.height = vs->height();
-  vfmt.format = (capsule_pix_fmt_t) vs->pix_fmt();
+  vfmt.format = (capsule::PixFmt) vs->pix_fmt();
   vfmt.vflip = vs->vflip();
   
   // TODO: support offset (for planar formats)
