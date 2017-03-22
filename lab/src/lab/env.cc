@@ -77,7 +77,7 @@ std::string Get(std::string name) {
     if (!value) {
         return "";
     } else {
-        return std::string(value):
+        return std::string(value);
     }
 #endif // !LAB_WINDOWS
 }

@@ -99,6 +99,11 @@ int Main (capsule_args_t *args) {
     CapsuleLog("Running in headless mode...");
     conn->printDetails();
   } else {
+    CapsuleLog("Running '%s'", args->exec);
+    for (int i = 0; i < args->exec_argc; i++) {
+      CapsuleLog("...with arg '%s'", args->exec_argv[i]);
+    }
+
     // spawn game
     int child_err = posix_spawn(
       &child_pid,
