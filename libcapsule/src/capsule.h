@@ -1,7 +1,8 @@
 
 #pragma once
 
-#include "capsule/platform.h"
+#include <lab/platform.h>
+
 #include "capsule/constants.h"
 #include "capsule/logging.h"
 #include "capsule/dynlib.h"
@@ -10,54 +11,22 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
 #define getpid(a) 0
 #define pid_t int
-#else // CAPSULE_WINDOWS
+#else // LAB_WINDOWS
 #include <sys/types.h>
 #include <unistd.h>
 #include <time.h>
-#endif // !CAPSULE_WINDOWS
-
-#ifdef CAPSULE_WINDOWS
-
-#ifdef BUILD_CAPSULE_DLL
-#define CAPSULE_DLL __declspec(dllexport)
-#else // BUILD_CAPSULE_DLL
-#define CAPSULE_DLL __declspec(dllimport)
-#endif // BUILD_CAPSULE_DLL
-
-#else // CAPSULE_WINDOWS
-#define CAPSULE_DLL
-#endif // CAPSULE_WINDOWS
-
-extern FILE *logfile;
-
-#define CapsuleLog(...) {\
-  if (!logfile) { \
-    logfile = CapsuleOpenLog(); \
-  } \
-  fprintf(logfile, __VA_ARGS__); \
-  fprintf(logfile, "\n"); \
-  fflush(logfile); \
-  fprintf(stderr, "[capsule] "); \
-  fprintf(stderr, __VA_ARGS__); \
-  fprintf(stderr, "\n"); }
+#endif // !LAB_WINDOWS
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-FILE *CapsuleOpenLog();
+#ifdef LAB_WINDOWS
 
-#ifdef CAPSULE_WINDOWS
-wchar_t *CapsuleLogPath();
-#else
-char *CapsuleLogPath();
-#endif // CAPSULE_WINDOWS
-
-#ifdef CAPSULE_WINDOWS
-DWORD CAPSULE_DLL CapsuleWindowsInit();
+DWORD __declspec(dllexport) CapsuleWindowsInit();
 void CapsuleInstallWindowsHooks();
 void CapsuleInstallProcessHooks();
 void CapsuleInstallOpenglHooks();
@@ -66,7 +35,7 @@ void CapsuleInstallD3d9Hooks();
 
 bool DcCaptureInit();
 
-#endif // CAPSULE_WINDOWS
+#endif // LAB_WINDOWS
 
 struct capture_data_settings {
   int fps;
@@ -76,17 +45,17 @@ struct capture_data_settings {
 
 struct capture_data {
   bool saw_opengl;
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
   bool saw_dxgi;
   bool saw_d3d9;
-#endif // CAPSULE_WINDOWS
+#endif // LAB_WINDOWS
   bool active;
   capture_data_settings settings;
 };
 extern struct capture_data capdata;
 
 // OpenGL-specific
-void CAPSULE_STDCALL GlCapture(int width, int height);
+void LAB_STDCALL GlCapture(int width, int height);
 
 void* glXGetProcAddressARB(const char*);
 void glXSwapBuffers(void *a, void *b);
@@ -96,7 +65,7 @@ int glXQueryExtension(void *a, void *b, void *c);
 }
 #endif
 
-#ifdef CAPSULE_WINDOWS
+#ifdef LAB_WINDOWS
 // Deviare-InProc, for hooking
 #include <NktHookLib.h>
 
@@ -105,9 +74,9 @@ int glXQueryExtension(void *a, void *b, void *c);
 #include <windows.h>
 
 extern CNktHookLib cHookMgr;
-#endif // CAPSULE_WINDOWS
+#endif // LAB_WINDOWS
 
-static void CAPSULE_STDCALL CapsuleAssert(const char *msg, int cond) {
+static void LAB_STDCALL CapsuleAssert(const char *msg, int cond) {
   if (cond) {
     return;
   }
@@ -117,17 +86,17 @@ static void CAPSULE_STDCALL CapsuleAssert(const char *msg, int cond) {
 
 namespace capsule {
 
-bool CAPSULE_STDCALL CaptureReady();
-bool CAPSULE_STDCALL CaptureActive();
-bool CAPSULE_STDCALL CaptureTryStart(struct capture_data_settings* settings);
-bool CAPSULE_STDCALL CaptureTryStop();
-int64_t CAPSULE_STDCALL FrameTimestamp();
+bool LAB_STDCALL CaptureReady();
+bool LAB_STDCALL CaptureActive();
+bool LAB_STDCALL CaptureTryStart(struct capture_data_settings* settings);
+bool LAB_STDCALL CaptureTryStop();
+int64_t LAB_STDCALL FrameTimestamp();
 
 namespace io {
 
-void CAPSULE_STDCALL Init();
-void CAPSULE_STDCALL WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch);
-void CAPSULE_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size);
+void LAB_STDCALL Init();
+void LAB_STDCALL WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch);
+void LAB_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size);
 
 } // namespace io
 } // namespace capsule

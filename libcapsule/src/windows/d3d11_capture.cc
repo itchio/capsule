@@ -288,6 +288,8 @@ static bool D3d11InitColorconvShader() {
     memcpy(map.pData, &initial_data, bd.ByteWidth);
     data.context->Unmap(data.constants, 0);
   }
+
+  return true;
 }
 
 static bool D3d11LoadShaders() {

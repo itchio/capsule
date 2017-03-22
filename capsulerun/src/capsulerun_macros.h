@@ -4,8 +4,6 @@
 // #define CAPSULERUN_PROFILE
 // #define CAPSULERUN_DEBUG
 
-#include <capsulerun_macros.h>
-
 #ifdef CAPSULERUN_PROFILE
 #define eprintf(...) { fprintf(stdout, "[capsulerun-profile] "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); fflush(stdout); }
 #else

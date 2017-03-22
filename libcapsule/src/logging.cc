@@ -1,32 +1,20 @@
 
 #include <capsule.h>
 
+#include <lab/platform.h>
+#include <lab/env.h>
+#include <lab/io.h>
+
 FILE *logfile;
 
+std::string CapsuleLogPath () {
+#if defined(LAB_WINDOWS)
+  return lab::env::Expand("%APPDATA%\\capsule.log.txt");
+#else // LAB_WINDOWS
+  return "/tmp/capsule.log.txt";
+#endif // !LAB_WINDOWS
+}
+
 FILE *CapsuleOpenLog () {
-#ifdef CAPSULE_WINDOWS
-  return _wfopen(CapsuleLogPath(), L"w");
-#else // CAPSULE_WINDOWS
-  return fopen(CapsuleLogPath(), "w");
-#endif // CAPSULE_WINDOWS
+  return lab::io::Fopen(CapsuleLogPath(), "w");
 }
-
-#ifdef CAPSULE_WINDOWS
-
-wchar_t *capsule_log_path;
-
-wchar_t *CapsuleLogPath () {
-  if (!capsule_log_path) {
-    capsule_log_path = (wchar_t*) malloc(sizeof(wchar_t) * CapsuleLog_PATH_SIZE);
-    ExpandEnvironmentStrings(L"%APPDATA%\\capsule.log.txt", capsule_log_path, CapsuleLog_PATH_SIZE);
-  }
-  return capsule_log_path;
-}
-
-#else // defined CAPSULE_WINDOWS
-
-char *CapsuleLogPath () {
-  return (char*) "/tmp/capsule.log.txt";
-}
-
-#endif // not CAPSULE_WINDOWS

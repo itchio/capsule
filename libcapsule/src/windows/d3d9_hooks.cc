@@ -40,7 +40,7 @@ static void present_end(IDirect3DDevice9 *device, IDirect3DSurface9 *backbuffer)
 ///////////////////////////////////////////////
 // IDirect3DDevice9::Present
 ///////////////////////////////////////////////
-typedef HRESULT (CAPSULE_STDCALL *Present_t)(
+typedef HRESULT (LAB_STDCALL *Present_t)(
   IDirect3DDevice9   *device,
   const RECT         *pSourceRect,
   const RECT         *pDestRect,
@@ -50,7 +50,7 @@ typedef HRESULT (CAPSULE_STDCALL *Present_t)(
 static Present_t Present_real;
 static SIZE_T Present_hookId = 0;
 
-HRESULT CAPSULE_STDCALL Present_hook (
+HRESULT LAB_STDCALL Present_hook (
   IDirect3DDevice9   *device,
   const RECT         *pSourceRect,
   const RECT         *pDestRect,
@@ -79,7 +79,7 @@ HRESULT CAPSULE_STDCALL Present_hook (
 ///////////////////////////////////////////////
 // IDirect3DDevice9Ex::PresentEx
 ///////////////////////////////////////////////
-typedef HRESULT (CAPSULE_STDCALL *PresentEx_t)(
+typedef HRESULT (LAB_STDCALL *PresentEx_t)(
   IDirect3DDevice9Ex *device,
   const RECT         *pSourceRect,
   const RECT         *pDestRect,
@@ -90,7 +90,7 @@ typedef HRESULT (CAPSULE_STDCALL *PresentEx_t)(
 static PresentEx_t PresentEx_real;
 static SIZE_T PresentEx_hookId = 0;
 
-HRESULT CAPSULE_STDCALL PresentEx_hook(
+HRESULT LAB_STDCALL PresentEx_hook(
   IDirect3DDevice9Ex *device,
   const RECT         *pSourceRect,
   const RECT         *pDestRect,
@@ -121,7 +121,7 @@ HRESULT CAPSULE_STDCALL PresentEx_hook(
 ///////////////////////////////////////////////
 // IDirect3DSwapChain9::Present
 ///////////////////////////////////////////////
-typedef HRESULT (CAPSULE_STDCALL *PresentSwap_t)(
+typedef HRESULT (LAB_STDCALL *PresentSwap_t)(
   IDirect3DSwapChain9   *swap,
   const RECT            *pSourceRect,
   const RECT            *pDestRect,
@@ -132,7 +132,7 @@ typedef HRESULT (CAPSULE_STDCALL *PresentSwap_t)(
 static PresentSwap_t PresentSwap_real;
 static SIZE_T PresentSwap_hookId = 0;
 
-HRESULT CAPSULE_STDCALL PresentSwap_hook(
+HRESULT LAB_STDCALL PresentSwap_hook(
   IDirect3DSwapChain9   *swap,
   const RECT            *pSourceRect,
   const RECT            *pDestRect,
@@ -254,7 +254,7 @@ static void install_present_hooks(IDirect3DDevice9 *device) {
 ///////////////////////////////////////////////
 // IDirect3D9::CreateDevice
 ///////////////////////////////////////////////
-typedef HRESULT (CAPSULE_STDCALL *CreateDevice_t)(
+typedef HRESULT (LAB_STDCALL *CreateDevice_t)(
   IDirect3D9            *obj,
   UINT                  Adapter,
   D3DDEVTYPE            DeviceType,
@@ -266,7 +266,7 @@ typedef HRESULT (CAPSULE_STDCALL *CreateDevice_t)(
 static CreateDevice_t CreateDevice_real;
 static SIZE_T CreateDevice_hookId = 0;
 
-HRESULT CAPSULE_STDCALL CreateDevice_hook(
+HRESULT LAB_STDCALL CreateDevice_hook(
   IDirect3D9            *obj,
   UINT                  Adapter,
   D3DDEVTYPE            DeviceType,
@@ -320,7 +320,7 @@ static void install_device_hooks(IDirect3D9 *obj) {
 ///////////////////////////////////////////////
 // IDirect3D9Ex::CreateDeviceEx
 ///////////////////////////////////////////////
-typedef HRESULT (CAPSULE_STDCALL *CreateDeviceEx_t)(
+typedef HRESULT (LAB_STDCALL *CreateDeviceEx_t)(
   IDirect3D9Ex          *obj,
   UINT                  Adapter,
   D3DDEVTYPE            DeviceType,
@@ -333,7 +333,7 @@ typedef HRESULT (CAPSULE_STDCALL *CreateDeviceEx_t)(
 static CreateDeviceEx_t CreateDeviceEx_real;
 static SIZE_T CreateDeviceEx_hookId = 0;
 
-HRESULT CAPSULE_STDCALL CreateDeviceEx_hook (
+HRESULT LAB_STDCALL CreateDeviceEx_hook (
   IDirect3D9Ex          *obj,
   UINT                  Adapter,
   D3DDEVTYPE            DeviceType,
@@ -392,13 +392,13 @@ static void install_device_ex_hooks (IDirect3D9Ex *obj) {
 // Direct3DCreate9
 ///////////////////////////////////////////////
 
-typedef IDirect3D9* (CAPSULE_STDCALL *Direct3DCreate9_t)(
+typedef IDirect3D9* (LAB_STDCALL *Direct3DCreate9_t)(
   UINT SDKVersion
 );
 static Direct3DCreate9_t Direct3DCreate9_real;
 static SIZE_T Direct3DCreate9_hookId = 0;
 
-IDirect3D9 * CAPSULE_STDCALL Direct3DCreate9_hook(
+IDirect3D9 * LAB_STDCALL Direct3DCreate9_hook(
   UINT SDKVersion
 ) {
   CapsuleLog("Direct3DCreate9 called with SDKVersion %u", (unsigned int) SDKVersion);
@@ -417,14 +417,14 @@ IDirect3D9 * CAPSULE_STDCALL Direct3DCreate9_hook(
 // Direct3DCreate9Ex
 ///////////////////////////////////////////////
 
-typedef HRESULT (CAPSULE_STDCALL *Direct3DCreate9Ex_t)(
+typedef HRESULT (LAB_STDCALL *Direct3DCreate9Ex_t)(
   UINT SDKVersion,
   IDirect3D9Ex **ppD3D
 );
 static Direct3DCreate9Ex_t Direct3DCreate9Ex_real;
 static SIZE_T Direct3DCreate9Ex_hookId = 0;
 
-HRESULT CAPSULE_STDCALL Direct3DCreate9Ex_hook(
+HRESULT LAB_STDCALL Direct3DCreate9Ex_hook(
   UINT SDKVersion,
   IDirect3D9Ex **ppD3D
 ) {

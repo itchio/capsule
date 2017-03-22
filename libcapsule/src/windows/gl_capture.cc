@@ -1,11 +1,11 @@
 
 #include <capsule.h>
 
-typedef bool (CAPSULE_STDCALL *wglSwapBuffers_t)(HANDLE hdc);
+typedef bool (LAB_STDCALL *wglSwapBuffers_t)(HANDLE hdc);
 wglSwapBuffers_t wglSwapBuffers_real;
 SIZE_T wglSwapBuffersHookId;
 
-bool CAPSULE_STDCALL wglSwapBuffers_hook (HANDLE hdc) {
+bool LAB_STDCALL wglSwapBuffers_hook (HANDLE hdc) {
   capdata.saw_opengl = true;
   GlCapture(0, 0);
   return wglSwapBuffers_real(hdc);

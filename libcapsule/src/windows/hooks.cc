@@ -21,14 +21,14 @@ void CapsuleInstallWindowsHooks () {
   CapsuleInstallD3d9Hooks();
 }
 
-BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
+BOOL LAB_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
   // don't actually do anything here, since what we can do from DllMain
   // is limited (no LoadLibrary, etc.)
 
   return TRUE;
 }
 
-DWORD CAPSULE_DLL CapsuleWindowsInit() {
+DWORD __declspec(dllexport) CapsuleWindowsInit() {
   wchar_t process_name[MAX_PATH];
   process_name[0] = '\0';
   GetModuleBaseName(GetCurrentProcess(), nullptr, process_name, MAX_PATH);

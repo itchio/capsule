@@ -15,6 +15,8 @@
 namespace lab {
 namespace env {
 
+const int kMaxCharacters = 16 * 1024;
+
 char **MergeBlocks (char **a, char **b) {
     size_t total_size = 0;
     char **p = a;
@@ -53,7 +55,7 @@ std::string Get(std::string name) {
 #if defined(LAB_WINDOWS)
     wchar_t *name_w;
     strings::ToWideChar(name.c_str(), &name_w);
-    const size_t value_w_characters = 16 * 1024;
+    const size_t value_w_characters = kMaxCharacters;
     wchar_t *value_w = reinterpret_cast<wchar_t *>(calloc(value_w_characters, sizeof(wchar_t)));
     int ret = GetEnvironmentVariableW(name_w, value_w, value_w_characters);
     free(name_w);
@@ -90,12 +92,31 @@ bool Set(std::string name, std::string value) {
     BOOL result = SetEnvironmentVariableW(name_w, value_w);
     free(name_w);
     free(value_w);
-    return result;
+    return result == TRUE;
 #else  // LAB_WINDOWS
     int result = setenv(name.c_str(), value.c_str(), 1 /* overwrite */);
     return result == 0;
 #endif // !LAB_WINDOWS
 }
+
+#if defined(LAB_WINDOWS)
+std::string Expand(std::string input) {
+    wchar_t *input_w;
+    strings::ToWideChar(input.c_str(), &input_w);
+    const size_t output_w_characters = kMaxCharacters;
+    wchar_t *output_w = reinterpret_cast<wchar_t *>(calloc(output_w_characters, sizeof(wchar_t)));
+
+    ExpandEnvironmentStringsW(input_w, output_w, output_w_characters);
+    free(input_w);
+
+    char* output;
+    strings::FromWideChar(output_w, &output);
+    std::string result = std::string(output);
+    free(output_w);
+    free(output);
+    return result;
+}
+#endif // LAB_WINDOWS
 
 } // namespace env
 } // namespace lab

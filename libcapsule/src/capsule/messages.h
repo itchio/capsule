@@ -19,14 +19,14 @@
 
 #include <capsule/constants.h>
 
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
 #include <io.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
 #else
 #include <unistd.h>
-#endif // CAPSULE_WINDOWS
+#endif // LAB_WINDOWS
 
 /**
  * Read a packet-full of bytes from *file.
@@ -59,7 +59,7 @@ static void CapsuleFwritePacket(const flatbuffers::FlatBufferBuilder &builder, F
     fflush(file);
 }
 
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
 
 /**
  * Read a packet-full of bytes from *file.
@@ -125,7 +125,7 @@ static void CapsuleHwritePacket(const flatbuffers::FlatBufferBuilder &builder, H
     FlushFileBuffers(handle);
 }
 
-#else // CAPSULE_WINDOWS
+#else // LAB_WINDOWS
 
 /**
  * Read a packet-full of bytes from fd.
@@ -156,4 +156,4 @@ static void CapsuleWritePacket(const flatbuffers::FlatBufferBuilder &builder, in
     write(fd, builder.GetBufferPointer(), builder.GetSize());
 }
 
-#endif // !CAPSULE_WINDOWS
+#endif // !LAB_WINDOWS

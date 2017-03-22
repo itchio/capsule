@@ -56,7 +56,7 @@ static void UnlockFrame(int i) {
     frame_locked[i] = false;
 }
 
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
 static void CaptureStart (capture_data_settings *settings) {
     CapsuleLog("capsule_capture_start: enumerating our options");
     if (capdata.saw_dxgi || capdata.saw_d3d9 || capdata.saw_opengl) {
@@ -79,7 +79,7 @@ static void CaptureStart (capture_data_settings *settings) {
         }
     }
 }
-#else // CAPSULE_WINDOWS
+#else // LAB_WINDOWS
 static void CaptureStart (capture_data_settings *settings) {
     if (capdata.saw_opengl) {
         // cool, it'll initialize on next swapbuffers
@@ -91,7 +91,7 @@ static void CaptureStart (capture_data_settings *settings) {
         return;
     }
 }
-#endif // !CAPSULE_WINDOWS
+#endif // !LAB_WINDOWS
 
 static void CaptureStop () {
     if (CaptureTryStop()) {
@@ -138,7 +138,7 @@ static void PollInfile() {
     }
 }
 
-void CAPSULE_STDCALL WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch) {
+void LAB_STDCALL WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch) {
     CapsuleLog("writing video format");
     for (int i = 0; i < NUM_BUFFERS; i++) {
         frame_locked[i] = false;
@@ -146,13 +146,13 @@ void CAPSULE_STDCALL WriteVideoFormat(int width, int height, int format, bool vf
 
     flatbuffers::FlatBufferBuilder builder(1024);
 
-    size_t frame_size = height * pitch;
-    CapsuleLog("Frame size: %" PRIdS " bytes", frame_size);
-    size_t shmem_size = frame_size * NUM_BUFFERS;
-    CapsuleLog("Should allocate %" PRIdS " bytes of shmem area", shmem_size);
+    int64_t frame_size = height * pitch;
+    CapsuleLog("Frame size: %" PRId64 " bytes", frame_size);
+    int64_t shmem_size = frame_size * NUM_BUFFERS;
+    CapsuleLog("Should allocate %" PRId64 " bytes of shmem area", shmem_size);
 
     std::string shmem_path = "capsule.shm";
-    shm = new shoom::Shm(shmem_path, shmem_size);
+    shm = new shoom::Shm(shmem_path, static_cast<size_t>(shmem_size));
     int ret = shm->Create();
     if (ret != shoom::kOK) {
         CapsuleLog("Could not create shared memory area: code %d", ret);
@@ -198,7 +198,7 @@ void CAPSULE_STDCALL WriteVideoFormat(int width, int height, int format, bool vf
 
 int is_skipping;
 
-void CAPSULE_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size) {
+void LAB_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size) {
     if (IsFrameLocked(next_frame_index)) {
         if (!is_skipping) {
             CapsuleLog("frame buffer overrun (at %d)! skipping until further notice", next_frame_index);
@@ -232,9 +232,9 @@ void CAPSULE_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t
     next_frame_index = (next_frame_index + 1) % NUM_BUFFERS;
 }
 
-void CAPSULE_STDCALL Init () {
-    CapsuleLog("CAPSULE_R_PATH: %s", getenv("CAPSULE_R_PATH"));
-    CapsuleLog("CAPSULE_W_PATH: %s", getenv("CAPSULE_W_PATH"));
+void LAB_STDCALL Init () {
+    CapsuleLog("CAPSULE_R_PATH: %s", lab::env::Get("CAPSULE_R_PATH").c_str());
+    CapsuleLog("CAPSULE_W_PATH: %s", lab::env::Get("CAPSULE_W_PATH").c_str());
 
     CapsuleLog("Ensuring outfile..");
     EnsureOutfile();

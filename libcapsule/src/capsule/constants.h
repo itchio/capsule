@@ -1,6 +1,5 @@
-#pragma once
 
-#include "platform.h"
+#pragma once
 
 typedef enum capsule_pix_fmt_t {
   CAPSULE_PIX_FMT_UNKNOWN     = 0,

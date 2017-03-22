@@ -5,7 +5,7 @@
 // CreateProcessA
 ///////////////////////////////////////////////
 
-typedef BOOL (CAPSULE_STDCALL *CreateProcessA_t)(
+typedef BOOL (LAB_STDCALL *CreateProcessA_t)(
   LPCSTR                lpApplicationName,
   LPSTR                 lpCommandLine,
   LPSECURITY_ATTRIBUTES lpProcessAttributes,
@@ -20,7 +20,7 @@ typedef BOOL (CAPSULE_STDCALL *CreateProcessA_t)(
 CreateProcessA_t CreateProcessA_real;
 SIZE_T CreateProcessA_hookId = 0;
 
-BOOL CAPSULE_STDCALL CreateProcessA_hook (
+BOOL LAB_STDCALL CreateProcessA_hook (
   LPCSTR                lpApplicationName,
   LPSTR                 lpCommandLine,
   LPSECURITY_ATTRIBUTES lpProcessAttributes,
@@ -51,7 +51,7 @@ BOOL CAPSULE_STDCALL CreateProcessA_hook (
 // CreateProcessW
 ///////////////////////////////////////////////
 
-typedef BOOL (CAPSULE_STDCALL *CreateProcessW_t)(
+typedef BOOL (LAB_STDCALL *CreateProcessW_t)(
   LPCWSTR               lpApplicationName,
   LPWSTR                lpCommandLine,
   LPSECURITY_ATTRIBUTES lpProcessAttributes,
@@ -66,7 +66,7 @@ typedef BOOL (CAPSULE_STDCALL *CreateProcessW_t)(
 CreateProcessW_t CreateProcessW_real;
 SIZE_T CreateProcessW_hookId = 0;
 
-BOOL CAPSULE_STDCALL CreateProcessW_hook (
+BOOL LAB_STDCALL CreateProcessW_hook (
   LPCWSTR               lpApplicationName,
   LPWSTR                lpCommandLine,
   LPSECURITY_ATTRIBUTES lpProcessAttributes,

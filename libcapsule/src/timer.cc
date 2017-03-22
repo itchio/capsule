@@ -17,12 +17,12 @@ static std::chrono::time_point<std::chrono::steady_clock> first_ts;
 
 std::mutex capdata_mutex;
 
-bool CAPSULE_STDCALL CaptureActive () {
+bool LAB_STDCALL CaptureActive () {
   std::lock_guard<std::mutex> lock(capdata_mutex);
   return capdata.active;
 }
 
-bool CAPSULE_STDCALL CaptureTryStart (struct capture_data_settings *settings) {
+bool LAB_STDCALL CaptureTryStart (struct capture_data_settings *settings) {
   std::lock_guard<std::mutex> lock(capdata_mutex);
   if (capdata.active) {
     CapsuleLog("CaptureTryStart: already active, ignoring start");
@@ -37,7 +37,7 @@ bool CAPSULE_STDCALL CaptureTryStart (struct capture_data_settings *settings) {
   return true;
 }
 
-bool CAPSULE_STDCALL CaptureTryStop () {
+bool LAB_STDCALL CaptureTryStop () {
   std::lock_guard<std::mutex> lock(capdata_mutex);
   if (!capdata.active) {
     CapsuleLog("CaptureTryStop: not active, ignoring stop");
@@ -82,13 +82,13 @@ static inline bool FrameReady () {
   return true;
 }
 
-int64_t CAPSULE_STDCALL FrameTimestamp () {
+int64_t LAB_STDCALL FrameTimestamp () {
   auto frame_timestamp = std::chrono::steady_clock::now() - first_ts;
   auto micro_timestamp = std::chrono::duration_cast<std::chrono::microseconds>(frame_timestamp);
   return (int64_t) micro_timestamp.count();
 }
 
-bool CAPSULE_STDCALL CaptureReady () {
+bool LAB_STDCALL CaptureReady () {
   return FrameReady();
 }
 

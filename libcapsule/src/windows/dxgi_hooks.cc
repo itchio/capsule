@@ -73,7 +73,7 @@ static inline IUnknown *get_dxgi_backbuffer (IDXGISwapChain *swap) {
 // IDXGISwapChain::Present
 ///////////////////////////////////////////////
 
-typedef HRESULT (CAPSULE_STDCALL *Present_t)(
+typedef HRESULT (LAB_STDCALL *Present_t)(
   IDXGISwapChain *swap,
   UINT SyncInterval,
   UINT Flags
@@ -81,7 +81,7 @@ typedef HRESULT (CAPSULE_STDCALL *Present_t)(
 static Present_t Present_real;
 static SIZE_T Present_hookId = 0;
 
-HRESULT CAPSULE_STDCALL Present_hook (
+HRESULT LAB_STDCALL Present_hook (
   IDXGISwapChain *swap,
   UINT SyncInterval,
   UINT Flags
@@ -138,7 +138,7 @@ void install_present_hook (IDXGISwapChain *swap) {
 // D3D11CreateDeviceAndSwapChain 
 ///////////////////////////////////////////////
 
-typedef HRESULT (CAPSULE_STDCALL *D3D11CreateDeviceAndSwapChain_t)(
+typedef HRESULT (LAB_STDCALL *D3D11CreateDeviceAndSwapChain_t)(
         IDXGIAdapter         *pAdapter,
         D3D_DRIVER_TYPE      DriverType,
         HMODULE              Software,
@@ -155,7 +155,7 @@ typedef HRESULT (CAPSULE_STDCALL *D3D11CreateDeviceAndSwapChain_t)(
 static D3D11CreateDeviceAndSwapChain_t D3D11CreateDeviceAndSwapChain_real;
 static SIZE_T D3D11CreateDeviceAndSwapChain_hookId = 0;
 
-HRESULT CAPSULE_STDCALL D3D11CreateDeviceAndSwapChain_hook (
+HRESULT LAB_STDCALL D3D11CreateDeviceAndSwapChain_hook (
         IDXGIAdapter         *pAdapter,
         D3D_DRIVER_TYPE      DriverType,
         HMODULE              Software,
@@ -197,7 +197,7 @@ HRESULT CAPSULE_STDCALL D3D11CreateDeviceAndSwapChain_hook (
 // Example users: Unity 5.x
 ///////////////////////////////////////////////
 
-typedef HRESULT (CAPSULE_STDCALL *CreateSwapChainForHwnd_t)(
+typedef HRESULT (LAB_STDCALL *CreateSwapChainForHwnd_t)(
         IDXGIFactory2                   *factory,
         IUnknown                        *pDevice,
         HWND                            hWnd,
@@ -209,7 +209,7 @@ typedef HRESULT (CAPSULE_STDCALL *CreateSwapChainForHwnd_t)(
 static CreateSwapChainForHwnd_t CreateSwapChainForHwnd_real;
 static SIZE_T CreateSwapChainForHwnd_hookId = 0;
 
-HRESULT CAPSULE_STDCALL CreateSwapChainForHwnd_hook (
+HRESULT LAB_STDCALL CreateSwapChainForHwnd_hook (
         IDXGIFactory2                   *factory,
         IUnknown                        *pDevice,
         HWND                            hWnd,
@@ -254,7 +254,7 @@ HRESULT CAPSULE_STDCALL CreateSwapChainForHwnd_hook (
 // Example users: MonoGame
 ///////////////////////////////////////////////
 
-typedef HRESULT (CAPSULE_STDCALL *CreateSwapChain_t)(
+typedef HRESULT (LAB_STDCALL *CreateSwapChain_t)(
         IDXGIFactory2                   *factory,
         IUnknown                        *pDevice,
         DXGI_SWAP_CHAIN_DESC            *pDesc,
@@ -263,7 +263,7 @@ typedef HRESULT (CAPSULE_STDCALL *CreateSwapChain_t)(
 static CreateSwapChain_t CreateSwapChain_real;
 static SIZE_T CreateSwapChain_hookId = 0;
 
-HRESULT CAPSULE_STDCALL CreateSwapChain_hook (
+HRESULT LAB_STDCALL CreateSwapChain_hook (
         IDXGIFactory2                   *factory,
         IUnknown                        *pDevice,
         DXGI_SWAP_CHAIN_DESC            *pDesc,
@@ -326,11 +326,11 @@ static void install_swapchain_hooks (IDXGIFactory *factory) {
 // CreateDXGIFactory (DXGI 1.0)
 ///////////////////////////////////////////////
 
-typedef HRESULT (CAPSULE_STDCALL *CreateDXGIFactory_t)(REFIID, void**);
+typedef HRESULT (LAB_STDCALL *CreateDXGIFactory_t)(REFIID, void**);
 static CreateDXGIFactory_t CreateDXGIFactory_real;
 static SIZE_T CreateDXGIFactory_hookId = 0;
 
-HRESULT CAPSULE_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
+HRESULT LAB_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
   CapsuleLog("CreateDXGIFactory called with riid: %s", NameFromIid(riid).c_str());
   HRESULT res = CreateDXGIFactory_real(riid, ppFactory);
 
@@ -347,11 +347,11 @@ HRESULT CAPSULE_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
 // CreateDXGIFactory1 (DXGI 1.1)
 ///////////////////////////////////////////////
 
-typedef HRESULT (CAPSULE_STDCALL *CreateDXGIFactory1_t)(REFIID, void**);
+typedef HRESULT (LAB_STDCALL *CreateDXGIFactory1_t)(REFIID, void**);
 static CreateDXGIFactory1_t CreateDXGIFactory1_real;
 static SIZE_T CreateDXGIFactory1_hookId;
 
-HRESULT CAPSULE_STDCALL CreateDXGIFactory1_hook (REFIID riid, void** ppFactory) {
+HRESULT LAB_STDCALL CreateDXGIFactory1_hook (REFIID riid, void** ppFactory) {
   CapsuleLog("Hooked_CreateDXGIFactory1 called with riid: %s", NameFromIid(riid).c_str());
   HRESULT res = CreateDXGIFactory1_real(riid, ppFactory);
 

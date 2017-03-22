@@ -16,11 +16,11 @@ class Connection {
   private:
     std::string *r_path;
     std::string *w_path;
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
     HANDLE pipe_r;
     HANDLE pipe_w;
-#else // CAPSULE_WINDOWS
+#else // LAB_WINDOWS
     int fifo_r;
     int fifo_w;
-#endif // !CAPSULE_WINDOWS
+#endif // !LAB_WINDOWS
 };

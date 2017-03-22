@@ -36,9 +36,9 @@ static inline bool GlError(const char *func, const char *str) {
 	return false;
 }
 
-bool CAPSULE_STDCALL LoadOpengl (const char *opengl_path);
+bool LAB_STDCALL LoadOpengl (const char *opengl_path);
 
-void CAPSULE_STDCALL EnsureOpengl() {
+void LAB_STDCALL EnsureOpengl() {
 	if (!gl_handle) {
 		LoadOpengl(DEFAULT_OPENGL);
 	}
@@ -57,7 +57,7 @@ void CAPSULE_STDCALL EnsureOpengl() {
   } \
 }
 
-bool CAPSULE_STDCALL InitGlFunctions() {
+bool LAB_STDCALL InitGlFunctions() {
   EnsureOpengl();
   GLSYM(glGetError)
   GLSYM(glGetIntegerv)
@@ -116,8 +116,8 @@ static void GlFree() {
 typedef void* (*dlopen_type)(const char*, int);
 dlopen_type _dlopen;
 
-void CAPSULE_STDCALL EnsureRealDlopen() {
-#ifdef CAPSULE_LINUX
+void LAB_STDCALL EnsureRealDlopen() {
+#ifdef LAB_LINUX
   if (!_dlopen) {
     // on linux, since we intercept dlopen, we need to
     // get back the actual dlopen, so that we can, y'know,
@@ -128,8 +128,8 @@ void CAPSULE_STDCALL EnsureRealDlopen() {
 #endif
 }
 
-bool CAPSULE_STDCALL LoadOpengl (const char *opengl_path) {
-#if defined(CAPSULE_LINUX)
+bool LAB_STDCALL LoadOpengl (const char *opengl_path) {
+#if defined(LAB_LINUX)
   EnsureRealDlopen();
   gl_handle = _dlopen(opengl_path, (RTLD_NOW|RTLD_LOCAL));
 #else
@@ -141,20 +141,20 @@ bool CAPSULE_STDCALL LoadOpengl (const char *opengl_path) {
     return false;
   }
 
-#if defined(CAPSULE_LINUX)
+#if defined(LAB_LINUX)
   GLSYM(glXQueryExtension)
   GLSYM(glXSwapBuffers)
   GLSYM(glXGetProcAddressARB)
-#elif defined(CAPSULE_WINDOWS)
+#elif defined(LAB_WINDOWS)
   GLSYM(wglGetProcAddress)
-#elif defined(CAPSULE_MACOS)
+#elif defined(LAB_MACOS)
   GLSYM(glGetProcAddress)
 #endif
 
   return true;
 }
 
-#ifdef CAPSULE_LINUX
+#ifdef LAB_LINUX
 extern "C" {
 
 // this intercepts glXGetProcAddressARB for linux games
@@ -173,7 +173,7 @@ void* glXGetProcAddressARB (const char *name) {
 }
 #endif
 
-#ifdef CAPSULE_LINUX
+#ifdef LAB_LINUX
 void* dlopen (const char * filename, int flag) {
   EnsureRealDlopen();
 
@@ -198,7 +198,7 @@ void* dlopen (const char * filename, int flag) {
 }
 #endif
 
-#ifdef CAPSULE_LINUX
+#ifdef LAB_LINUX
 extern "C" {
   void glXSwapBuffers (void *a, void *b) {
     capdata.saw_opengl = true;
@@ -451,7 +451,7 @@ void GlShmemCapture () {
 /**
  * Capture one OpenGL frame
  */
-void CAPSULE_STDCALL GlCapture (int width, int height) {
+void LAB_STDCALL GlCapture (int width, int height) {
 
   static bool functions_initialized = false;
   static bool critical_failure = false;

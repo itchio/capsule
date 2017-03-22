@@ -1,12 +1,12 @@
 #include "connection.h"
 
-#if defined(CAPSULE_LINUX)
+#if defined(LAB_LINUX)
 #include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
 #include <unistd.h>   // unlink
 #include <signal.h>   // signal, SIGPIPE
-#elif defined(CAPSULE_MACOS)
+#elif defined(LAB_MACOS)
 #include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
@@ -25,7 +25,7 @@
 
 using namespace std;
 
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
 
 static HANDLE create_pipe(
   std::string &pipe_path,
@@ -52,7 +52,7 @@ static HANDLE create_pipe(
   return handle;
 }
 
-#else // CAPSULE_WINDOWS
+#else // LAB_WINDOWS
 
 static void create_fifo(
     std::string &fifo_path
@@ -84,27 +84,27 @@ static int open_fifo (
   return fd;
 }
 
-#endif // !CAPSULE_WINDOWS
+#endif // !LAB_WINDOWS
 
 Connection::Connection(std::string &r_path_in, std::string &w_path_in) {
   r_path = &r_path_in;
   w_path = &w_path_in;
 
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
   pipe_r = create_pipe(*r_path, PIPE_ACCESS_INBOUND);
   pipe_w = create_pipe(*w_path, PIPE_ACCESS_OUTBOUND);
-#else // CAPSULE_WINDOWS
+#else // LAB_WINDOWS
   // ignore SIGPIPE - those will get disconnected when
   // the game shuts down, and that's okay.
   signal(SIGPIPE, SIG_IGN);
 
   create_fifo(*r_path);
   create_fifo(*w_path);
-#endif // !CAPSULE_WINDOWS
+#endif // !LAB_WINDOWS
 }
 
 void Connection::connect() {
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
   BOOL success = false;
   success = ConnectNamedPipe(pipe_r, NULL);
   if (!success) {
@@ -115,26 +115,26 @@ void Connection::connect() {
   if (!success) {
     throw runtime_error("Could not connect to named pipe for writing");
   }
-#else // CAPSULE_WINDOWS
+#else // LAB_WINDOWS
   fifo_r = open_fifo(*r_path, "reading", O_RDONLY);
   fifo_w = open_fifo(*w_path, "writing", O_WRONLY);
-#endif // !CAPSULE_WINDOWS
+#endif // !LAB_WINDOWS
 }
 
 void Connection::write(const flatbuffers::FlatBufferBuilder &builder) {
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
   CapsuleHwritePacket(builder, pipe_w);
-#else // CAPSULE_WINDOWS
+#else // LAB_WINDOWS
   CapsuleWritePacket(builder, fifo_w);
-#endif // !CAPSULE_WINDOWS
+#endif // !LAB_WINDOWS
 }
 
 char *Connection::read() {
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
   return CapsuleHreadPacket(pipe_r);
-#else // CAPSULE_WINDOWS
+#else // LAB_WINDOWS
   return CapsuleReadPacket(fifo_r);
-#endif // !CAPSULE_WINDOWS
+#endif // !LAB_WINDOWS
 }
 
 void Connection::printDetails() {

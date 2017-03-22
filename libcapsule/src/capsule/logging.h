@@ -1,16 +1,18 @@
 #pragma once
 
-#include "platform.h"
-
 #include <stdio.h>
+#include <stdint.h>
+#include <inttypes.h>
 
-#define CapsuleLog_PATH_SIZE 32*1024
+#include <string>
+
+#include <lab/platform.h>
 
 extern FILE *logfile;
 
 #define CapsuleLog(...) {\
   if (!logfile) { \
-    logfile = capsule_open_log(); \
+    logfile = CapsuleOpenLog(); \
   } \
   fprintf(logfile, __VA_ARGS__); \
   fprintf(logfile, "\n"); \
@@ -24,12 +26,6 @@ extern "C" {
 #endif
 
 FILE *CapsuleOpenLog();
-
-#ifdef CAPSULE_WINDOWS
-wchar_t *CapsuleLogPath();
-#else
-char *CapsuleLogPath();
-#endif // CAPSULE_WINDOWS
 
 #ifdef __cplusplus
 }

@@ -23,8 +23,6 @@ include_directories(
   ${lab_INCLUDE_DIR}
 )
 
-add_definitions(-DBUILD_CAPSULE_DLL)
-
 set(libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/capsule.cc
     ${libcapsule_SOURCE_DIR}/gl_capture.cc
