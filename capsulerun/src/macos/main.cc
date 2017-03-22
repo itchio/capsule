@@ -56,7 +56,7 @@ void MainThread (MainArgs *args) {
 
   CapsuleLog("pid %d given to child %s", child_pid, args->exec);
 
-  conn->connect();
+  conn->Connect();
 
   MainLoop ml {args, conn};
   hotkey::Init(&ml);

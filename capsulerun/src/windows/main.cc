@@ -128,7 +128,7 @@ int Main (MainArgs *args) {
     std::thread child_thread(WaitForChild, pi.hProcess);
     child_thread.detach();
 
-    conn->connect();
+    conn->Connect();
     connected = true;
 
     MainLoop ml {args, conn};
