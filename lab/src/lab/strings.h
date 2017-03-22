@@ -21,7 +21,7 @@ void ToWideChar (const char *s, wchar_t **ws);
  */
 void FromWideChar (const wchar_t *ws, char **s);
 
-#endif() // LAB_WINDOWS
+#endif // LAB_WINDOWS
 
 } // namespace strings
 } // namespace lab
