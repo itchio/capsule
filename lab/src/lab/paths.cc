@@ -3,6 +3,8 @@
 
 #include "platform.h"
 
+#include <stdlib.h>
+
 #if defined(LAB_LINUX)
 #include <unistd.h> // readlink
 #include <limits.h> // realpath
