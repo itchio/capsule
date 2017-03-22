@@ -97,7 +97,7 @@ int Main (capsule_args_t *args) {
 
   if (strcmp("headless", args->exec) == 0) {
     CapsuleLog("Running in headless mode...");
-    conn->printDetails();
+    conn->PrintDetails();
   } else {
     CapsuleLog("Running '%s'", args->exec);
     for (int i = 0; i < args->exec_argc; i++) {
@@ -123,7 +123,7 @@ int Main (capsule_args_t *args) {
     child_thread.detach();
   }
 
-  conn->connect();
+  conn->Connect();
   connected = true;
 
   MainLoop ml {args, conn};

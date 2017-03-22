@@ -24,7 +24,7 @@ void MainLoop::Run () {
 
     {
       MICROPROFILE_SCOPE(MainLoopRead);
-      buf = conn_->read();
+      buf = conn_->Read();
       if (!buf) {
         CapsuleLog("MainLoop::Run: pipe closed");
         break;
@@ -78,7 +78,7 @@ void MainLoop::CaptureStart () {
   auto cps = messages::CreateCaptureStart(builder, args_->fps, args_->size_divider, args_->gpu_color_conv);
   auto opkt = messages::CreatePacket(builder, messages::Message_CaptureStart, cps.Union());
   builder.Finish(opkt);
-  conn_->write(builder);
+  conn_->Write(builder);
 }
 
 void MainLoop::EndSession () {
@@ -110,9 +110,9 @@ void MainLoop::CaptureStop () {
 
   flatbuffers::FlatBufferBuilder builder(1024);
   auto cps = messages::CreateCaptureStop(builder);
-  auto opkt = CreatePacket(builder, messages::Message_CaptureStop, cps.Union());
+  auto opkt = messages::CreatePacket(builder, messages::Message_CaptureStop, cps.Union());
   builder.Finish(opkt);
-  conn_->write(builder);
+  conn_->Write(builder);
 }
 
 void MainLoop::StartSession (const messages::VideoSetup *vs) {

@@ -153,7 +153,7 @@ void VideoReceiver::FrameCommitted(int index, int64_t timestamp) {
   auto vfp = messages::CreateVideoFrameProcessed(builder, index); 
   auto opkt = messages::CreatePacket(builder, messages::Message_VideoFrameProcessed, vfp.Union());
   builder.Finish(opkt);
-  conn_->write(builder);
+  conn_->Write(builder);
 }
 
 void VideoReceiver::Stop() {

@@ -5,22 +5,20 @@
 class Connection {
   public:
     Connection(std::string &r_path, std::string &w_path);
-    void connect();
-    void printDetails();
+    void Connect();
+    void PrintDetails();
 
-    void write(const flatbuffers::FlatBufferBuilder &builder);
-    char *read();
-
-    void write_capture_start();
+    void Write(const flatbuffers::FlatBufferBuilder &builder);
+    char *Read();
 
   private:
-    std::string *r_path;
-    std::string *w_path;
+    std::string *r_path_;
+    std::string *w_path_;
 #if defined(LAB_WINDOWS)
-    HANDLE pipe_r;
-    HANDLE pipe_w;
+    HANDLE pipe_r_;
+    HANDLE pipe_w_;
 #else // LAB_WINDOWS
-    int fifo_r;
-    int fifo_w;
+    int fifo_r_;
+    int fifo_w_;
 #endif // !LAB_WINDOWS
 };
