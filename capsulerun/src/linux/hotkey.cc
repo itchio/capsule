@@ -28,7 +28,7 @@ static void Poll (MainLoop *ml) {
     }
 }
 
-void Init(MainLoop *ml) {
+void Init (MainLoop *ml) {
     // XSetErrorHandler(capsule_x11_error_handler);
     capsule_x11_dpy = XOpenDisplay(0);
     capsule_x11_root = DefaultRootWindow(capsule_x11_dpy);

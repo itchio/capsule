@@ -31,7 +31,7 @@ class WasapiReceiver : public AudioReceiver {
 
   private:
     audio_format_t afmt_;
-    IMMDeviceEnumerator *enumerator = nullptr;
+    IMMDeviceEnumerator *enumerator_ = nullptr;
     IMMDevice *device_ = nullptr;
     IAudioClient *audio_client_ = nullptr;
     IAudioCaptureClient *capture_client_ = nullptr;

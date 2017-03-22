@@ -63,7 +63,6 @@ void CapsuleInstallProcessHooks();
 void CapsuleInstallOpenglHooks();
 void CapsuleInstallDxgiHooks();
 void CapsuleInstallD3d9Hooks();
-void CapsuleInstallDdrawHooks();
 
 bool DcCaptureInit();
 

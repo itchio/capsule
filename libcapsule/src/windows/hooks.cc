@@ -19,7 +19,6 @@ void CapsuleInstallWindowsHooks () {
   CapsuleInstallOpenglHooks();
   CapsuleInstallDxgiHooks();
   CapsuleInstallD3d9Hooks();
-  CapsuleInstallDdrawHooks();
 }
 
 BOOL CAPSULE_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {

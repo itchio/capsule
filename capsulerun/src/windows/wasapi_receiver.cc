@@ -32,29 +32,29 @@ static inline void SafeRelease(IUnknown *p) {
 }
 
 WasapiReceiver::WasapiReceiver() {
-  memset(&afmt_, 0, sizeof(*afmt));
+  memset(&afmt_, 0, sizeof(afmt_));
 
   HRESULT hr;
 
   hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
   if (FAILED(hr)) {
-    throw runtime_error("CoInitializeEx failed");
+    throw std::runtime_error("CoInitializeEx failed");
   }
 
   hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void**)&enumerator_);
   if (FAILED(hr)) {
-    throw runtime_error("Could not create device enumerator instance");
+    throw std::runtime_error("Could not create device enumerator instance");
   }
 
   hr = enumerator_->GetDefaultAudioEndpoint(eRender, eConsole, &device_);
   if (FAILED(hr)) {
-    throw runtime_error("Could not get default audio endpoint");
+    throw std::runtime_error("Could not get default audio endpoint");
   }
 
   IPropertyStore *props = nullptr;
-  hr = device->OpenPropertyStore(STGM_READ, &props);
+  hr = device_->OpenPropertyStore(STGM_READ, &props);
   if (FAILED(hr)) {
-    throw runtime_error("Could not get open endpoint property store");
+    throw std::runtime_error("Could not get open endpoint property store");
   }
 
   PROPVARIANT var_name;
@@ -64,7 +64,7 @@ WasapiReceiver::WasapiReceiver() {
   // Get the endpoint's friendly-name property.
   hr = props->GetValue(PKEY_Device_FriendlyName, &var_name);
   if (FAILED(hr)) {
-    throw runtime_error("Could not get device friendly name");
+    throw std::runtime_error("Could not get device friendly name");
   }
 
   // Print endpoint friendly name and endpoint ID.
@@ -73,14 +73,14 @@ WasapiReceiver::WasapiReceiver() {
   PropVariantClear(&var_name);
   SafeRelease(props);
 
-  hr = device->Activate(IID_IAudioClient, CLSCTX_ALL, NULL, (void**) &audio_client_);
+  hr = device_->Activate(IID_IAudioClient, CLSCTX_ALL, NULL, (void**) &audio_client_);
   if (FAILED(hr)) {
-    throw runtime_error("Could not activate audio device");
+    throw std::runtime_error("Could not activate audio device");
   }
 
-  hr = audio_client->GetMixFormat(&pwfx_);
+  hr = audio_client_->GetMixFormat(&pwfx_);
   if (FAILED(hr)) {
-    throw runtime_error("Could not get mix format");
+    throw std::runtime_error("Could not get mix format");
   }
 
   afmt_.channels = pwfx_->nChannels;
@@ -96,7 +96,7 @@ WasapiReceiver::WasapiReceiver() {
       pwfx_,
       NULL);
   if (FAILED(hr)) {
-    throw runtime_error("Could not initialize audio client");
+    throw std::runtime_error("Could not initialize audio client");
   }
 
   UINT32 buffer_frame_count;
@@ -104,7 +104,7 @@ WasapiReceiver::WasapiReceiver() {
   // Get the size of the allocated buffer.
   hr = audio_client_->GetBufferSize(&buffer_frame_count);
   if (hr != S_OK) {
-    throw runtime_error("Could not get buffer size");
+    throw std::runtime_error("Could not get buffer size");
   }
 
   CapsuleLog("WasapiReceiver: Buffer frame count: %d", buffer_frame_count);
@@ -113,7 +113,7 @@ WasapiReceiver::WasapiReceiver() {
       IID_IAudioCaptureClient,
       (void **) &capture_client_);
   if (FAILED(hr)) {
-    throw runtime_error("Could not get capture client");
+    throw std::runtime_error("Could not get capture client");
   }
 
   hr = audio_client_->Start();
@@ -133,7 +133,7 @@ void *WasapiReceiver::ReceiveFrames(int *frames_received) {
 
   std::lock_guard<std::mutex> lock(stopped_mutex_);
 
-  if (stopped) {
+  if (stopped_) {
     *frames_received = 0;
     return nullptr;
   }
@@ -143,11 +143,11 @@ void *WasapiReceiver::ReceiveFrames(int *frames_received) {
   HRESULT hr;
   UINT32 num_frames_available;
 
-  if (num_frames_received > 0) {
-    hr = capture_client_->ReleaseBuffer(num_frames_received);
+  if (num_frames_received_ > 0) {
+    hr = capture_client_->ReleaseBuffer(num_frames_received_);
     if (FAILED(hr)) {
       CapsuleLog("WasapiReceiver: Could not release buffer: error %d (%x)\n", hr, hr);
-      stopped = true;
+      stopped_ = true;
       *frames_received = 0;
       return nullptr;
     }
@@ -191,11 +191,11 @@ void WasapiReceiver::Stop() {
 }
 
 WasapiReceiver::~WasapiReceiver() {
-  CoTaskMemFree(pwfx);
-  SafeRelease(enumerator_)
-  SafeRelease(device_)
-  SafeRelease(audio_client_)
-  SafeRelease(capture_client_)
+  CoTaskMemFree(pwfx_);
+  SafeRelease(enumerator_);
+  SafeRelease(device_);
+  SafeRelease(audio_client_);
+  SafeRelease(capture_client_);
 }
 
 } // namespace audio

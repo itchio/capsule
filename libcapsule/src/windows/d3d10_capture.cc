@@ -8,10 +8,10 @@ struct d3d10_data {
 
 static struct d3d10_data data = {};
 
-void d3d10_capture (void *swap_ptr, void *backbuffer_ptr) {
+void D3d10Capture (void *swap_ptr, void *backbuffer_ptr) {
   CapsuleLog("d3d10_capture: stub!");
 }
 
-void d3d10_free () {
+void D3d10Free () {
   CapsuleLog("d3d10_free: stub!");
 }

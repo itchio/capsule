@@ -8,7 +8,7 @@
 namespace capsule {
 namespace hotkey {
 
-static void Poll(MainLoop *ml) {
+static void Poll (MainLoop *ml) {
   BOOL success = RegisterHotKey(NULL, 1, MOD_NOREPEAT, VK_F9);
 
   if (!success) {
@@ -26,14 +26,12 @@ static void Poll(MainLoop *ml) {
   }
 }
 
-int Init(MainLoop *ml) {
+void Init (MainLoop *ml) {
   // we must register from the same thread we use to poll,
   // since we don't register it for a specific hwnd.
   // That's how Win32 message queues work!
   std::thread poll_thread(Poll, ml);
   poll_thread.detach();
-
-  return 0;
 }
 
 } // namespace hotkey

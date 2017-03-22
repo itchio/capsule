@@ -447,7 +447,7 @@ HRESULT CAPSULE_STDCALL Direct3DCreate9Ex_hook(
   return res;
 }
 
-void capsule_install_d3d9_hooks () {
+void CapsuleInstallD3d9Hooks () {
   DWORD err;
 
   HMODULE d3d9 = LoadLibrary(L"d3d9.dll");

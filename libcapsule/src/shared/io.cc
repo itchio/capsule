@@ -28,7 +28,7 @@ static wchar_t *GetPipePath (wchar_t *var_name) {
 FILE *EnsureOutfile() {
   if (!out_file) {
 #if defined(CAPSULE_WINDOWS)
-    wchar_t *pipe_path = get_pipe_path(L"CAPSULE_PIPE_W_PATH");
+    wchar_t *pipe_path = GetPipePath(L"CAPSULE_PIPE_W_PATH");
     CapsuleLog("pipe_w path: %S", pipe_path);
     out_file = _wfopen(pipe_path, L"wb");
     free(pipe_path);

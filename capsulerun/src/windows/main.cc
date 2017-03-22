@@ -77,8 +77,8 @@ int Main (capsule_args_t *args) {
   wchar_t *libcapsule_path_w;
   ToWideChar(libcapsule_path, &libcapsule_path_w);
 
-  string pipe_r_path = "\\\\.\\pipe\\capsule.runr";
-  string pipe_w_path = "\\\\.\\pipe\\capsule.runw";
+  std::string pipe_r_path = "\\\\.\\pipe\\capsule.runr";
+  std::string pipe_w_path = "\\\\.\\pipe\\capsule.runw";
 
   Connection *conn = new Connection(pipe_r_path, pipe_w_path);
 
@@ -104,7 +104,7 @@ int Main (capsule_args_t *args) {
 
   bool first_arg = true;
 
-  wstring command_line_w;
+  std::wstring command_line_w;
   for (int i = 0; i < args->exec_argc; i++) {
     wchar_t *arg;
     // this "leaks" mem, but it's one time, so don't care
@@ -120,7 +120,7 @@ int Main (capsule_args_t *args) {
 
   CapsuleLog("Launching %S", command_line_w.c_str());
   CapsuleLog("Injecting %S", libcapsule_path_w);
-  auto libcapsule_init_function_name = "capsule_windows_init";
+  auto libcapsule_init_function_name = "CapsuleWindowsInit";
 
   err = NktHookLibHelpers::CreateProcessWithDllW(
     executable_path_w, // applicationName

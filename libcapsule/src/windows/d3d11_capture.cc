@@ -1,7 +1,7 @@
 
 #include <capsule.h>
 #include "win_capture.h"
-#include "dxgi-util.h"
+#include "dxgi_util.h"
 
 #include "./d3d11_shaders.h"
 
@@ -79,7 +79,7 @@ static bool D3d11InitFormat(IDXGISwapChain *swap, HWND *window) {
     CapsuleLog("D3d11InitFormat: swap->GetDesc failed");
     return false;
   }
-  data.format = fix_dxgi_format(desc.BufferDesc.Format);
+  data.format = FixDxgiFormat(desc.BufferDesc.Format);
   data.out_format = DXGI_FORMAT_R8G8B8A8_UNORM;
   data.multisampled = desc.SampleDesc.Count > 1;
   *window = desc.OutputWindow;
@@ -993,7 +993,7 @@ void D3d11Capture(void *swap_ptr, void *backbuffer_ptr) {
     if (data.gpu_color_conv) {
       pix_fmt = CAPSULE_PIX_FMT_YUV444P;
     } else {
-      pix_fmt = dxgi_format_to_pix_fmt(data.format);
+      pix_fmt = DxgiFormatToPixFmt(data.format);
     }
     capsule::io::WriteVideoFormat(
       data.cx / data.size_divider,
@@ -1018,17 +1018,17 @@ void D3d11DrawOverlay () {
 }
 
 void D3d11Free() {
-  SAFE_RELEASE(data.scale_tex);
-  SAFE_RELEASE(data.scale_resource);
-  SAFE_RELEASE(data.vertex_shader);
-  SAFE_RELEASE(data.vertex_layout);
-  SAFE_RELEASE(data.pixel_shader);
-  SAFE_RELEASE(data.sampler_state);
-  SAFE_RELEASE(data.blend_state);
-  SAFE_RELEASE(data.zstencil_state);
-  SAFE_RELEASE(data.raster_state);
-  SAFE_RELEASE(data.vertex_buffer);
-  SAFE_RELEASE(data.constants);
+  SafeRelease(data.scale_tex);
+  SafeRelease(data.scale_resource);
+  SafeRelease(data.vertex_shader);
+  SafeRelease(data.vertex_layout);
+  SafeRelease(data.pixel_shader);
+  SafeRelease(data.sampler_state);
+  SafeRelease(data.blend_state);
+  SafeRelease(data.zstencil_state);
+  SafeRelease(data.raster_state);
+  SafeRelease(data.vertex_buffer);
+  SafeRelease(data.constants);
 
   for (size_t i = 0; i < NUM_BUFFERS; i++) {
     if (data.copy_surfaces[i]) {
@@ -1038,8 +1038,8 @@ void D3d11Free() {
       data.copy_surfaces[i]->Release();
     }
 
-    SAFE_RELEASE(data.textures[i]);
-    SAFE_RELEASE(data.render_targets[i]);
+    SafeRelease(data.textures[i]);
+    SafeRelease(data.render_targets[i]);
   }
 
   memset(&data, 0, sizeof(data));

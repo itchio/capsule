@@ -14,7 +14,7 @@ void RunApp () {
 
 namespace hotkey {
 
-int Init(MainLoop *ml) {
+void Init(MainLoop *ml) {
   CapsuleLog("capsule::hotkey::Init: registering hotkey");
 
   CapsuleLog("capsule::hotkey::Init: kVK_F9 is %d", kVK_F9);
@@ -24,10 +24,7 @@ int Init(MainLoop *ml) {
 
   if (hotKey == nil) {
     CapsuleLog("capsule::hotkey::init: registration failed");
-    return 1;
   }
-
-  return 0;
 }
 
 } // namespace hotkey
