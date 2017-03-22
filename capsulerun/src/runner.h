@@ -9,10 +9,21 @@
 
 namespace capsule {
 
+enum ProcessStatus {
+  kProcessStatusUnknown = 0,
+  kProcessStatusExited,
+  kProcessStatusSignaled,
+};
+
+struct ProcessFate {
+  ProcessStatus status;
+  int code; // exit code if exited, signal if signalled
+};
+
 class ProcessInterface {
   public:
     virtual ~ProcessInterface() {};
-    virtual std::string Wait() = 0;
+    virtual void Wait(ProcessFate *fate) = 0;
 };
 
 class ExecutorInterface {
@@ -43,6 +54,8 @@ class Runner {
 
     Connection *conn_ = nullptr;
     MainLoop *loop_ = nullptr;
+
+    int exit_code_ = 0;
 };
 
 } // namespace capsule

@@ -16,7 +16,7 @@ class Process : public ProcessInterface {
       process_handle_(process_handle) {};
     ~Process() override;
 
-    std::string Wait() override;
+    void Wait(ProcessFate *fate) override;
 
   private:
     HANDLE process_handle_ = INVALID_HANDLE_VALUE;

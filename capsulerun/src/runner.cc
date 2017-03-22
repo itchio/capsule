@@ -34,21 +34,36 @@ void Runner::Run () {
   loop_->audio_receiver_factory_ = executor_->GetAudioReceiverFactory();
   hotkey::Init(loop_);
   loop_->Run();
+
+  exit(exit_code_);
 }
 
 void Runner::WaitForChild () {
-  // TODO: a string as error isn't good enough, we need a data structure
-  // for child exit status
-  auto error = process_->Wait();
+  ProcessFate fate;
+  memset(&fate, 0, sizeof(fate));
 
-  if (error == "") {
-    CapsuleLog("Child exited peacefully");
-  } else {
-    CapsuleLog("Child error: %s", error.c_str());
+  process_->Wait(&fate);
+  exit_code_ = fate.code;
+
+  if (fate.status == kProcessStatusExited) {
+    if (fate.code == 0) {
+      CapsuleLog("Child exited gracefully");
+    } else {
+      CapsuleLog("Child exited with code %d", fate.code);
+    }
+  } else if (fate.status == kProcessStatusSignaled) {
+    CapsuleLog("Child killed by signal %d", fate.code);
+    if (!conn_->IsConnected()) {
+      exit(fate.code);
+    }
   }
 
   if (!conn_->IsConnected()) {
-    exit(error == "" ? 0 : 127);
+    // if we haven't connected by this point, we never will:
+    // the child doesn't exist anymore.
+    // this also works for "disappearing launchers": even the launchers
+    // should connect once first, and then their spawn will use a second connection.
+    exit(fate.code);
   }
 }
 

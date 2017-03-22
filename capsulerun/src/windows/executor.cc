@@ -16,17 +16,14 @@
 namespace capsule {
 namespace windows {
 
-std::string Process::Wait() {
+void Process::Wait(ProcessFate *fate) {
   WaitForSingleObject(process_handle_, INFINITE);
 
   DWORD exit_code;
   GetExitCodeProcess(process_handle_, &exit_code);
 
-  if (exit_code == 0) {
-    return "";
-  } else {
-    return "Child exited with code " + std::to_string(exit_code);
-  }
+  fate->status = kProcessStatusExited;
+  fate->code = static_cast<int>(exit_code);
 }
 
 Process::~Process() {
