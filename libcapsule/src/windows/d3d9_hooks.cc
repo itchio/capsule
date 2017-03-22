@@ -23,7 +23,7 @@ static void present_begin(IDirect3DDevice9 *device, IDirect3DSurface9 **backbuff
       CapsuleLog("d3d9 present_begin: failed to get backbuffer %d (%x)", hr, hr);
     }
 
-    d3d9_capture(device, *backbuffer);
+    D3d9Capture(device, *backbuffer);
   }
 
   present_recurse++;

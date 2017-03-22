@@ -17,6 +17,9 @@
 
 #include <mutex>
 
+namespace capsule {
+namespace audio {
+
 class WasapiReceiver : public AudioReceiver {
   public:
     WasapiReceiver();
@@ -27,14 +30,17 @@ class WasapiReceiver : public AudioReceiver {
     virtual void Stop();
 
   private:
-    audio_format_t afmt;
+    audio_format_t afmt_;
     IMMDeviceEnumerator *enumerator = nullptr;
-    IMMDevice *device = nullptr;
-    IAudioClient *audio_client = nullptr;
-    IAudioCaptureClient *capture_client = nullptr;
-    WAVEFORMATEX *pwfx = nullptr;
-    int num_frames_received = 0;
+    IMMDevice *device_ = nullptr;
+    IAudioClient *audio_client_ = nullptr;
+    IAudioCaptureClient *capture_client_ = nullptr;
+    WAVEFORMATEX *pwfx_ = nullptr;
+    int num_frames_received_ = 0;
 
-    bool stopped = false;    
-    std::mutex stopped_mutex;
+    bool stopped_ = false;    
+    std::mutex stopped_mutex_;
 };
+
+} // namespace capsule
+} // namespace audio

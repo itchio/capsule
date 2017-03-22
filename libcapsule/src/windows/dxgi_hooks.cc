@@ -37,8 +37,8 @@ static bool setup_dxgi(IDXGISwapChain *swap) {
   if (SUCCEEDED(hr)) {
     CapsuleLog("Found D3D10 Device!");
     data.swap = swap;
-    data.capture = d3d10_capture;
-    data.free = d3d10_free;
+    data.capture = D3d10Capture;
+    data.free = D3d10Free;
     device->Release();
     return true;
   }
@@ -47,9 +47,9 @@ static bool setup_dxgi(IDXGISwapChain *swap) {
   if (SUCCEEDED(hr)) {
     CapsuleLog("Found D3D11 Device!");
     data.swap = swap;
-    data.draw_overlay = d3d11_draw_overlay;
-    data.capture = d3d11_capture;
-    data.free = d3d11_free;
+    data.draw_overlay = D3d11DrawOverlay;
+    data.capture = D3d11Capture;
+    data.free = D3d11Free;
     device->Release();
     return true;
   }
