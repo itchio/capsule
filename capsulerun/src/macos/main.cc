@@ -2,7 +2,6 @@
 #include <capsulerun.h>
 #include <capsulerun_hotkey.h>
 
-#include "../env.h"
 #include "../main_loop.h"
 
 #include <stdio.h>
@@ -11,20 +10,21 @@
 // posix_spawn
 #include <spawn.h>
 
-// unlink
-#include <unistd.h>
-
 // strerror
 #include <string.h>
 
 #include <thread>
+
+#include <lab/platform.h>
+#include <lab/paths.h>
+#include <lab/env.h>
 
 extern char **environ;
 
 namespace capsule {
 
 void MainThread (capsule_args_t *args) {
-  auto libcapsule_path = std::string(args->libpath) + "/libcapsule.dylib";
+  auto libcapsule_path = lab::paths::Join(std::string(args->libpath), "libcapsule.dylib");
 
   // TODO: respect outside DYLD_INSERT_LIBRARIES ?
   auto dyld_insert_var = "DYLD_INSERT_LIBRARIES=" + libcapsule_path;
@@ -42,7 +42,7 @@ void MainThread (capsule_args_t *args) {
     NULL
   };
 
-  char **child_environ = MergeEnvs(environ, env_additions);
+  char **child_environ = lab::env::MergeBlocks(environ, env_additions);
 
   pid_t child_pid;
 

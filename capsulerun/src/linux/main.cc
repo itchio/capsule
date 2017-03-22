@@ -2,8 +2,6 @@
 #include "capsulerun.h"
 #include "capsulerun_hotkey.h"
 
-#include "../env.h"
-
 #include "../main_loop.h"
 #include "./pulse_receiver.h"
 
@@ -28,6 +26,10 @@
 
 // thread
 #include <thread>
+
+#include <lab/platform.h>
+#include <lab/paths.h>
+#include <lab/env.h>
 
 namespace capsule {
 
@@ -67,8 +69,8 @@ static void WaitForChild (int child_pid) {
 }
 
 int Main (capsule_args_t *args) {
-  std::string libcapsule32_path = paths::Join(std::string(args->libpath), "libcapsule32.so");
-  std::string libcapsule64_path = paths::Join(std::string(args->libpath), "libcapsule64.so");
+  std::string libcapsule32_path = lab::paths::Join(std::string(args->libpath), "libcapsule32.so");
+  std::string libcapsule64_path = lab::paths::Join(std::string(args->libpath), "libcapsule64.so");
   std::string ldpreload = libcapsule32_path + ":" + libcapsule64_path;
 
   pid_t child_pid;
@@ -89,7 +91,7 @@ int Main (capsule_args_t *args) {
     (char *) fifo_w_var.c_str(),
     NULL
   };
-  char **child_environ = MergeEnvs(environ, env_additions);
+  char **child_environ = lab::env::MergeBlocks(environ, env_additions);
 
   auto conn = new Connection(fifo_r_path, fifo_w_path);
 
