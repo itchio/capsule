@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../audio_receiver.h"
+#include "../encoder.h"
 
 // IMMDeviceEnumerator, IMMDevice
 #include <mmDeviceapi.h>
@@ -17,20 +18,20 @@ namespace capsule {
 namespace audio {
 
 // REFERENCE_TIME time units per second and per millisecond
-const long long kReftimesPerSec = 10000000LL;
-const long long kReftimesPerMillisec = 10000LL;
+static const long long kReftimesPerSec = 10000000LL;
+static const long long kReftimesPerMillisec = 10000LL;
 
 class WasapiReceiver : public AudioReceiver {
   public:
     WasapiReceiver();
     virtual ~WasapiReceiver();
 
-    virtual int ReceiveFormat(audio_format_t *afmt);
+    virtual int ReceiveFormat(encoder::AudioFormat *afmt);
     virtual void *ReceiveFrames(int *frames_received);
     virtual void Stop();
 
   private:
-    audio_format_t afmt_;
+    encoder::AudioFormat afmt_;
     IMMDeviceEnumerator *enumerator_ = nullptr;
     IMMDevice *device_ = nullptr;
     IAudioClient *audio_client_ = nullptr;

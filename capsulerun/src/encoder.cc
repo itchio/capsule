@@ -16,6 +16,7 @@ extern "C" {
 
 #include <microprofile.h>
 #include <lab/logging.h>
+#include <lab/env.h>
 
 #include <chrono>
 
@@ -388,7 +389,7 @@ void Run(MainArgs *args, Params *params) {
     }
 
     // FIXME: just messing around
-    bool misalign_planes = !!getenv("MISALIGN_PLANES");
+    bool misalign_planes = lab::env::Get("MISALIGN_PLANES") == "1";
     if (misalign_planes) {
       CapsuleLog("Purposefully misaligning planes to confirm suspicions about x264 performance");
       size_t frame_buffer_size = vc->width * 4 * vc->height;

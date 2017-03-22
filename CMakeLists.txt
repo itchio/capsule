@@ -68,6 +68,8 @@ add_definitions(-DMICROPROFILE_USE_CONFIG)
 set(microprofile_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/microprofile)
 set(microprofile_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/microprofile)
 
+add_definitions(-DCRT_SECURE_NO_WARNINGS)
+
 add_subdirectory(lab)
 add_subdirectory(libcapsule)
 add_subdirectory(capsulerun)

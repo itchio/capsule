@@ -1,16 +1,13 @@
 
-// this file is pretty much textbook msdn:
-// https://msdn.microsoft.com/en-us/library/windows/desktop/dd370800(v=vs.85).aspx 
-
 #include "wasapi_receiver.h"
+
+#include <microprofile.h>
 
 // PKEY_Device_FriendlyName
 #include <Functiondiscoverykeys_devpkey.h>
 
 // TODO: signal errors without exceptions
 #include <stdexcept>
-
-#include <microprofile.h>
 
 MICROPROFILE_DEFINE(WasapiReceiveFrames, "Wasapi", "WasapiReceiveFrames", 0xff00ff00);
 
@@ -123,7 +120,7 @@ WasapiReceiver::WasapiReceiver() {
   }
 }
 
-int WasapiReceiver::ReceiveFormat(audio_format_t *afmt) {
+int WasapiReceiver::ReceiveFormat(encoder::AudioFormat *afmt) {
   memcpy(afmt, &afmt_, sizeof(*afmt));
   return 0;
 }
