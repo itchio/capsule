@@ -1,6 +1,6 @@
 
 #include "../capsulerun_hotkey.h"
-#include "../shared/main_loop.h"
+#include "../main_loop.h"
 
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>

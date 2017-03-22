@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../shared/audio_receiver.h"
+#include "../audio_receiver.h"
 
 // IMMDeviceEnumerator, IMMDevice
 #include <mmDeviceapi.h>

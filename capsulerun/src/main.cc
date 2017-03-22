@@ -4,7 +4,7 @@
 #include "paths.h"
 
 #if defined(CAPSULE_WINDOWS)
-#include "../windows/strings.h"
+#include "windows/strings.h"
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN

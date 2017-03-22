@@ -11,10 +11,9 @@
 #include <capsulerun.h>
 #include <capsulerun_hotkey.h>
 
-#include "../shared/main_loop.h"
-#include "../shared/paths.h"
-#include "./wasapi_receiver.h"
-
+#include "../main_loop.h"
+#include "../paths.h"
+#include "wasapi_receiver.h"
 #include "strings.h"
 
 namespace capsule {

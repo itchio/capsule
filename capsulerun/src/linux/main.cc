@@ -2,9 +2,9 @@
 #include "capsulerun.h"
 #include "capsulerun_hotkey.h"
 
-#include "../shared/env.h"
+#include "../env.h"
 
-#include "../shared/main_loop.h"
+#include "../main_loop.h"
 #include "./pulse_receiver.h"
 
 #include <stdio.h>

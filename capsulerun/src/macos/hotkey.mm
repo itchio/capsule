@@ -4,7 +4,7 @@
 #include "DDHotKeyCenter.h"
 #import <Carbon/Carbon.h>
 
-#include "../shared/main_loop.h"
+#include "../main_loop.h"
 
 namespace capsule {
 

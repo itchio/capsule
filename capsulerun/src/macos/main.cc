@@ -2,8 +2,8 @@
 #include <capsulerun.h>
 #include <capsulerun_hotkey.h>
 
-#include "../shared/env.h"
-#include "../shared/main_loop.h"
+#include "../env.h"
+#include "../main_loop.h"
 
 #include <stdio.h>
 #include <stdlib.h>

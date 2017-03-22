@@ -24,11 +24,11 @@ include_directories(
 add_definitions(-DBUILD_CAPSULE_DLL)
 
 set(libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/shared/capsule.cc
-    ${libcapsule_SOURCE_DIR}/shared/gl_capture.cc
-    ${libcapsule_SOURCE_DIR}/shared/io.cc
-    ${libcapsule_SOURCE_DIR}/shared/timer.cc
-    ${libcapsule_SOURCE_DIR}/shared/logging.cc
+    ${libcapsule_SOURCE_DIR}/capsule.cc
+    ${libcapsule_SOURCE_DIR}/gl_capture.cc
+    ${libcapsule_SOURCE_DIR}/io.cc
+    ${libcapsule_SOURCE_DIR}/timer.cc
+    ${libcapsule_SOURCE_DIR}/logging.cc
 )
 
 if(APPLE)

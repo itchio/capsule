@@ -21,15 +21,15 @@ include_directories(
 )
 
 set(capsulerun_SRC
-  ${capsulerun_SOURCE_DIR}/shared/main.cc
-  ${capsulerun_SOURCE_DIR}/shared/paths.cc
-  ${capsulerun_SOURCE_DIR}/shared/encoder.cc
-  ${capsulerun_SOURCE_DIR}/shared/argparse.c
-  ${capsulerun_SOURCE_DIR}/shared/main_loop.cc
-  ${capsulerun_SOURCE_DIR}/shared/video_receiver.cc
-  ${capsulerun_SOURCE_DIR}/shared/session.cc
-  ${capsulerun_SOURCE_DIR}/shared/connection.cc
-  ${capsulerun_SOURCE_DIR}/shared/fps_counter.cc
+  ${capsulerun_SOURCE_DIR}/main.cc
+  ${capsulerun_SOURCE_DIR}/paths.cc
+  ${capsulerun_SOURCE_DIR}/encoder.cc
+  ${capsulerun_SOURCE_DIR}/argparse.c
+  ${capsulerun_SOURCE_DIR}/main_loop.cc
+  ${capsulerun_SOURCE_DIR}/video_receiver.cc
+  ${capsulerun_SOURCE_DIR}/session.cc
+  ${capsulerun_SOURCE_DIR}/connection.cc
+  ${capsulerun_SOURCE_DIR}/fps_counter.cc
   ${microprofile_SOURCE_DIR}/microprofile.cpp
 )
 
@@ -45,7 +45,7 @@ endif()
 
 if(APPLE)
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/shared/env.cc
+    ${capsulerun_SOURCE_DIR}/env.cc
     ${capsulerun_SOURCE_DIR}/macos/DDHotKeyCenter.m
     ${capsulerun_SOURCE_DIR}/macos/DDHotKeyUtilities.m
     ${capsulerun_SOURCE_DIR}/macos/hotkey.mm
@@ -55,7 +55,7 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/shared/env.cc
+    ${capsulerun_SOURCE_DIR}/env.cc
     ${capsulerun_SOURCE_DIR}/linux/pulse_dynamic.cc
     ${capsulerun_SOURCE_DIR}/linux/pulse_receiver.cc
     ${capsulerun_SOURCE_DIR}/linux/hotkey.cc

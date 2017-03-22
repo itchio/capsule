@@ -1,5 +1,5 @@
 
-#include "./shared/main_loop.h"
+#include "./main_loop.h"
 
 namespace capsule {
 namespace hotkey {

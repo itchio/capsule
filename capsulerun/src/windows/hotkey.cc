@@ -1,7 +1,7 @@
 
 #include <capsulerun.h>
 
-#include "../src/shared/main_loop.h"
+#include "../src/main_loop.h"
 
 #include <thread>
 
