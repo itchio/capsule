@@ -21,7 +21,7 @@
 // DEFINE_GUID(IID_IDXGIFactory,0x7b7166ec,0x21c7,0x44ae,0xb2,0x1a,0xc9,0xae,0x32,0x1a,0xe3,0x69);
 // 
 
-static std::string name_from_iid(IID id) {
+static std::string NameFromIid(IID id) {
 	// Adding every MIDL_INTERFACE from d3d11_1.h to make this reporting complete.
 	// Doesn't seem useful to do every object from d3d11.h itself.
 
@@ -141,7 +141,7 @@ static std::string name_from_iid(IID id) {
 	return iidString;
 }
 
-static std::string name_from_dxgi_format(DXGI_FORMAT format) {
+static std::string NameFromDxgiFormat(DXGI_FORMAT format) {
   if (format == DXGI_FORMAT_UNKNOWN                     ) return "UNKNOWN";
   if (format == DXGI_FORMAT_R32G32B32A32_TYPELESS       ) return "R32G32B32A32_TYPELESS";
   if (format == DXGI_FORMAT_R32G32B32A32_FLOAT          ) return "R32G32B32A32_FLOAT";
@@ -265,7 +265,7 @@ static std::string name_from_dxgi_format(DXGI_FORMAT format) {
   return "<unrecognized format>";
 }
 
-static inline DXGI_FORMAT fix_dxgi_format(DXGI_FORMAT format) {
+static inline DXGI_FORMAT FixDxgiFormat(DXGI_FORMAT format) {
 	switch ((unsigned long)format) {
 		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
 			return DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -276,8 +276,8 @@ static inline DXGI_FORMAT fix_dxgi_format(DXGI_FORMAT format) {
 	return format;
 }
 
-static inline capsule_pix_fmt_t dxgi_format_to_pix_fmt(DXGI_FORMAT format) {
-  switch (fix_dxgi_format(format)) {
+static inline capsule_pix_fmt_t DxgiFormatToPixFmt(DXGI_FORMAT format) {
+  switch (FixDxgiFormat(format)) {
     case DXGI_FORMAT_B8G8R8A8_UNORM:
       return CAPSULE_PIX_FMT_BGRA;
     case DXGI_FORMAT_B8G8R8X8_UNORM:
@@ -287,7 +287,7 @@ static inline capsule_pix_fmt_t dxgi_format_to_pix_fmt(DXGI_FORMAT format) {
     case DXGI_FORMAT_R10G10B10A2_UNORM:
       return CAPSULE_PIX_FMT_RGB10_A2;
     default:
-      CapsuleLog("Unsupported DXGI format %s", name_from_dxgi_format(format).c_str());
+      CapsuleLog("Unsupported DXGI format %s", NameFromDxgiFormat(format).c_str());
       return CAPSULE_PIX_FMT_UNKNOWN;
   }
 }

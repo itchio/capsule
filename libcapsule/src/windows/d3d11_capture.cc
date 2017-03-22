@@ -90,7 +90,7 @@ static bool D3d11InitFormat(IDXGISwapChain *swap, HWND *window) {
   CapsuleLog("Backbuffer: %ux%u (%s) format = %s",
     data.cx, data.cy,
     data.multisampled ? "multisampled" : "",
-    name_from_dxgi_format(desc.BufferDesc.Format).c_str()
+    NameFromDxgiFormat(desc.BufferDesc.Format).c_str()
   );
 
   return true;

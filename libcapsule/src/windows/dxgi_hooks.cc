@@ -331,7 +331,7 @@ static CreateDXGIFactory_t CreateDXGIFactory_real;
 static SIZE_T CreateDXGIFactory_hookId = 0;
 
 HRESULT CAPSULE_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
-  CapsuleLog("CreateDXGIFactory called with riid: %s", name_from_iid(riid).c_str());
+  CapsuleLog("CreateDXGIFactory called with riid: %s", NameFromIid(riid).c_str());
   HRESULT res = CreateDXGIFactory_real(riid, ppFactory);
 
   if (SUCCEEDED(res)) {
@@ -352,7 +352,7 @@ static CreateDXGIFactory1_t CreateDXGIFactory1_real;
 static SIZE_T CreateDXGIFactory1_hookId;
 
 HRESULT CAPSULE_STDCALL CreateDXGIFactory1_hook (REFIID riid, void** ppFactory) {
-  CapsuleLog("Hooked_CreateDXGIFactory1 called with riid: %s", name_from_iid(riid).c_str());
+  CapsuleLog("Hooked_CreateDXGIFactory1 called with riid: %s", NameFromIid(riid).c_str());
   HRESULT res = CreateDXGIFactory1_real(riid, ppFactory);
 
   if (SUCCEEDED(res)) {

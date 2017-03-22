@@ -7,10 +7,6 @@
 // IAudioClient, IAudioCaptureClient
 #include <audioclient.h>
 
-// REFERENCE_TIME time units per second and per millisecond
-#define REFTIMES_PER_SEC  10000000
-#define REFTIMES_PER_MILLISEC  10000
-
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
@@ -19,6 +15,10 @@
 
 namespace capsule {
 namespace audio {
+
+// REFERENCE_TIME time units per second and per millisecond
+const long long kReftimesPerSec = 10000000LL;
+const long long kReftimesPerMillisec = 10000LL;
 
 class WasapiReceiver : public AudioReceiver {
   public:

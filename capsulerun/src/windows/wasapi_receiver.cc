@@ -15,7 +15,7 @@
 MICROPROFILE_DEFINE(WasapiReceiveFrames, "Wasapi", "WasapiReceiveFrames", 0xff00ff00);
 
 namespace capsule {
-namespace video {
+namespace audio {
 
 const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
 const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
@@ -87,7 +87,7 @@ WasapiReceiver::WasapiReceiver() {
   afmt_.samplerate = pwfx_->nSamplesPerSec;
   afmt_.samplewidth = pwfx_->wBitsPerSample;
 
-  REFERENCE_TIME hns_requested_duration = REFTIMES_PER_SEC * 4;
+  REFERENCE_TIME hns_requested_duration = kReftimesPerSec * 4;
   hr = audio_client_->Initialize(
       AUDCLNT_SHAREMODE_SHARED, // we don't need exclusive access
       AUDCLNT_STREAMFLAGS_LOOPBACK, // we want to capture output, not an input
@@ -198,5 +198,5 @@ WasapiReceiver::~WasapiReceiver() {
   SafeRelease(capture_client_)
 }
 
+} // namespace audio
 } // namespace capsule
-} // namespace video
