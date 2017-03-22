@@ -993,7 +993,7 @@ void D3d11Capture(void *swap_ptr, void *backbuffer_ptr) {
   if (first_frame) {
     capsule::PixFmt pix_fmt;
     if (data.gpu_color_conv) {
-      pix_fmt = kPixFmtYuv444P;
+      pix_fmt = capsule::kPixFmtYuv444P;
     } else {
       pix_fmt = DxgiFormatToPixFmt(data.format);
     }

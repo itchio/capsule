@@ -48,7 +48,7 @@ static void CaptureHwnd(HWND hwnd) {
   auto timestamp = capsule::FrameTimestamp();
 
   if (first_frame) {
-    capsule::io::WriteVideoFormat(data.cx, data.cy, CAPSULE_PIX_FMT_BGRA, 1 /* vflip */, data.cx * components);
+    capsule::io::WriteVideoFormat(data.cx, data.cy, capsule::kPixFmtBgra, 1 /* vflip */, data.cx * components);
     first_frame = false;
   }
 
