@@ -22,8 +22,6 @@ extern "C" {
 
 #include <microprofile.h>
 
-using namespace std;
-
 MICROPROFILE_DEFINE(EncoderMain, "Encoder", "Main", MP_WHITE);
 MICROPROFILE_DEFINE(EncoderCycle, "Encoder", "Cycle", MP_WHITE);
 
@@ -39,7 +37,10 @@ MICROPROFILE_DEFINE(EncoderSendAudioFrames, "Encoder", "AEncode", MP_AZURE4);
 MICROPROFILE_DEFINE(EncoderRecvAudioPkt, "Encoder", "AMux1", MP_BURLYWOOD4);
 MICROPROFILE_DEFINE(EncoderWriteAudioPkt, "Encoder", "AMux2", MP_BROWN4);
 
-void EncoderRun(capsule_args_t *args, encoder_params_t *params) {
+namespace capsule {
+namespace encoder {
+
+void Run(capsule_args_t *args, encoder_params_t *params) {
   MicroProfileOnThreadCreate("encoder");
   MICROPROFILE_SCOPE(EncoderMain);
 
@@ -794,3 +795,5 @@ void EncoderRun(capsule_args_t *args, encoder_params_t *params) {
   // MicroProfileOnThreadExit();
 }
 
+} // namespace encoder
+} // namespace capsule

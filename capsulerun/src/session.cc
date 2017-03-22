@@ -3,6 +3,7 @@
 
 #include "video_receiver.h"
 #include "audio_receiver.h"
+#include "encoder.h"
 
 #include <capsulerun.h>
 
@@ -38,7 +39,7 @@ void Session::Start () {
     encoder_params_.has_audio = 0;  
   }
 
-  encoder_thread_ = new std::thread(EncoderRun, args_, &encoder_params_);
+  encoder_thread_ = new std::thread(encoder::Run, args_, &encoder_params_);
 }
 
 void Session::Stop () {
