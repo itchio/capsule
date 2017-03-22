@@ -7,6 +7,7 @@ endif()
 
 set(libcapsule_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
+set(lab_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lab/src)
 
 if(WIN32)
     find_package(OpenGL REQUIRED)
@@ -19,6 +20,7 @@ include_directories(
   ${shoom_INCLUDE_DIR}
   ${libcapsule_INCLUDE_DIRS}
   ${libcapsule_INCLUDE_DIR}
+  ${lab_INCLUDE_DIR}
 )
 
 add_definitions(-DBUILD_CAPSULE_DLL)
@@ -65,6 +67,7 @@ endif()
 add_library(capsule SHARED ${libcapsule_SRC})
 
 target_link_libraries(capsule shoom)
+target_link_libraries(capsule lab)
 
 if(WIN32)
   add_dependencies(capsule capsule_deps)

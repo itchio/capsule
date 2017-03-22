@@ -1,11 +1,17 @@
 
+#include "strings.h"
+
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
 
-#include "strings.h"
 #include <stdio.h>
 #include <stdlib.h>
+
+namespace lab {
+namespace strings {
+
+#if defined(LAB_WINDOWS)
 
 void ToWideChar (const char *s, wchar_t **ws) {
   int wchars_num = MultiByteToWideChar(CP_UTF8, 0, s, -1, NULL, 0);
@@ -57,3 +63,7 @@ void FromWideChar (const wchar_t *ws, char **s) {
   }
 }
 
+#endif // LAB_WINDOWS
+
+} // namespace strings
+} // namespace lab

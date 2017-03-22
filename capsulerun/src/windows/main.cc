@@ -8,13 +8,15 @@
 // ArgvQuote
 #include "quote.h"
 
+#include <lab/platform.h>
+#include <lab/paths.h>
+#include <lab/strings.h>
+
 #include <capsulerun.h>
 #include <capsulerun_hotkey.h>
 
 #include "../main_loop.h"
-#include "../paths.h"
 #include "wasapi_receiver.h"
-#include "strings.h"
 
 namespace capsule {
 
@@ -52,7 +54,7 @@ int Main (capsule_args_t *args) {
   // hence the blanket 'capsule32.dll' here
   // N.B: even if the .exe we launch appears to be PE32, it might actually end up being a 64-bit process.
   // Don't ask me, I don't know either.
-  std::string libcapsule_path = paths::Join(std::string(args->libpath), "capsule32.dll");
+  std::string libcapsule_path = lab::paths::Join(std::string(args->libpath), "capsule32.dll");
 
   STARTUPINFOW si;
   PROCESS_INFORMATION pi;
@@ -65,10 +67,10 @@ int Main (capsule_args_t *args) {
   ZeroMemory(&pi, sizeof(pi));  
 
   wchar_t *executable_path_w;
-  ToWideChar(args->exec, &executable_path_w);
+  lab::strings::ToWideChar(args->exec, &executable_path_w);
 
   wchar_t *libcapsule_path_w;
-  ToWideChar(libcapsule_path.c_str(), &libcapsule_path_w);
+  lab::strings::ToWideChar(libcapsule_path.c_str(), &libcapsule_path_w);
 
   std::string pipe_r_path = "\\\\.\\pipe\\capsule.runr";
   std::string pipe_w_path = "\\\\.\\pipe\\capsule.runw";
@@ -101,7 +103,7 @@ int Main (capsule_args_t *args) {
   for (int i = 0; i < args->exec_argc; i++) {
     wchar_t *arg;
     // this "leaks" mem, but it's one time, so don't care
-    ToWideChar(args->exec_argv[i], &arg);
+    lab::strings::ToWideChar(args->exec_argv[i], &arg);
 
     if (first_arg) {
       first_arg = false;

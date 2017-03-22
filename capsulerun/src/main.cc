@@ -1,15 +1,16 @@
 
 #include <capsulerun.h>
 
-#include "paths.h"
+#include <lab/platform.h>
+#include <lab/paths.h>
+#include <lab/strings.h>
 
-#if defined(CAPSULE_WINDOWS)
-#include "windows/strings.h"
+#if defined(LAB_WINDOWS)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
 #include <shellapi.h> // CommandLineToArgvW
-#endif // CAPSULE_WINDOWS
+#endif // LAB_WINDOWS
 
 #include <string>
 
@@ -23,7 +24,7 @@ static const char *const usage[] = {
   NULL
 };
 
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
 int main (int _argc, char **_argv) {
   LPWSTR in_command_line = GetCommandLineW();
   int argc;
@@ -32,13 +33,13 @@ int main (int _argc, char **_argv) {
   // argv must be null-terminated, calloc zeroes so this works out.
   char **argv = (char **) calloc(argc + 1, sizeof(char *));
   for (int i = 0; i < argc; i++) {
-    FromWideChar(argv_w[i], (char **) &argv[i]);
+    lab::strings::FromWideChar(argv_w[i], (char **) &argv[i]);
   }
-#else // CAPSULE_WINDOWS
+#else // LAB_WINDOWS
 
 int main (int argc, char **argv) {
 
-#endif // !CAPSULE_WINDOWS
+#endif // !LAB_WINDOWS
 
   MicroProfileOnThreadCreate("Main");
 
@@ -98,7 +99,7 @@ int main (int argc, char **argv) {
   args.exec_argc = argc - num_positional_args;
   args.exec_argv = argv + num_positional_args;
 
-#if !defined(CAPSULE_WINDOWS)
+#if !defined(LAB_WINDOWS)
   // on non-windows platforms, exec_argv needs to include the executable
   int real_exec_argc = args.exec_argc + 1;
   char **real_exec_argv = (char **) calloc(real_exec_argc + 1, sizeof(char *));
@@ -110,12 +111,12 @@ int main (int argc, char **argv) {
 
   args.exec_argc = real_exec_argc;
   args.exec_argv = real_exec_argv;
-#endif // !CAPSULE_WINDOWS
+#endif // !LAB_WINDOWS
 
-  CapsuleLog("thanks for flying capsule on %s", CAPSULE_PLATFORM);
+  CapsuleLog("thanks for flying capsule on %s", lab::kPlatform);
 
   if (args.priority) {
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
     HANDLE hProcess = GetCurrentProcess();
     HRESULT hr = 0;
 
@@ -130,15 +131,15 @@ int main (int argc, char **argv) {
     if (FAILED(hr)) {
       CapsuleLog("Failed to set process priority: %d (%x), continuing", hr, hr)
     }
-#else
-    CapsuleLog("priority parameter not yet supported");
-#endif
+#else // LAB_WINDOWS
+    CapsuleLog("priority parameter not yet supported on %s", lab::kPlatform);
+#endif // !LAB_WINDOWS
   }
 
-  std::string self_path = capsule::paths::SelfPath();
+  std::string self_path = lab::paths::SelfPath();
   CapsuleLog("Running from: %s", self_path.c_str());
 
-  std::string lib_path = capsule::paths::DirName(self_path);
+  std::string lib_path = lab::paths::DirName(self_path);
   args.libpath = lib_path.c_str();
 
   CapsuleLog("Library path: %s", lib_path.c_str());
@@ -149,9 +150,9 @@ int main (int argc, char **argv) {
     // different for each platform, CMake compiles the right one in.
     int ret = capsule::Main(&args);
 
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
     free(argv);
-#endif // CAPSULE_WINDOWS
+#endif // LAB_WINDOWS
 
     return ret;
   }

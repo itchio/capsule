@@ -11,6 +11,7 @@ set(capsulerun_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(capsulerun_INCLUDE_DIRS SYSTEM)
 
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/src)
+set(lab_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lab/src)
 
 include_directories(
   ${shoom_INCLUDE_DIR}
@@ -18,11 +19,11 @@ include_directories(
   ${capsulerun_INCLUDE_DIR}
   ${libcapsule_INCLUDE_DIR}
   ${microprofile_INCLUDE_DIR}
+  ${lab_INCLUDE_DIR}
 )
 
 set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/main.cc
-  ${capsulerun_SOURCE_DIR}/paths.cc
   ${capsulerun_SOURCE_DIR}/encoder.cc
   ${capsulerun_SOURCE_DIR}/argparse.c
   ${capsulerun_SOURCE_DIR}/main_loop.cc
@@ -35,7 +36,6 @@ set(capsulerun_SRC
 
 if(WIN32)
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/windows/strings.cc
     ${capsulerun_SOURCE_DIR}/windows/wasapi_receiver.cc
     ${capsulerun_SOURCE_DIR}/windows/quote.cc
     ${capsulerun_SOURCE_DIR}/windows/hotkey.cc
@@ -45,7 +45,6 @@ endif()
 
 if(APPLE)
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/env.cc
     ${capsulerun_SOURCE_DIR}/macos/DDHotKeyCenter.m
     ${capsulerun_SOURCE_DIR}/macos/DDHotKeyUtilities.m
     ${capsulerun_SOURCE_DIR}/macos/hotkey.mm
@@ -68,6 +67,7 @@ set(CMAKE_INSTALL_RPATH "\$ORIGIN")
 add_executable(capsulerun ${capsulerun_SRC})
 
 target_link_libraries(capsulerun shoom)
+target_link_libraries(capsulerun lab)
 
 if(WIN32)
   add_dependencies(capsulerun capsule_deps)

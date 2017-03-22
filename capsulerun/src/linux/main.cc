@@ -67,8 +67,8 @@ static void WaitForChild (int child_pid) {
 }
 
 int Main (capsule_args_t *args) {
-  std::string libcapsule32_path = std::string(args->libpath) + "/libcapsule32.so";
-  std::string libcapsule64_path = std::string(args->libpath) + "/libcapsule64.so";
+  std::string libcapsule32_path = paths::Join(std::string(args->libpath), "libcapsule32.so");
+  std::string libcapsule64_path = paths::Join(std::string(args->libpath), "libcapsule64.so");
   std::string ldpreload = libcapsule32_path + ":" + libcapsule64_path;
 
   pid_t child_pid;
@@ -78,12 +78,12 @@ int Main (capsule_args_t *args) {
     exit(1);
   }
 
-  auto fifo_r_path = std::string("/tmp/capsule.runr");
-  auto fifo_w_path = std::string("/tmp/capsule.runw");
+  std::string fifo_r_path = "/tmp/capsule.runr";
+  std::string fifo_w_path = "/tmp/capsule.runw";
 
   // swapped on purpose
-  auto fifo_r_var = "CAPSULE_PIPE_R_PATH=" + fifo_w_path;
-  auto fifo_w_var = "CAPSULE_PIPE_W_PATH=" + fifo_r_path;
+  std::string fifo_r_var = "CAPSULE_PIPE_R_PATH=" + fifo_w_path;
+  std::string fifo_w_var = "CAPSULE_PIPE_W_PATH=" + fifo_r_path;
   char *env_additions[] = {
     (char *) fifo_r_var.c_str(),
     (char *) fifo_w_var.c_str(),

@@ -1,6 +1,13 @@
 
 #pragma once
 
+#include "platform.h"
+
+namespace lab {
+namespace strings {
+
+#if defined(LAB_WINDOWS)
+
 /**
  * Convert s (UTF-8) to a wide-char (UCS-2) string, for use
  * with win32 functions.
@@ -13,3 +20,8 @@ void ToWideChar (const char *s, wchar_t **ws);
  * Note: FromWideChar mallocs the result, the caller is responsible for freeing it.
  */
 void FromWideChar (const wchar_t *ws, char **s);
+
+#endif() // LAB_WINDOWS
+
+} // namespace strings
+} // namespace lab

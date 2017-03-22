@@ -3,7 +3,13 @@
 
 #include <stdlib.h>
 
-char **MergeEnvs (char **a, char **b) {
+#include "platform.h"
+#include "strings.h"
+
+namespace lab {
+namespace env {
+
+char **MergeBlocks (char **a, char **b) {
     size_t total_size = 0;
     char **p = a;
     while (*p) {
@@ -36,3 +42,19 @@ char **MergeEnvs (char **a, char **b) {
 
     return res;
 }
+
+std::string Get(std::string name) {
+#if defined(CAPSULE_WINDOWS)
+
+#else
+
+#endif
+    return "stub";
+}
+
+bool Set(std::string name, std::string value) {
+    return false;
+}
+
+} // namespace env
+} // namespace lab
