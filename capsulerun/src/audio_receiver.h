@@ -1,6 +1,6 @@
 #pragma once
 
-#include <capsulerun.h>
+#include "encoder.h"
 
 namespace capsule {
 namespace audio {
@@ -9,7 +9,7 @@ class AudioReceiver {
   public:
     virtual ~AudioReceiver() {};
 
-    virtual int ReceiveFormat(audio_format_t *afmt) = 0;
+    virtual int ReceiveFormat(encoder::AudioFormat *afmt) = 0;
     virtual void *ReceiveFrames(int *frames_received) = 0;
     virtual void Stop() = 0;
 };

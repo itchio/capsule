@@ -48,7 +48,7 @@ int main (int argc, char **argv) {
 
 	MicroProfileStartContextSwitchTrace();
 
-  struct capsule_args_s args;
+  capsule::MainArgs args;
   memset(&args, 0, sizeof(args));
   args.dir = ".";
   args.pix_fmt = "yuv420p";

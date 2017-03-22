@@ -7,8 +7,8 @@
 
 #include <capsule/messages.h>
 #include <capsulerun.h>
-#include <capsulerun_args.h>
 
+#include "args.h"
 #include "video_receiver.h"
 #include "audio_receiver.h"
 #include "session.h"
@@ -20,7 +20,7 @@ typedef audio::AudioReceiver * (*audio_receiver_factory_t)();
 
 class MainLoop {
   public:
-    MainLoop(capsule_args_t *args, Connection *conn) :
+    MainLoop(MainArgs *args, Connection *conn) :
       args_(args),
       conn_(conn)
       {};
@@ -37,7 +37,7 @@ class MainLoop {
     void CaptureStop();
     void StartSession(const messages::VideoSetup *vs);
 
-    capsule_args_t *args_;
+    MainArgs *args_;
 
     Connection *conn_;
     Session *session_ = nullptr;

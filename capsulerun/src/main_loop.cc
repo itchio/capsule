@@ -118,7 +118,7 @@ void MainLoop::CaptureStop () {
 void MainLoop::StartSession (const messages::VideoSetup *vs) {
   CapsuleLog("Setting up encoder");
 
-  video_format_t vfmt;
+  encoder::VideoFormat vfmt;
   vfmt.width = vs->width();
   vfmt.height = vs->height();
   vfmt.format = (capsule::PixFmt) vs->pix_fmt();

@@ -1,14 +1,12 @@
 
-#include <capsule/messages.h>
-#include <capsule/logging.h>
-
-#include <lab/logging.h>
-
-#include "video_receiver.h"
-
 #include <stdexcept>
 
+#include <lab/logging.h>
 #include <microprofile.h>
+#include <capsule/messages.h>
+
+#include "video_receiver.h"
+#include "macros.h"
 
 MICROPROFILE_DEFINE(VideoReceiverWait, "VideoReceiver", "VWait", MP_CHOCOLATE3);
 MICROPROFILE_DEFINE(VideoReceiverCopy1, "VideoReceiver", "VCopy1", MP_CORNSILK3);
@@ -17,7 +15,7 @@ MICROPROFILE_DEFINE(VideoReceiverCopy2, "VideoReceiver", "VCopy2", MP_PINK3);
 namespace capsule {
 namespace video {
 
-VideoReceiver::VideoReceiver (Connection *conn, video_format_t vfmt, shoom::Shm *shm, int num_frames) {
+VideoReceiver::VideoReceiver (Connection *conn, encoder::VideoFormat vfmt, shoom::Shm *shm, int num_frames) {
   conn_ = conn;
   vfmt_ = vfmt;
   shm_ = shm;
@@ -35,7 +33,7 @@ VideoReceiver::VideoReceiver (Connection *conn, video_format_t vfmt, shoom::Shm 
   commit_index_ = 0;
 }
 
-int VideoReceiver::ReceiveFormat(video_format_t *vfmt) {
+int VideoReceiver::ReceiveFormat(encoder::VideoFormat *vfmt) {
   memcpy(vfmt, &vfmt_, sizeof(*vfmt));
   return 0;
 }

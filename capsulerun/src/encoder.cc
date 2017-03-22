@@ -1,5 +1,5 @@
 
-#include "capsulerun.h"
+#include "encoder.h"
 
 extern "C" {
     #include <libavcodec/avcodec.h>
@@ -14,13 +14,13 @@ extern "C" {
     #include <libswresample/swresample.h>
 }
 
-#include "./fps_counter.h"
-
+#include <microprofile.h>
 #include <lab/logging.h>
 
 #include <chrono>
 
-#include <microprofile.h>
+#include "fps_counter.h"
+#include "macros.h"
 
 MICROPROFILE_DEFINE(EncoderMain, "Encoder", "Main", MP_WHITE);
 MICROPROFILE_DEFINE(EncoderCycle, "Encoder", "Cycle", MP_WHITE);
@@ -40,7 +40,7 @@ MICROPROFILE_DEFINE(EncoderWriteAudioPkt, "Encoder", "AMux2", MP_BROWN4);
 namespace capsule {
 namespace encoder {
 
-void Run(capsule_args_t *args, encoder_params_t *params) {
+void Run(MainArgs *args, Params *params) {
   MicroProfileOnThreadCreate("encoder");
   MICROPROFILE_SCOPE(EncoderMain);
 
@@ -53,7 +53,7 @@ void Run(capsule_args_t *args, encoder_params_t *params) {
   }
 
   // receive video format info
-  video_format_t vfmt_in;
+  VideoFormat vfmt_in;
   ret = params->receive_video_format(params->private_data, &vfmt_in);
   if (ret != 0) {
     printf("could not receive video format");
@@ -76,7 +76,7 @@ void Run(capsule_args_t *args, encoder_params_t *params) {
   }
 
   // receive audio format info
-  audio_format_t afmt_in;
+  AudioFormat afmt_in;
   if (params->has_audio) {
     ret = params->receive_audio_format(params->private_data, &afmt_in);
     if (ret != 0) {

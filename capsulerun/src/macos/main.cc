@@ -1,17 +1,8 @@
 
-#include <capsulerun.h>
-#include <capsulerun_hotkey.h>
-
-#include "../main_loop.h"
-
 #include <stdio.h>
 #include <stdlib.h>
-
-// posix_spawn
-#include <spawn.h>
-
-// strerror
-#include <string.h>
+#include <spawn.h> // posix_spawn
+#include <string.h> // strerror
 
 #include <thread>
 
@@ -19,11 +10,14 @@
 #include <lab/paths.h>
 #include <lab/env.h>
 
+#include "../hotkey.h"
+#include "../main_loop.h"
+
 extern char **environ;
 
 namespace capsule {
 
-void MainThread (capsule_args_t *args) {
+void MainThread (MainArgs *args) {
   auto libcapsule_path = lab::paths::Join(std::string(args->libpath), "libcapsule.dylib");
 
   // TODO: respect outside DYLD_INSERT_LIBRARIES ?
@@ -92,7 +86,7 @@ void MainThread (capsule_args_t *args) {
   exit(0);
 }
 
-int Main (capsule_args_t *args) {
+int Main (MainArgs *args) {
   std::thread main_thread(MainThread, args);
   RunApp();
   return 0;

@@ -1,8 +1,10 @@
 
 #pragma once
 
+namespace capsule {
+
 // all strings are UTF-8, even on windows
-typedef struct capsule_args_s {
+struct MainArgs {
   // positional arguments
   const char *libpath;
   char *exec;
@@ -24,4 +26,6 @@ typedef struct capsule_args_s {
   int buffered_frames;
   const char *priority;
   const char *x264_preset;
-} capsule_args_t;
+};
+
+}

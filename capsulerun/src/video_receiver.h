@@ -4,9 +4,9 @@
 
 #include <shoom.h>
 
-#include <capsulerun.h>
 #include "locking_queue.h"
 #include "connection.h"
+#include "encoder.h"
 
 namespace capsule {
 namespace video {
@@ -24,16 +24,16 @@ struct FrameInfo {
 
 class VideoReceiver {
   public:
-    VideoReceiver(Connection *conn, video_format_t vfmt, shoom::Shm *shm, int num_frames);
+    VideoReceiver(Connection *conn, encoder::VideoFormat vfmt, shoom::Shm *shm, int num_frames);
     ~VideoReceiver();
     void FrameCommitted(int index, int64_t timestamp);
-    int ReceiveFormat(video_format_t *vfmt);
+    int ReceiveFormat(encoder::VideoFormat *vfmt);
     int ReceiveFrame(uint8_t *buffer, size_t buffer_size, int64_t *timestamp);
     void Stop();
 
   private:
     Connection *conn_;
-    video_format_t vfmt_;
+    encoder::VideoFormat vfmt_;
     shoom::Shm *shm_;
 
     char *mapped_;

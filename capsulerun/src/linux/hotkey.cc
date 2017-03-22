@@ -1,5 +1,5 @@
 
-#include "../capsulerun_hotkey.h"
+#include "../hotkey.h"
 #include "../main_loop.h"
 
 #include <X11/Xlib.h>

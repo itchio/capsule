@@ -1,35 +1,23 @@
 
-#include "capsulerun.h"
-#include "capsulerun_hotkey.h"
-
-#include "../main_loop.h"
-#include "./pulse_receiver.h"
-
 #include <stdio.h>
 #include <stdlib.h>
-
-// environ
-#include <unistd.h>
-
-// posix_spawn
-#include <spawn.h>
-
-// waitpid
+#include <unistd.h> // environ
+#include <spawn.h> // posix_spawn
 #include <sys/types.h>
-#include <sys/wait.h>
+#include <sys/wait.h> // waitpid
+#include <string.h> // strerror
+#include <errno.h> // erno
 
-// strerror
-#include <string.h>
-
-// errno
-#include <errno.h>
-
-// thread
 #include <thread>
 
 #include <lab/platform.h>
 #include <lab/paths.h>
 #include <lab/env.h>
+
+#include "pulse_receiver.h"
+
+#include "../hotkey.h"
+#include "../main_loop.h"
 
 namespace capsule {
 
@@ -68,7 +56,7 @@ static void WaitForChild (int child_pid) {
   }
 }
 
-int Main (capsule_args_t *args) {
+int Main (MainArgs *args) {
   std::string libcapsule32_path = lab::paths::Join(std::string(args->libpath), "libcapsule32.so");
   std::string libcapsule64_path = lab::paths::Join(std::string(args->libpath), "libcapsule64.so");
   std::string ldpreload = libcapsule32_path + ":" + libcapsule64_path;

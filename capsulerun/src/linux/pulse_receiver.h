@@ -7,11 +7,13 @@
 #include <thread>
 #include <mutex>
 
+#include "../encoder.h"
+
 namespace capsule {
 namespace audio {
 
-const int kAudioNbBuffers = 16;
-const int kAudioNbSamples = 128;
+static const int kAudioNbBuffers = 16;
+static const int kAudioNbSamples = 128;
 
 enum BufferState {
   kBufferStateAvailable = 0,
@@ -24,14 +26,14 @@ class PulseReceiver : public AudioReceiver {
     PulseReceiver();
     virtual ~PulseReceiver();
 
-    virtual int ReceiveFormat(audio_format_t *afmt);
+    virtual int ReceiveFormat(encoder::AudioFormat *afmt);
     virtual void *ReceiveFrames(int *frames_received);
     virtual void Stop();
 
     bool ReadFromPa();
 
   private:
-    audio_format_t afmt_;
+    encoder::AudioFormat afmt_;
     pa_simple *ctx_;
 
     uint8_t *in_buffer_;

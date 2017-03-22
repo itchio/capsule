@@ -2,22 +2,18 @@
 #include <stdio.h>
 #include <NktHookLib.h>
 
-// std::thread
 #include <thread>
-
-// ArgvQuote
-#include "quote.h"
 
 #include <lab/platform.h>
 #include <lab/paths.h>
 #include <lab/strings.h>
 #include <lab/env.h>
 
-#include <capsulerun.h>
-#include <capsulerun_hotkey.h>
-
-#include "../main_loop.h"
+#include "quote.h"
 #include "wasapi_receiver.h"
+
+#include "../hotkey.h"
+#include "../main_loop.h"
 
 namespace capsule {
 
@@ -48,7 +44,7 @@ static void WaitForChild (HANDLE hProcess) {
   }
 }
 
-int Main (capsule_args_t *args) {
+int Main (MainArgs *args) {
   // From Deviare-InProc's doc: 
   //   If "szDllNameW" string ends with 'x86.dll', 'x64.dll', '32.dll', '64.dll', the dll name will be adjusted
   //   in order to match the process platform. I.e.: "mydll_x86.dll" will become "mydll_x64.dll" on 64-bit processes.

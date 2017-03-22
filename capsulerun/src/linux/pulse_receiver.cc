@@ -19,7 +19,7 @@ static void ReadLoop (PulseReceiver *pr) {
 }
 
 PulseReceiver::PulseReceiver() {
-  memset(&afmt_, 0, sizeof(audio_format_t));
+  memset(&afmt_, 0, sizeof(afmt_));
 
   if (!capsule::pulse::Load()) {
     return;
@@ -112,7 +112,7 @@ bool PulseReceiver::ReadFromPa() {
   return true;
 }
 
-int PulseReceiver::ReceiveFormat(audio_format_t *afmt) {
+int PulseReceiver::ReceiveFormat(encoder::AudioFormat *afmt) {
   memcpy(afmt, &afmt_, sizeof(*afmt));
   return 0;
 }
