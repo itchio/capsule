@@ -15,6 +15,7 @@ compile-windows:
   artifacts:
     paths:
       - compile-artifacts
+    expire_in: 1 week
 
 compile-darwin:
   stage: build
@@ -25,6 +26,7 @@ compile-darwin:
   artifacts:
     paths:
       - compile-artifacts
+    expire_in: 1 week
 
 compile-linux-386:
   stage: build
@@ -35,6 +37,7 @@ compile-linux-386:
   artifacts:
     paths:
       - compile-artifacts
+    expire_in: 1 week
 
 compile-linux-amd64:
   stage: build
@@ -45,3 +48,4 @@ compile-linux-amd64:
   artifacts:
     paths:
       - compile-artifacts
+    expire_in: 1 week
