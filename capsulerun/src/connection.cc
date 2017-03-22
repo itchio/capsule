@@ -44,8 +44,6 @@ static HANDLE CreatePipe(
   );
 
   if (!handle) {
-    DWORD err = GetLastError();
-    // CapsuleLog("CreateNamedPipe failed, err = %d (%x)", err, err);
     throw std::runtime_error("CreateNamedPipe failed");
   }
 
@@ -125,16 +123,16 @@ void Connection::Connect() {
 
 void Connection::Write(const flatbuffers::FlatBufferBuilder &builder) {
 #if defined(LAB_WINDOWS)
-  CapsuleHwritePacket(builder, pipe_w_);
+  lab::packet::Hwrite(builder, pipe_w_);
 #else // LAB_WINDOWS
-  CapsuleWritePacket(builder, fifo_w_);
+  lab::packet::Write(builder, fifo_w_);
 #endif // !LAB_WINDOWS
 }
 
 char *Connection::Read() {
 #if defined(LAB_WINDOWS)
-  return CapsuleHreadPacket(pipe_r_);
+  return lab::packet::Hread(pipe_r_);
 #else // LAB_WINDOWS
-  return CapsuleReadPacket(fifo_r_);
+  return lab::packet::Read(fifo_r_);
 #endif // !LAB_WINDOWS
 }

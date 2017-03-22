@@ -31,7 +31,7 @@ static const char *const usage[] = {
 };
 
 #if defined(LAB_WINDOWS)
-int main (int _argc, char **_argv) {
+int main () {
   LPWSTR in_command_line = GetCommandLineW();
   int argc;
   LPWSTR* argv_w = CommandLineToArgvW(in_command_line, &argc);

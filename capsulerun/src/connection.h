@@ -1,6 +1,6 @@
 #pragma once
 
-#include <capsule/messages.h>
+#include <lab/packet.h>
 
 class Connection {
   public:

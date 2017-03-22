@@ -1,6 +1,9 @@
 
 #include "encoder.h"
 
+#if defined(WIN32)
+#pragma warning(push, 0)
+#endif // WIN32
 extern "C" {
     #include <libavcodec/avcodec.h>
 
@@ -13,6 +16,9 @@ extern "C" {
     #include <libswscale/swscale.h>
     #include <libswresample/swresample.h>
 }
+#if defined(WIN32)
+#pragma warning(pop)
+#endif // WIN32
 
 #include <microprofile.h>
 #include <lab/logging.h>
@@ -78,6 +84,7 @@ void Run(MainArgs *args, Params *params) {
 
   // receive audio format info
   AudioFormat afmt_in;
+  memset(&afmt_in, 0, sizeof(afmt_in));
   if (params->has_audio) {
     ret = params->receive_audio_format(params->private_data, &afmt_in);
     if (ret != 0) {
@@ -89,15 +96,18 @@ void Run(MainArgs *args, Params *params) {
       afmt_in.channels, afmt_in.samplerate, afmt_in.samplewidth);
   }
 
-  AVFormatContext *oc;
-  AVOutputFormat *fmt;
+  AVFormatContext *oc = nullptr;
+  AVOutputFormat *fmt = nullptr;
 
-  AVStream *video_st, *audio_st;
+  AVStream *video_st = nullptr;
+  AVStream *audio_st = nullptr;
 
   AVCodecID vcodec_id = AV_CODEC_ID_H264;
   AVCodecID acodec_id = AV_CODEC_ID_AAC;
-  AVCodec *vcodec, *acodec;
-  AVCodecContext *vc, *ac;
+  AVCodec *vcodec = nullptr;
+  AVCodec *acodec = nullptr;
+  AVCodecContext *vc = nullptr;
+  AVCodecContext *ac = nullptr;
 
   AVFrame *vframe, *aframe;
 

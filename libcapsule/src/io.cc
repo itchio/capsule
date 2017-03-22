@@ -5,13 +5,15 @@
 
 #include <shoom.h>
 
-#include <capsule/messages.h>
+#include <lab/packet.h>
 #include <capsule.h>
 
 #include <lab/logging.h>
 #include <lab/env.h>
 #include <lab/paths.h>
 #include <lab/io.h>
+
+#include "capsule/messages_generated.h"
 
 namespace capsule {
 namespace io {
@@ -103,7 +105,7 @@ static void CaptureStop () {
 
 static void PollInfile() {
     while (true) {
-        char *buf = CapsuleFreadPacket(in_file);
+        char *buf = lab::packet::Fread(in_file);
         if (!buf) {
             break;
         }
@@ -195,7 +197,7 @@ void LAB_STDCALL WriteVideoFormat(int width, int height, int format, bool vflip,
     auto pkt = pkt_builder.Finish();
 
     builder.Finish(pkt);
-    CapsuleFwritePacket(builder, out_file);
+    lab::packet::Fwrite(builder, out_file);
 }
 
 int is_skipping;
@@ -229,7 +231,7 @@ void LAB_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t fra
     builder.Finish(pkt);
 
     LockFrame(next_frame_index);
-    CapsuleFwritePacket(builder, out_file);
+    lab::packet::Fwrite(builder, out_file);
 
     next_frame_index = (next_frame_index + 1) % kNumBuffers;
 }

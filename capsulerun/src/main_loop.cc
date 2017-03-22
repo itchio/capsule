@@ -1,8 +1,6 @@
 
 #include "main_loop.h"
 
-#include <capsule/messages.h>
-
 #include <microprofile.h>
 
 MICROPROFILE_DEFINE(MainLoopMain, "MainLoop", "Main", 0xff0000);
@@ -131,7 +129,7 @@ void MainLoop::StartSession (const messages::VideoSetup *vs) {
   vfmt.pitch = linesize_vec->Get(0);
 
   auto shm_path = vs->shmem()->path()->str();  
-  auto shm = new shoom::Shm(shm_path, vs->shmem()->size());
+  auto shm = new shoom::Shm(shm_path, static_cast<size_t>(vs->shmem()->size()));
   int ret = shm->Open();
   if (ret != shoom::kOK) {
     CapsuleLog("Could not open shared memory area: code %d", ret);

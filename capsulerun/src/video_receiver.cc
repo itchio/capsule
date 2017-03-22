@@ -2,8 +2,10 @@
 #include <stdexcept>
 
 #include <lab/logging.h>
+#include <lab/packet.h>
+#include <capsule/messages_generated.h>
+
 #include <microprofile.h>
-#include <capsule/messages.h>
 
 #include "video_receiver.h"
 #include "macros.h"
@@ -21,7 +23,7 @@ VideoReceiver::VideoReceiver (Connection *conn, encoder::VideoFormat vfmt, shoom
   shm_ = shm;
 
   num_frames_ = num_frames;
-  frame_size_ = vfmt_.pitch * vfmt_.height;
+  frame_size_ = static_cast<size_t>(vfmt_.pitch * vfmt_.height);
   CapsuleLog("VideoReceiver: initializing, buffer of %d frames", num_frames_);
   CapsuleLog("VideoReceiver: total buffer size in RAM: %.2f MB", (float) (frame_size_ * num_frames_) / 1024.0f / 1024.0f);
   buffer_ = (char *) calloc(num_frames_, frame_size_);

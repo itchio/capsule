@@ -7,6 +7,7 @@ set (SOURCES
   ${SOURCE_DIR}/lab/strings.cc
   ${SOURCE_DIR}/lab/paths.cc
   ${SOURCE_DIR}/lab/io.cc
+  ${SOURCE_DIR}/lab/packet.cc
 )
 
 add_definitions(-D_UNICODE)

@@ -5,14 +5,15 @@
 
 #include <shoom.h>
 
-#include <capsule/messages.h>
-#include <capsulerun.h>
+#include <lab/packet.h>
+#include <capsule/messages_generated.h>
 
 #include "args.h"
 #include "video_receiver.h"
 #include "audio_receiver.h"
 #include "session.h"
 #include "connection.h"
+#include "macros.h"
 
 namespace capsule {
 
