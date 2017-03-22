@@ -22,6 +22,7 @@ include_directories(
 
 set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/shared/main.cc
+  ${capsulerun_SOURCE_DIR}/shared/paths.cc
   ${capsulerun_SOURCE_DIR}/shared/encoder.cc
   ${capsulerun_SOURCE_DIR}/shared/argparse.c
   ${capsulerun_SOURCE_DIR}/shared/main_loop.cc

@@ -12,6 +12,7 @@
 #include <capsulerun_hotkey.h>
 
 #include "../shared/main_loop.h"
+#include "../shared/paths.h"
 #include "./wasapi_receiver.h"
 
 #include "strings.h"
@@ -52,14 +53,7 @@ int Main (capsule_args_t *args) {
   // hence the blanket 'capsule32.dll' here
   // N.B: even if the .exe we launch appears to be PE32, it might actually end up being a 64-bit process.
   // Don't ask me, I don't know either.
-  const char *libcapsule_name = "capsule32.dll";
-  char libcapsule_path[CAPSULE_MAX_PATH_LENGTH];
-  const int libcapsule_path_length = snprintf(libcapsule_path, CAPSULE_MAX_PATH_LENGTH, "%s\\%s", args->libpath, libcapsule_name);
-
-  if (libcapsule_path_length > CAPSULE_MAX_PATH_LENGTH) {
-    CapsuleLog("libcapsule path too long (%d > %d)", libcapsule_path_length, CAPSULE_MAX_PATH_LENGTH);
-    exit(1);
-  }
+  std::string libcapsule_path = paths::Join(std::string(args->libpath), "capsule32.dll");
 
   STARTUPINFOW si;
   PROCESS_INFORMATION pi;
@@ -75,7 +69,7 @@ int Main (capsule_args_t *args) {
   ToWideChar(args->exec, &executable_path_w);
 
   wchar_t *libcapsule_path_w;
-  ToWideChar(libcapsule_path, &libcapsule_path_w);
+  ToWideChar(libcapsule_path.c_str(), &libcapsule_path_w);
 
   std::string pipe_r_path = "\\\\.\\pipe\\capsule.runr";
   std::string pipe_w_path = "\\\\.\\pipe\\capsule.runw";
@@ -96,7 +90,7 @@ int Main (capsule_args_t *args) {
     exit(1);
   }
 
-  err = SetEnvironmentVariableA("CAPSULE_LIBRARY_PATH", libcapsule_path);
+  err = SetEnvironmentVariableA("CAPSULE_LIBRARY_PATH", libcapsule_path.c_str());
   if (err == 0) {
     CapsuleLog("Could not set library path environment variable");
     exit(1);
@@ -115,11 +109,13 @@ int Main (capsule_args_t *args) {
     } else {
       command_line_w.append(L" ");
     }
-    ArgvQuote(arg, command_line_w, false);
+
+    std::wstring arg_w = arg;
+    ArgvQuote(arg_w, command_line_w, false);
   }
 
-  CapsuleLog("Launching %S", command_line_w.c_str());
-  CapsuleLog("Injecting %S", libcapsule_path_w);
+  CapsuleLog("Launching '%S' with args '%S'", executable_path_w, command_line_w.c_str());
+  CapsuleLog("Injecting '%S'", libcapsule_path_w);
   auto libcapsule_init_function_name = "CapsuleWindowsInit";
 
   err = NktHookLibHelpers::CreateProcessWithDllW(

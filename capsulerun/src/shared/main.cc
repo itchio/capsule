@@ -1,17 +1,7 @@
 
 #include <capsulerun.h>
 
-#include "argparse.h"
-
-#if defined(CAPSULE_LINUX)
-#include <unistd.h> // readlink
-#include <limits.h> // realpath
-#endif
-
-#if defined(CAPSULE_MACOS)
-#include <mach-o/dyld.h> // _NSGetExecutablePath
-#include <sys/param.h> // realpath
-#endif
+#include "paths.h"
 
 #if defined(CAPSULE_WINDOWS)
 #include "../windows/strings.h"
@@ -23,6 +13,7 @@
 
 #include <string>
 
+#include "argparse.h"
 #include <microprofile.h>
 
 MICROPROFILE_DEFINE(MAIN, "MAIN", "Main", 0xff0000);
@@ -144,45 +135,10 @@ int main (int argc, char **argv) {
 #endif
   }
 
-  // get our own path
-  std::string exe_path;
+  std::string self_path = capsule::paths::SelfPath();
+  CapsuleLog("Running from: %s", self_path.c_str());
 
-  const size_t file_name_characters = 16 * 1024;
-#if defined(CAPSULE_WINDOWS)
-  wchar_t *file_name = reinterpret_cast<wchar_t*>(calloc(file_name_characters, sizeof(wchar_t)));
-  DWORD file_name_actual_characters = GetModuleFileNameW(NULL, file_name, static_cast<DWORD>(file_name_characters));
-  char *utf8_file_name = nullptr;
-  FromWideChar(file_name, &utf8_file_name);
-  free(file_name);
-  exe_path = std::string(utf8_file_name);
-  free(utf8_file_name);
-#elif defined(CAPSULE_MACOS)
-  // style: have to use uint32_t for _NSGetExecutablePath
-  uint32_t mac_file_name_characters = file_name_characters;
-  char *utf8_file_name = reinterpret_cast<char *>(calloc(file_name_characters, sizeof(char)));
-  if (_NSGetExecutablePath(utf8_file_name, &mac_file_name_characters) != 0) {
-    CapsuleLog("Could not get our own executable path, bailing out");
-    exit(1);
-  }
-  char *utf8_absolute_file_name = realpath(utf8_file_name, nullptr);
-  free(utf8_file_name);
-  exe_path = std::string(utf8_absolute_file_name);
-  free(utf8_absolute_file_name);
-#elif defined(CAPSULE_LINUX)
-  char *utf8_file_name = reinterpret_cast<char *>(calloc(file_name_characters, sizeof(char)));
-  ssize_t dest_num_characters = readlink("/proc/self/exe", utf8_file_name, file_name_characters);
-  // readlink does not append a null character
-  utf8_file_name[dest_num_characters] = '\0';
-  char *utf8_absolute_file_name = realpath(utf8_file_name, nullptr);
-  free(utf8_file_name);
-  exe_path = std::string(utf8_absolute_file_name);
-  free(utf8_absolute_file_name);
-#endif
-
-  CapsuleLog("Running from: %s", exe_path.c_str());
-
-  size_t slash_index = exe_path.find_last_of("/\\");
-  std::string lib_path = exe_path.substr(0, slash_index);
+  std::string lib_path = capsule::paths::DirName(self_path);
   args.libpath = lib_path.c_str();
 
   CapsuleLog("Library path: %s", lib_path.c_str());
