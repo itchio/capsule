@@ -15,6 +15,12 @@
 #include <string>
 
 #include "argparse.h"
+#include "runner.h"
+
+#if defined(LAB_WINDOWS)
+#include "windows/executor.h"
+#endif
+
 #include <microprofile.h>
 
 MICROPROFILE_DEFINE(MAIN, "MAIN", "Main", 0xff0000);
@@ -60,6 +66,7 @@ int main (int argc, char **argv) {
     OPT_HELP(),
     OPT_GROUP("Basic options"),
     OPT_STRING('d', "dir", &args.dir, "where to output .mp4 videos (defaults to current directory)"),
+    OPT_STRING(0, "pipe", &args.dir, "named pipe to listen on (defaults to unique name)"),
     OPT_GROUP("Video options"),
     OPT_INTEGER(0, "crf", &args.crf, "output quality. sane values range from 18 (~visually lossless) to 28 (fast but looks bad)"),
     OPT_INTEGER(0, "size_divider", &args.size_divider, "size divider: default 1, accepted values 2 or 4"),
@@ -144,16 +151,29 @@ int main (int argc, char **argv) {
 
   CapsuleLog("Library path: %s", lib_path.c_str());
 
+  if (!args.pipe) {
+    args.pipe = "capsule";
+  }
+
   {
     MICROPROFILE_SCOPE(MAIN);
 
-    // different for each platform, CMake compiles the right one in.
-    int ret = capsule::Main(&args);
+    capsule::ExecutorInterface *executor;
+#if defined(LAB_WINDOWS)
+    executor = new capsule::windows::Executor();
+#elif defined(LAB_MACOS)
+    executor = new capsule::macos::Executor();
+#elif
+    executor = new capsule::linux::Executor();
+#endif
+
+    capsule::Runner runner{&args, executor};
+    runner.Run();
 
 #if defined(LAB_WINDOWS)
     free(argv);
 #endif // LAB_WINDOWS
 
-    return ret;
+    return 0;
   }
 }

@@ -10,6 +10,7 @@
 
 #include <lab/logging.h>
 #include <lab/env.h>
+#include <lab/paths.h>
 #include <lab/io.h>
 
 namespace capsule {
@@ -20,8 +21,8 @@ static FILE *in_file = 0;
 
 FILE *EnsureOutfile() {
   if (!out_file) {
-    std::string w_path = lab::env::Get("CAPSULE_W_PATH");
-    out_file = lab::io::Fopen(w_path, "wb");
+    std::string w_path = lab::env::Get("CAPSULE_PIPE_PATH") + ".runread";
+    out_file = lab::io::Fopen(lab::paths::PipePath(w_path), "wb");
     CapsuleAssert("Opened output file", !!out_file);
   }
   return out_file;
@@ -29,8 +30,8 @@ FILE *EnsureOutfile() {
 
 FILE *EnsureInfile() {
   if (!in_file) {
-    std::string r_path = lab::env::Get("CAPSULE_R_PATH");
-    in_file = lab::io::Fopen(r_path, "rb");
+    std::string r_path = lab::env::Get("CAPSULE_PIPE_PATH") + ".runwrite";
+    in_file = lab::io::Fopen(lab::paths::PipePath(r_path), "rb");
     CapsuleAssert("Opened input file", !!in_file);
   }
   return in_file;
@@ -234,8 +235,7 @@ void LAB_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t fra
 }
 
 void LAB_STDCALL Init () {
-    CapsuleLog("CAPSULE_R_PATH: %s", lab::env::Get("CAPSULE_R_PATH").c_str());
-    CapsuleLog("CAPSULE_W_PATH: %s", lab::env::Get("CAPSULE_W_PATH").c_str());
+    CapsuleLog("CAPSULE_PIPE_PATH: %s", lab::env::Get("CAPSULE_PIPE_PATH").c_str());
 
     CapsuleLog("Ensuring outfile..");
     EnsureOutfile();

@@ -24,11 +24,11 @@ enum BufferState {
 class PulseReceiver : public AudioReceiver {
   public:
     PulseReceiver();
-    virtual ~PulseReceiver();
+    virtual ~PulseReceiver() override;
 
-    virtual int ReceiveFormat(encoder::AudioFormat *afmt);
-    virtual void *ReceiveFrames(int *frames_received);
-    virtual void Stop();
+    virtual int ReceiveFormat(encoder::AudioFormat *afmt) override;
+    virtual void *ReceiveFrames(int *frames_received) override;
+    virtual void Stop() override;
 
     bool ReadFromPa();
 

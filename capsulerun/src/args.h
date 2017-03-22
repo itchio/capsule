@@ -26,6 +26,8 @@ struct MainArgs {
   int buffered_frames;
   const char *priority;
   const char *x264_preset;
+
+  const char *pipe;
 };
 
 }

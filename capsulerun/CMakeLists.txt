@@ -23,6 +23,7 @@ include_directories(
 )
 
 set(capsulerun_SRC
+  ${capsulerun_SOURCE_DIR}/runner.cc
   ${capsulerun_SOURCE_DIR}/main.cc
   ${capsulerun_SOURCE_DIR}/encoder.cc
   ${capsulerun_SOURCE_DIR}/argparse.c
@@ -39,7 +40,7 @@ if(WIN32)
     ${capsulerun_SOURCE_DIR}/windows/wasapi_receiver.cc
     ${capsulerun_SOURCE_DIR}/windows/quote.cc
     ${capsulerun_SOURCE_DIR}/windows/hotkey.cc
-    ${capsulerun_SOURCE_DIR}/windows/main.cc
+    ${capsulerun_SOURCE_DIR}/windows/executor.cc
   )
 endif()
 
@@ -48,7 +49,7 @@ if(APPLE)
     ${capsulerun_SOURCE_DIR}/macos/DDHotKeyCenter.m
     ${capsulerun_SOURCE_DIR}/macos/DDHotKeyUtilities.m
     ${capsulerun_SOURCE_DIR}/macos/hotkey.mm
-    ${capsulerun_SOURCE_DIR}/macos/main.cc
+    ${capsulerun_SOURCE_DIR}/macos/executor.cc
   )
 endif()
 
@@ -57,7 +58,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     ${capsulerun_SOURCE_DIR}/linux/pulse_dynamic.cc
     ${capsulerun_SOURCE_DIR}/linux/pulse_receiver.cc
     ${capsulerun_SOURCE_DIR}/linux/hotkey.cc
-    ${capsulerun_SOURCE_DIR}/linux/main.cc
+    ${capsulerun_SOURCE_DIR}/linux/executor.cc
   )
   add_definitions(-D__STDC_CONSTANT_MACROS)
 endif()

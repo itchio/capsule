@@ -1,58 +1,50 @@
 
-#include <stdio.h>
+#include "executor.h"
+
 #include <NktHookLib.h>
 
-#include <thread>
-
-#include <lab/platform.h>
-#include <lab/paths.h>
 #include <lab/strings.h>
+#include <lab/paths.h>
 #include <lab/env.h>
+
+#include <string>
 
 #include "quote.h"
 #include "wasapi_receiver.h"
-
-#include "../hotkey.h"
-#include "../main_loop.h"
+#include "../macros.h"
 
 namespace capsule {
+namespace windows {
 
-static bool connected = false;
-static DWORD exit_code = 0;
+std::string Process::Wait() {
+  WaitForSingleObject(process_handle_, INFINITE);
 
-static void WaitForChild (HANDLE hProcess) {
-  LONG platform = NktHookLibHelpers::GetProcessPlatform(hProcess);
-  if (platform == NKTHOOKLIB_ProcessPlatformX86) {
-    cdprintf("Child is 32-bit!");
-  } else if (platform == NKTHOOKLIB_ProcessPlatformX64) {
-    cdprintf("Child is 64-bit!");
-  }
+  DWORD exit_code;
+  GetExitCodeProcess(process_handle_, &exit_code);
 
-  cdprintf("Waiting on child...");
-  WaitForSingleObject(hProcess, INFINITE);
-  cdprintf("Done waiting on child");
-
-  GetExitCodeProcess(hProcess, &exit_code);
-  CapsuleLog("Exit code: %d (%x)", exit_code, exit_code);
-
-  if (!connected) {
-    exit(exit_code);
+  if (exit_code == 0) {
+    return "";
+  } else {
+    return "Child exited with code " + std::to_string(exit_code);
   }
 }
 
-int Main (MainArgs *args) {
-  // From Deviare-InProc's doc: 
-  //   If "szDllNameW" string ends with 'x86.dll', 'x64.dll', '32.dll', '64.dll', the dll name will be adjusted
-  //   in order to match the process platform. I.e.: "mydll_x86.dll" will become "mydll_x64.dll" on 64-bit processes.
-  // hence the blanket 'capsule32.dll' here
-  // N.B: even if the .exe we launch appears to be PE32, it might actually end up being a 64-bit process.
-  // Don't ask me, I don't know either.
+Process::~Process() {
+  // muffin
+}
+
+Executor::Executor() {
+  // muffin
+}
+
+ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
+  // If the injected dll string passed to Deviare-InProc ends with 'x86.dll', 'x64.dll', '32.dll',
+  // '64.dll', the dll name will be adjusted in order to match the process platform.
+  // i.e.: "mydll_x86.dll" will become "mydll_x64.dll" on 64-bit processes.
   std::string libcapsule_path = lab::paths::Join(std::string(args->libpath), "capsule32.dll");
 
   STARTUPINFOW si;
   PROCESS_INFORMATION pi;
-
-  DWORD err;
 
   ZeroMemory(&si, sizeof(si));  
   si.cb = sizeof(si);
@@ -65,19 +57,12 @@ int Main (MainArgs *args) {
   wchar_t *libcapsule_path_w;
   lab::strings::ToWideChar(libcapsule_path.c_str(), &libcapsule_path_w);
 
-  std::string pipe_r_path = "\\\\.\\pipe\\capsule.runr";
-  std::string pipe_w_path = "\\\\.\\pipe\\capsule.runw";
-
-  Connection *conn = new Connection(pipe_r_path, pipe_w_path);
-
   bool env_success = true;
-  env_success &= lab::env::Set("CAPSULE_R_PATH", pipe_w_path); // swapped on purpose
-  env_success &= lab::env::Set("CAPSULE_W_PATH", pipe_r_path); // swapped on purose
+  env_success &= lab::env::Set("CAPSULE_PIPE_PATH", std::string(args->pipe));
   env_success &= lab::env::Set("CAPSULE_LIBRARY_PATH", libcapsule_path);
-
   if (!env_success) {
     CapsuleLog("Could not set environment variables for the child");
-    exit(1);
+    return nullptr;
   }
 
   bool first_arg = true;
@@ -102,7 +87,7 @@ int Main (MainArgs *args) {
   CapsuleLog("Injecting '%S'", libcapsule_path_w);
   const char* libcapsule_init_function_name = "CapsuleWindowsInit";
 
-  err = NktHookLibHelpers::CreateProcessWithDllW(
+  DWORD err = NktHookLibHelpers::CreateProcessWithDllW(
     executable_path_w, // applicationName
     (LPWSTR) command_line_w.c_str(), // commandLine
     NULL, // processAttributes
@@ -120,25 +105,25 @@ int Main (MainArgs *args) {
 
   if (err == ERROR_SUCCESS) {
     CapsuleLog("Process #%lu successfully launched with dll injected!", pi.dwProcessId);
-
-    std::thread child_thread(WaitForChild, pi.hProcess);
-    child_thread.detach();
-
-    conn->Connect();
-    connected = true;
-
-    MainLoop ml {args, conn};
-    ml.audio_receiver_factory_ = AudioReceiverFactory;
-
-    hotkey::Init(&ml);
-
-    ml.Run();
   } else {
     CapsuleLog("Error %lu: Cannot launch process and inject dll.", err);
-    return 127;
+    return nullptr;
   }
 
-  return exit_code;
+  return new Process(pi.hProcess);
 }
 
-} // namespace capsule
+static audio::AudioReceiver *WasapiReceiverFactory() {
+  return new audio::WasapiReceiver();
+}
+
+AudioReceiverFactory Executor::GetAudioReceiverFactory() {
+  return WasapiReceiverFactory;
+}
+
+Executor::~Executor() {
+  // stub
+}
+
+}
+}

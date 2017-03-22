@@ -16,7 +16,7 @@
 
 namespace capsule {
 
-typedef audio::AudioReceiver * (*audio_receiver_factory_t)();
+typedef audio::AudioReceiver * (*AudioReceiverFactory)();
 
 class MainLoop {
   public:
@@ -27,7 +27,7 @@ class MainLoop {
     void Run(void);
     void CaptureFlip();
 
-    audio_receiver_factory_t audio_receiver_factory_ = nullptr;
+    AudioReceiverFactory audio_receiver_factory_ = nullptr;
 
   private:
     void EndSession();

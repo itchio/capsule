@@ -1,3 +1,4 @@
+
 #include "connection.h"
 
 #if defined(LAB_LINUX)
@@ -13,13 +14,15 @@
 #include <errno.h>    // for errno
 #include <unistd.h>   // unlink
 #include <signal.h>   // signal, SIGPIPE
-#else
+#else // !(LAB_LINUX || LAB_MACOS)
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
 
 #include <io.h>
-#endif
+#endif // !(LAB_WINDOWS || LAB_MACOS)
+
+#include <lab/paths.h>
 
 #include <stdexcept>
 
@@ -29,7 +32,6 @@ static HANDLE CreatePipe(
   std::string &pipe_path,
   DWORD pipe_mode
 ) {
-  // CapsuleLog("Created named pipe %s", pipe_path.c_str());
   HANDLE handle = CreateNamedPipeA(
     pipe_path.c_str(),
     pipe_mode, // open mode
@@ -67,56 +69,58 @@ static void CreateFifo (
 }
 
 static int OpenFifo (
-  std::string &path,
-  std::string purpose,
+  std::string path,
   int flags
 ) {
   // CapsuleLog("opening %s fifo...", purpose.c_str());
-
-  int fd = open(path.c_str(), flags);
-  if (!fd) {
-    // CapsuleLog("could not open fifo for %s: %s", purpose.c_str(), strerror(errno));
-    throw std::runtime_error("could not open fifo");
-  }
-
-  return fd;
+  return open(path.c_str(), flags);
 }
 
 #endif // !LAB_WINDOWS
 
-Connection::Connection(std::string &r_path, std::string &w_path) {
-  r_path_ = &r_path;
-  w_path_ = &w_path;
+Connection::Connection(std::string pipe_name) {
+  r_path_ = lab::paths::PipePath(pipe_name + ".runread");
+  w_path_ = lab::paths::PipePath(pipe_name + ".runwrite");
 
 #if defined(LAB_WINDOWS)
-  pipe_r_ = CreatePipe(*r_path_, PIPE_ACCESS_INBOUND);
-  pipe_w_ = CreatePipe(*w_path_, PIPE_ACCESS_OUTBOUND);
+  pipe_r_ = CreatePipe(r_path_, PIPE_ACCESS_INBOUND);
+  pipe_w_ = CreatePipe(w_path_, PIPE_ACCESS_OUTBOUND);
 #else // LAB_WINDOWS
   // ignore SIGPIPE - those will get disconnected when
   // the game shuts down, and that's okay.
   signal(SIGPIPE, SIG_IGN);
 
-  CreateFifo(*r_path_);
-  CreateFifo(*w_path_);
+  CreateFifo(r_path_);
+  CreateFifo(w_path_);
 #endif // !LAB_WINDOWS
 }
 
+// TODO: error reporting
 void Connection::Connect() {
 #if defined(LAB_WINDOWS)
   BOOL success = false;
   success = ConnectNamedPipe(pipe_r_, NULL);
   if (!success) {
-    throw std::runtime_error("Could not connect to named pipe for reading");
+    return;
   }
 
   success = ConnectNamedPipe(pipe_w_, NULL);
   if (!success) {
-    throw std::runtime_error("Could not connect to named pipe for writing");
+    return;
   }
 #else // LAB_WINDOWS
-  fifo_r_ = OpenFifo(*r_path_, "reading", O_RDONLY);
-  fifo_w_ = OpenFifo(*w_path_, "writing", O_WRONLY);
+  fifo_r_ = OpenFifo(r_path_, O_RDONLY);
+  if (!fifo_r) {
+    return;
+  }
+
+  fifo_w_ = OpenFifo(w_path_, O_WRONLY);
+  if (!fifo_w) {
+    return;
+  }
 #endif // !LAB_WINDOWS
+
+  connected_ = true;
 }
 
 void Connection::Write(const flatbuffers::FlatBufferBuilder &builder) {
@@ -133,9 +137,4 @@ char *Connection::Read() {
 #else // LAB_WINDOWS
   return CapsuleReadPacket(fifo_r_);
 #endif // !LAB_WINDOWS
-}
-
-void Connection::PrintDetails() {
-  fprintf(stderr, "<CAPS> {\"r_path\": \"%s\", \"w_path\": \"%s\"}\n",
-          w_path_->c_str(), r_path_->c_str());
 }

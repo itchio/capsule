@@ -77,5 +77,13 @@ std::string Join(const std::string &a, const std::string &b) {
   return a + kSeparator + b;
 }
 
+std::string PipePath(std::string name) {
+#if defined(LAB_WINDOWS)
+  return Join("\\\\.\\pipe", name);
+#else
+  return Join("/tmp", name);
+#endif
+}
+
 } // namespace paths
 } // namespace lab

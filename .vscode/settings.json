@@ -3,7 +3,9 @@
       "thread": "cpp",
       "chrono": "cpp",
       "string": "cpp",
-      "xfunctional": "cpp"
+      "xfunctional": "cpp",
+      "xiosbase": "cpp",
+      "xlocale": "cpp"
     },
     "files.exclude": {
       "**/.git": true,

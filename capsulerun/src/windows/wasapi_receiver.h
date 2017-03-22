@@ -24,11 +24,11 @@ static const long long kReftimesPerMillisec = 10000LL;
 class WasapiReceiver : public AudioReceiver {
   public:
     WasapiReceiver();
-    virtual ~WasapiReceiver();
+    virtual ~WasapiReceiver() override;
 
-    virtual int ReceiveFormat(encoder::AudioFormat *afmt);
-    virtual void *ReceiveFrames(int *frames_received);
-    virtual void Stop();
+    virtual int ReceiveFormat(encoder::AudioFormat *afmt) override;
+    virtual void *ReceiveFrames(int *frames_received) override;
+    virtual void Stop() override;
 
   private:
     encoder::AudioFormat afmt_;

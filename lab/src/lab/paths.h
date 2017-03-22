@@ -11,6 +11,7 @@ extern std::string kSeparator;
 std::string SelfPath();
 std::string DirName(const std::string& path);
 std::string Join(const std::string& a, const std::string& b);
+std::string PipePath(std::string name);
 
 } // namespace paths
 } // namespace lab
