@@ -33,8 +33,8 @@ void MainThread (capsule_args_t *args) {
   std::string fifo_w_path = "/tmp/capsule.runw";
 
   // swapped on purpose
-  auto fifo_r_var = "CAPSULE_PIPE_R_PATH=" + fifo_w_path;
-  auto fifo_w_var = "CAPSULE_PIPE_W_PATH=" + fifo_r_path;
+  auto fifo_r_var = "CAPSULE_R_PATH=" + fifo_w_path;
+  auto fifo_w_var = "CAPSULE_W_PATH=" + fifo_r_path;
   char *env_additions[] = {
     (char *) fifo_r_var.c_str(),
     (char *) fifo_w_var.c_str(),

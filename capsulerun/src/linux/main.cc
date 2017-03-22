@@ -84,8 +84,8 @@ int Main (capsule_args_t *args) {
   std::string fifo_w_path = "/tmp/capsule.runw";
 
   // swapped on purpose
-  std::string fifo_r_var = "CAPSULE_PIPE_R_PATH=" + fifo_w_path;
-  std::string fifo_w_var = "CAPSULE_PIPE_W_PATH=" + fifo_r_path;
+  std::string fifo_r_var = "CAPSULE_R_PATH=" + fifo_w_path;
+  std::string fifo_w_var = "CAPSULE_W_PATH=" + fifo_r_path;
   char *env_additions[] = {
     (char *) fifo_r_var.c_str(),
     (char *) fifo_w_var.c_str(),

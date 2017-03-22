@@ -6,6 +6,12 @@
 #include "platform.h"
 #include "strings.h"
 
+#if defined(LAB_WINDOWS)
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#undef WIN32_LEAN_AND_MEAN
+#endif // LAB_WINDOWS
+
 namespace lab {
 namespace env {
 
@@ -44,16 +50,51 @@ char **MergeBlocks (char **a, char **b) {
 }
 
 std::string Get(std::string name) {
-#if defined(CAPSULE_WINDOWS)
+#if defined(LAB_WINDOWS)
+    wchar_t *name_w;
+    strings::ToWideChar(name.c_str(), &name_w);
+    const size_t value_w_characters = 16 * 1024;
+    wchar_t *value_w = reinterpret_cast<wchar_t *>(calloc(value_w_characters, sizeof(wchar_t)));
+    int ret = GetEnvironmentVariableW(name_w, value_w, value_w_characters);
+    free(name_w);
 
-#else
-
-#endif
-    return "stub";
+    if (ret == 0) {
+        free(value_w);
+        return "";
+    } else {
+        char *value;
+        strings::FromWideChar(value_w, &value);
+        free(value_w);
+        std::string result = std::string(value);
+        free(value);
+        return result;
+    }
+#else // LAB_WINDOWS
+    // doesn't need to be freed, points to environment block
+    const char *value = getenv(name.c_str());
+    if (!value) {
+        return "";
+    } else {
+        return std::string(value):
+    }
+#endif // !LAB_WINDOWS
 }
 
 bool Set(std::string name, std::string value) {
-    return false;
+#if defined(LAB_WINDOWS)
+    wchar_t *name_w;
+    strings::ToWideChar(name.c_str(), &name_w);
+    wchar_t *value_w;
+    strings::ToWideChar(value.c_str(), &value_w);
+
+    BOOL result = SetEnvironmentVariableW(name_w, value_w);
+    free(name_w);
+    free(value_w);
+    return result;
+#else  // LAB_WINDOWS
+    int result = setenv(name.c_str(), value.c_str(), 1 /* overwrite */);
+    return result == 0;
+#endif // !LAB_WINDOWS
 }
 
 } // namespace env

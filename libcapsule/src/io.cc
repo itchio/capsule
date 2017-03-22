@@ -8,56 +8,30 @@
 #include <capsule/messages.h>
 #include <capsule.h>
 
+#include <lab/env.h>
+#include <lab/io.h>
+
 namespace capsule {
 namespace io {
 
 static FILE *out_file = 0;
 static FILE *in_file = 0;
 
-#if defined(CAPSULE_WINDOWS)
-static wchar_t *GetPipePath (wchar_t *var_name) {
-  const int pipe_path_len = CapsuleLog_PATH_SIZE;
-  wchar_t *pipe_path = (wchar_t*) calloc(pipe_path_len, sizeof(wchar_t));
-  pipe_path[0] = '\0';
-  GetEnvironmentVariable(var_name, pipe_path, pipe_path_len);
-  CapsuleAssert("Got pipe path", wcslen(pipe_path) > 0);
-  return pipe_path;
-}
-#endif
-
 FILE *EnsureOutfile() {
   if (!out_file) {
-#if defined(CAPSULE_WINDOWS)
-    wchar_t *pipe_path = GetPipePath(L"CAPSULE_PIPE_W_PATH");
-    CapsuleLog("pipe_w path: %S", pipe_path);
-    out_file = _wfopen(pipe_path, L"wb");
-    free(pipe_path);
-#else
-    char *pipe_path = getenv("CAPSULE_PIPE_W_PATH");
-    CapsuleLog("pipe_w path: %s", pipe_path);
-    out_file = fopen(pipe_path, "wb");
-#endif
+    std::string w_path = lab::env::Get("CAPSULE_W_PATH");
+    out_file = lab::io::Fopen(w_path, "wb");
     CapsuleAssert("Opened output file", !!out_file);
   }
-
   return out_file;
 }
 
 FILE *EnsureInfile() {
   if (!in_file) {
-#if defined(CAPSULE_WINDOWS)
-    wchar_t *pipe_path = GetPipePath(L"CAPSULE_PIPE_R_PATH");
-    CapsuleLog("pipe_r path: %S", pipe_path);
-    in_file = _wfopen(pipe_path, L"rb");
-    free(pipe_path);
-#else
-    char *pipe_path = getenv("CAPSULE_PIPE_R_PATH");
-    CapsuleLog("pipe_r path: %s", pipe_path);
-    in_file = fopen(pipe_path, "rb");
-#endif
+    std::string r_path = lab::env::Get("CAPSULE_R_PATH");
+    in_file = lab::io::Fopen(r_path, "rb");
     CapsuleAssert("Opened input file", !!in_file);
   }
-
   return in_file;
 }
 
@@ -259,6 +233,9 @@ void CAPSULE_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t
 }
 
 void CAPSULE_STDCALL Init () {
+    CapsuleLog("CAPSULE_R_PATH: %s", getenv("CAPSULE_R_PATH"));
+    CapsuleLog("CAPSULE_W_PATH: %s", getenv("CAPSULE_W_PATH"));
+
     CapsuleLog("Ensuring outfile..");
     EnsureOutfile();
     CapsuleLog("outfile ensured!");

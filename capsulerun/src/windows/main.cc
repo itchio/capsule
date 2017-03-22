@@ -11,6 +11,7 @@
 #include <lab/platform.h>
 #include <lab/paths.h>
 #include <lab/strings.h>
+#include <lab/env.h>
 
 #include <capsulerun.h>
 #include <capsulerun_hotkey.h>
@@ -77,23 +78,13 @@ int Main (capsule_args_t *args) {
 
   Connection *conn = new Connection(pipe_r_path, pipe_w_path);
 
-  // swapped on purpose
-  err = SetEnvironmentVariableA("CAPSULE_PIPE_R_PATH", pipe_w_path.c_str());
-  if (err == 0) {
-    CapsuleLog("Could not set pipe_r path environment variable");
-    exit(1);
-  }
+  bool env_success = true;
+  env_success &= lab::env::Set("CAPSULE_R_PATH", pipe_w_path); // swapped on purpose
+  env_success &= lab::env::Set("CAPSULE_W_PATH", pipe_r_path); // swapped on purose
+  env_success &= lab::env::Set("CAPSULE_LIBRARY_PATH", libcapsule_path);
 
-  // swapped on purpose
-  err = SetEnvironmentVariableA("CAPSULE_PIPE_W_PATH", pipe_r_path.c_str());
-  if (err == 0) {
-    CapsuleLog("Could not set pipe_w path environment variable");
-    exit(1);
-  }
-
-  err = SetEnvironmentVariableA("CAPSULE_LIBRARY_PATH", libcapsule_path.c_str());
-  if (err == 0) {
-    CapsuleLog("Could not set library path environment variable");
+  if (!env_success) {
+    CapsuleLog("Could not set environment variables for the child");
     exit(1);
   }
 
@@ -117,7 +108,7 @@ int Main (capsule_args_t *args) {
 
   CapsuleLog("Launching '%S' with args '%S'", executable_path_w, command_line_w.c_str());
   CapsuleLog("Injecting '%S'", libcapsule_path_w);
-  auto libcapsule_init_function_name = "CapsuleWindowsInit";
+  const char* libcapsule_init_function_name = "CapsuleWindowsInit";
 
   err = NktHookLibHelpers::CreateProcessWithDllW(
     executable_path_w, // applicationName

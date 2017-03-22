@@ -20,8 +20,6 @@ void __attribute__((constructor)) CapsuleLoad() {
   CapsuleLog("LD_PRELOAD: %s", getenv("LD_PRELOAD"));
 #endif
 
-  CapsuleLog("CAPSULE_PIPE_R_PATH: %s", getenv("CAPSULE_PIPE_R_PATH"));
-  CapsuleLog("CAPSULE_PIPE_W_PATH: %s", getenv("CAPSULE_PIPE_W_PATH"));
   capsule::io::Init();
 }
 
