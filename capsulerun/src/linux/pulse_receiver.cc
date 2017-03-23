@@ -8,16 +8,6 @@
 namespace capsule {
 namespace audio {
 
-// TODO: use trick from http://stackoverflow.com/questions/10673585/start-thread-with-member-function
-// to avoid this.
-static void ReadLoop (PulseReceiver *pr) {
-  while (true) {
-    if (!pr->ReadFromPa()) {
-      return;
-    }
-  }
-}
-
 PulseReceiver::PulseReceiver() {
   memset(&afmt_, 0, sizeof(afmt_));
 
@@ -67,7 +57,15 @@ PulseReceiver::PulseReceiver() {
   process_index_ = 0;
 
   // start reading
-  pa_thread_ = new std::thread(ReadLoop, this);
+  pa_thread_ = new std::thread(&PulseReceiver::ReadLoop, this);
+}
+
+void PulseReceiver::ReadLoop () {
+  while (true) {
+    if (!ReadFromPa()) {
+      return;
+    }
+  }
 }
 
 bool PulseReceiver::ReadFromPa() {

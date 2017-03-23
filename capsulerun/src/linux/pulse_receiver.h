@@ -30,9 +30,10 @@ class PulseReceiver : public AudioReceiver {
     virtual void *ReceiveFrames(int *frames_received) override;
     virtual void Stop() override;
 
+  private:
+    void ReadLoop();
     bool ReadFromPa();
 
-  private:
     encoder::AudioFormat afmt_;
     pa_simple *ctx_;
 
