@@ -1,6 +1,8 @@
 
 #include "pulse_receiver.h"
 
+#include "../macros.h"
+
 #include <chrono>
 
 #include <string.h> // memset, memcpy
@@ -11,35 +13,43 @@ namespace audio {
 PulseReceiver::PulseReceiver() {
   memset(&afmt_, 0, sizeof(afmt_));
 
-  if (!capsule::pulse::Load()) {
+  if (!pulse::Load()) {
+    CapsuleLog("PulseReceiver: could not load pulse library");
     return;
   }
 
-  /* The sample type to use */
+  auto dev = pulse::GetDefaultSinkMonitor();
+  if (!dev) {
+    CapsuleLog("PulseReceiver: could not determine default sink");
+    return;
+  }
+
+  CapsuleLog("PulseReceiver: will record sink %s", dev);
+
   static const pa_sample_spec ss = {
       .format = PA_SAMPLE_FLOAT32LE,
       .rate = 44100,
       .channels = 2
   };
 
-  // TODO: list devices instead
-  const char *dev = "alsa_output.pci-0000_00_1b.0.analog-stereo.monitor";
-
   int pa_err = 0;
-  ctx_ = capsule::pulse::SimpleNew(NULL,             // server
-                      "capsule",        // name
-                      PA_STREAM_RECORD, // direction
-                      dev,              // device
-                      "record",         // stream name
-                      &ss,              // sample spec
-                      NULL,             // channel map
-                      NULL,             // buffer attributes
-                      &pa_err           // error
-                      );
+  ctx_ = pulse::SimpleNew(NULL,             // server
+                          "capsule",        // name
+                          PA_STREAM_RECORD, // direction
+                          dev,              // device
+                          "record",         // stream name
+                          &ss,              // sample spec
+                          NULL,             // channel map
+                          NULL,             // buffer attributes
+                          &pa_err           // error
+                          );
+
+  free(dev);
 
   if (!ctx_) {
-    fprintf(stderr, "Could not create pulseaudio context, error %d (%x)\n",
-            pa_err, pa_err);
+    CapsuleLog(
+        "PulseReceiver: Could not create pulseaudio context, error %d (%x)",
+        pa_err, pa_err);
     return;
   }
 
@@ -47,12 +57,13 @@ PulseReceiver::PulseReceiver() {
   afmt_.samplerate = ss.rate;
   afmt_.samplewidth = 32;
   buffer_size_ = kAudioNbSamples * afmt_.channels * (afmt_.samplewidth / 8);
-  in_buffer_ = (uint8_t *) calloc(1, buffer_size_);
-  buffers_ = (uint8_t *) calloc(kAudioNbBuffers, buffer_size_);
+  in_buffer_ = reinterpret_cast<uint8_t *>(calloc(1, buffer_size_));
+  buffers_ = reinterpret_cast<uint8_t *>(calloc(kAudioNbBuffers, buffer_size_));
 
   for (int i = 0; i < kAudioNbBuffers; i++) {
     buffer_state_[i] = kBufferStateAvailable;
   }
+
   commit_index_ = 0;
   process_index_ = 0;
 
@@ -60,7 +71,7 @@ PulseReceiver::PulseReceiver() {
   pa_thread_ = new std::thread(&PulseReceiver::ReadLoop, this);
 }
 
-void PulseReceiver::ReadLoop () {
+void PulseReceiver::ReadLoop() {
   while (true) {
     if (!ReadFromPa()) {
       return;
@@ -78,10 +89,11 @@ bool PulseReceiver::ReadFromPa() {
     }
 
     int pa_err;
-    int ret = capsule::pulse::SimpleRead(ctx_, in_buffer_, buffer_size_, &pa_err);
+    int ret = pulse::SimpleRead(ctx_, in_buffer_, buffer_size_, &pa_err);
     if (ret < 0) {
-        fprintf(stderr, "Could not read from pulseaudio, error %d (%x)\n", pa_err, pa_err);
-        return false;
+      fprintf(stderr, "Could not read from pulseaudio, error %d (%x)\n", pa_err,
+              pa_err);
+      return false;
     }
   }
 
@@ -93,7 +105,8 @@ bool PulseReceiver::ReadFromPa() {
       // no room for it, just skip those then
       if (!overrun_) {
         overrun_ = true;
-        fprintf(stderr, "PulseReceiver: buffer overrun (captured audio but nowhere to place it)\n");
+        CapsuleLog("PulseReceiver: buffer overrun (captured audio but "
+                   "nowhere to place it)\n");
       }
       // keep trying tho
       return true;
@@ -126,7 +139,8 @@ void *PulseReceiver::ReceiveFrames(int *frames_received) {
     // ooh there's a buffer ready
 
     // if the previous one was processing, that means we've processed it.
-    auto prev_process_index = (process_index_ == 0) ? (kAudioNbBuffers - 1) : (process_index_ - 1);
+    auto prev_process_index =
+        (process_index_ == 0) ? (kAudioNbBuffers - 1) : (process_index_ - 1);
     if (buffer_state_[prev_process_index] == kBufferStateProcessing) {
       buffer_state_[prev_process_index] = kBufferStateAvailable;
     }
@@ -143,7 +157,7 @@ void PulseReceiver::Stop() {
   {
     std::lock_guard<std::mutex> lock(pa_mutex_);
     if (ctx_) {
-      capsule::pulse::SimpleFree(ctx_);
+      pulse::SimpleFree(ctx_);
     }
     ctx_ = nullptr;
   }

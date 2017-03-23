@@ -35,35 +35,50 @@ typedef int (*pa_simple_free_t)(
 extern pa_simple_free_t SimpleFree;
 
 typedef pa_mainloop *(*pa_mainloop_new_t)();
-extern pa_mainloop_new_t MainLoopNew;
+extern pa_mainloop_new_t MainloopNew;
 
 typedef pa_mainloop_api *(*pa_mainloop_get_api_t)(
   pa_mainloop *loop
 );
-extern pa_mainloop_get_api_t MainLoopGetApi;
+extern pa_mainloop_get_api_t MainloopGetApi;
 
 typedef void (*pa_mainloop_run_t)(
   pa_mainloop *loop,
   int *retval
 );
-extern pa_mainloop_run_t MainLoopRun;
+extern pa_mainloop_run_t MainloopRun;
 
 typedef void (*pa_mainloop_quit_t)(
   pa_mainloop *loop,
   int retval
 );
-extern pa_mainloop_quit_t MainLoopQuit;
+extern pa_mainloop_quit_t MainloopQuit;
 
 typedef void (*pa_mainloop_free_t)(
   pa_mainloop *loop
 );
-extern pa_mainloop_free_t MainLoopFree;
+extern pa_mainloop_free_t MainloopFree;
 
 typedef pa_context *(*pa_context_new_t)(
   pa_mainloop_api *api,
   const char *name
 );
 extern pa_context_new_t ContextNew;
+
+typedef void (*pa_context_connect_t)(
+  pa_context *ctx,
+  const char *server,
+  pa_context_flags_t flags,
+  const pa_spawn_api* api
+);
+extern pa_context_connect_t ContextConnect;
+
+typedef void (*pa_context_set_state_callback_t)(
+  pa_context *ctx,
+  pa_context_notify_cb_t cb,
+  void *userdata
+);
+extern pa_context_set_state_callback_t ContextSetStateCallback;
 
 typedef pa_context_state_t (*pa_context_get_state_t)(
   pa_context *ctx
@@ -91,6 +106,7 @@ typedef void (*pa_context_disconnect_t)(
 extern pa_context_disconnect_t ContextDisconnect;
 
 bool Load();
+char *GetDefaultSinkMonitor();
 
 } // namespace pulse
 } // namespace capsule

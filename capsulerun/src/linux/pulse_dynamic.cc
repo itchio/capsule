@@ -2,6 +2,7 @@
 #include "pulse_dynamic.h"
 
 #include <dlfcn.h>
+#include <string.h>
 
 #include "../macros.h"
 
@@ -20,6 +21,8 @@ pa_mainloop_quit_t MainloopQuit;
 pa_mainloop_free_t MainloopFree;
 
 pa_context_new_t ContextNew;
+pa_context_connect_t ContextConnect;
+pa_context_set_state_callback_t ContextSetStateCallback;
 pa_context_get_state_t ContextGetState;
 pa_context_get_server_info_t ContextGetServerInfo;
 pa_context_get_sink_info_by_name_t ContextGetSinkInfoByName;
@@ -66,12 +69,69 @@ bool Load() {
   PULSESYM(MainloopQuit, pa_mainloop_quit);
   PULSESYM(MainloopFree, pa_mainloop_free);
   PULSESYM(ContextNew, pa_context_new);
+  PULSESYM(ContextConnect, pa_context_connect);
+  PULSESYM(ContextSetStateCallback, pa_context_set_state_callback);
   PULSESYM(ContextGetState, pa_context_get_state);
   PULSESYM(ContextGetServerInfo, pa_context_get_server_info);
   PULSESYM(ContextGetSinkInfoByName, pa_context_get_sink_info_by_name);
   PULSESYM(ContextDisconnect, pa_context_disconnect);
 
   return true;
+}
+
+struct SinkSeeker {
+  pa_mainloop *loop;
+  char *default_sink_monitor;
+};
+
+void SinkInfoCb(pa_context * /* unused */, const pa_sink_info *i, int eol, void *userdata) {
+  auto ss = reinterpret_cast<SinkSeeker *>(userdata);
+
+  if (eol) {
+    MainloopQuit(ss->loop, 0);
+    return;
+  }
+
+  ss->default_sink_monitor = strdup(i->monitor_source_name);
+}
+
+void ServerInfoCb(pa_context *ctx, const pa_server_info *i, void *userdata) {
+  ContextGetSinkInfoByName(ctx, i->default_sink_name, SinkInfoCb, userdata);
+}
+
+void StateCb(pa_context *ctx, void *userdata) {
+  auto state = ContextGetState(ctx);
+
+  switch (state) {
+  case PA_CONTEXT_READY: {
+    ContextGetServerInfo(ctx, ServerInfoCb, userdata);
+    break;
+  }
+  case PA_CONTEXT_FAILED: {
+    CapsuleLog("Failed to connect to PulseAudio");
+    auto ss = reinterpret_cast<SinkSeeker *>(userdata);
+    MainloopQuit(ss->loop, 1);
+    break;
+  }
+  default: {
+    // ignore
+  }
+  }
+}
+
+char *GetDefaultSinkMonitor() {
+  SinkSeeker ss;
+  ss.default_sink_monitor = nullptr;
+  ss.loop = MainloopNew();
+
+  auto ctx = ContextNew(MainloopGetApi(ss.loop), "capsule");
+  ContextSetStateCallback(ctx, StateCb, &ss);
+  ContextConnect(ctx, nullptr, PA_CONTEXT_NOFLAGS, nullptr);
+  MainloopRun(ss.loop, nullptr);
+  ContextDisconnect(ctx);
+  MainloopFree(ss.loop);
+
+  return ss.default_sink_monitor;
 }
 
 } // namespace pulse
