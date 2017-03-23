@@ -11,6 +11,10 @@
 
 #include "logging.h"
 
+#if defined(LAB_WINDOWS)
+#include "windows/win_capture.h"
+#endif
+
 namespace capsule {
 namespace capture {
 
@@ -22,7 +26,7 @@ static std::chrono::time_point<std::chrono::steady_clock> first_ts;
 
 std::mutex state_mutex;
 
-State state = {0};
+static State state = {0};
 
 bool Active () {
   std::lock_guard<std::mutex> lock(state_mutex);
@@ -129,6 +133,10 @@ void SawBackend(Backend backend) {
   }
 }
 
+State *GetState() {
+  return &state;
+}
+
 void Start (Settings *settings) {
 
 #if defined(LAB_WINDOWS)
@@ -141,13 +149,13 @@ void Start (Settings *settings) {
         }
     } else {
         // try dc capture then
-        bool success = DcCaptureInit();
+        bool success = dc::Init();
         if (!success) {
-            Log("Cannot start capture: no capture method available")
+            Log("Cannot start capture: no capture method available");
             return;
         }
 
-        if (CaptureTryStart(settings)) {
+        if (TryStart(settings)) {
             Log("Started DC capture");
             return;
         } else {

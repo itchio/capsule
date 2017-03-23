@@ -1,12 +1,21 @@
 
-#include <capsule.h>
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#undef WIN32_LEAN_AND_MEAN
 
 #include <psapi.h>
 
-CNktHookLib cHookMgr;
+#include "../capsule.h"
+#include "../io.h"
+#include "win_capture.h"
+
 static int capsule_inited = 0;
 
-void CapsuleInstallWindowsHooks () {
+namespace capsule {
+
+CNktHookLib cHookMgr;
+
+void InstallHooks () {
   if (capsule_inited) {
     return;
   }
@@ -15,11 +24,13 @@ void CapsuleInstallWindowsHooks () {
   // Let Deviare-InProc be chatty
   cHookMgr.SetEnableDebugOutput(TRUE);
 
-  CapsuleInstallProcessHooks();
-  CapsuleInstallOpenglHooks();
-  CapsuleInstallDxgiHooks();
-  CapsuleInstallD3d9Hooks();
+  process::InstallHooks();
+  gl::InstallHooks();
+  dxgi::InstallHooks();
+  d3d9::InstallHooks();
 }
+
+} // namespace capsule
 
 BOOL LAB_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
   // don't actually do anything here, since what we can do from DllMain
@@ -34,9 +45,9 @@ DWORD __declspec(dllexport) CapsuleWindowsInit() {
   GetModuleBaseName(GetCurrentProcess(), nullptr, process_name, MAX_PATH);
   DWORD pid = GetCurrentProcessId();
 
-  CapsuleLog("capsule warming up for %S (pid %d)", process_name, pid);
+  capsule::Log("capsule warming up for %S (pid %d)", process_name, pid);
   capsule::io::Init();
-  CapsuleInstallWindowsHooks();
+  capsule::InstallHooks();
 
   return ERROR_SUCCESS;
 }

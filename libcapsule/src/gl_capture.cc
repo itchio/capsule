@@ -36,7 +36,7 @@ struct State {
   int64_t                 timestamps[kNumBuffers];
 };
 
-static struct State state = {};
+static State state = {};
 
 LibHandle handle;
 

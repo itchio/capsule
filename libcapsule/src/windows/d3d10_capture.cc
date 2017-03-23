@@ -1,17 +1,23 @@
 
-#include <capsule.h>
+#include "../capsule.h"
 #include "win_capture.h"
 
+namespace capsule {
+namespace d3d10 {
+
 // inspired by libobs
-struct d3d10_data {
+struct State {
 };
 
-static struct d3d10_data data = {};
+static struct State state = {};
 
-void D3d10Capture (void *swap_ptr, void *backbuffer_ptr) {
-  CapsuleLog("d3d10_capture: stub!");
+void Capture (void *swap_ptr, void *backbuffer_ptr) {
+  Log("d3d10::Capture: stub!");
 }
 
-void D3d10Free () {
-  CapsuleLog("d3d10_free: stub!");
+void Free () {
+  Log("d3d10::Free: stub!");
 }
+
+} // namespace capsule
+} // namespace d3d10

@@ -36,6 +36,7 @@ void Stop();
 int64_t FrameTimestamp();
 
 void SawBackend(Backend backend);
+State *GetState();
 
 } // namespace capture
 } // namespace capsule
