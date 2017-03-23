@@ -171,7 +171,7 @@ void Start (Settings *settings) {
     Log("Cannot start capture: no capture method available");
 }
 
-void Stop () {
+void Stop() {
     if (TryStop()) {
         Log("capsule_capture_stop: stopped!");
     }

@@ -10,6 +10,7 @@ enum PixFmt:int {
 }
 
 union Message {
+    HotkeyPressed,
     CaptureStart,
     CaptureStop,
     VideoSetup,
@@ -20,6 +21,8 @@ union Message {
 table Packet {
     message: Message;
 }
+
+table HotkeyPressed {}
 
 table CaptureStart {
     fps: uint;

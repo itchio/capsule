@@ -1,11 +1,14 @@
 
-#include "capsule.h"
-#include "capsule_macos.h"
 #include "playthrough/CAPlayThrough.h"
 
 #include <CoreAudio/CoreAudio.h>
 #include <CoreServices/CoreServices.h>
 #include <AudioToolbox/AudioToolbox.h>
+
+#include <lab/strings.h>
+
+#include "interpose.h"
+#include "../logging.h"
 
 static CAPlayThroughHost *playThroughHost;
 static bool settingUpPlayThrough = false;
@@ -29,28 +32,32 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
        )
       ) {
 
-    AudioDeviceID soundflowerId = -1;
-    AudioDeviceID builtinId = -1;
+    AudioDeviceID soundflowerId = 0;
+    AudioDeviceID builtinId = 0;
+    bool found_soundflower;
+    bool found_builtin;
     UInt32 size;
     OSStatus nStatus = AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &devlist_address, 0, NULL, &size);
     if (nStatus != kAudioHardwareNoError) {
-      CapsuleLog("Could not get size of device list");
+      capsule::Log("Could not get size of device list");
+      return status;
     }
 
     AudioDeviceID* devs = (AudioDeviceID*) alloca(size);
     if (!devs) {
-      CapsuleLog("Could not allocate device list");
+      capsule::Log("Could not allocate device list");
       return status;
     }
 
     nStatus = AudioObjectGetPropertyData(kAudioObjectSystemObject, &devlist_address, 0, NULL, &size, devs);
     if (nStatus != kAudioHardwareNoError) {
-      CapsuleLog("Could not list devices");
+      capsule::Log("Could not list devices");
+      return status;
     }
 
     UInt32 numDevs = size / sizeof(AudioDeviceID);
 
-    CapsuleLog("Querying %s, got %d results",
+    capsule::Log("Querying %s, got %d results",
         (inAddress->mSelector == kAudioHardwarePropertyDevices ? "all devices" :
          (inAddress->mSelector == kAudioHardwarePropertyDefaultOutputDevice ? "default output" :
           (inAddress->mSelector == kAudioHardwarePropertyDefaultSystemOutputDevice ? "default system output" : "???"))),
@@ -70,7 +77,7 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
       AudioObjectGetPropertyData(dev, &nameaddr, 0, NULL, &size, &cfstr);
 
       if (!cfstr) {
-        CapsuleLog("No output name for device %d", (unsigned int) i);
+        capsule::Log("No output name for device %d", (unsigned int) i);
         continue;
       }
 
@@ -78,32 +85,33 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
 
       ptr = (char *) malloc(len + 1);
       if (!CFStringGetCString(cfstr, ptr, len + 1, kCFStringEncodingUTF8)) {
-        CapsuleLog("Could not convert to CString");
+        capsule::Log("Could not convert to CString");
       }
       CFRelease(cfstr);
 
-      CapsuleLog("Device #%d: %s", (unsigned int) i, ptr)
+      // capsule::Log("Device #%d: %s", (unsigned int) i, ptr);
 
-      if (strcmp("Soundflower (2ch)", ptr) == 0) {
-        CapsuleLog("Found the soundflower!")
+      if (lab::strings::CEquals("Soundflower (2ch)", ptr)) {
+        // capsule::Log("Found the soundflower!")
         soundflowerId = dev;
+        found_soundflower = true;
       }
-      if (strcmp("Built-in Output", ptr) == 0) {
-        CapsuleLog("Found the built-in output!")
+      if (lab::strings::CEquals("Built-in Output", ptr)) {
+        // capsule::Log("Found the built-in output!")
         builtinId = dev;
+        found_builtin = true;
       }
 
       free(ptr);
     }
 
-    if (builtinId != -1 && soundflowerId != -1) {
+    if (found_builtin && found_soundflower) {
       numDevs = *ioDataSize / sizeof(AudioDeviceID);
       devs = (AudioDeviceID*) outData;
-      CapsuleLog("Pretending default output is soundflower, %d devices to go through", (unsigned int) numDevs);
       for (UInt32 i = 0; i < numDevs; i++) {
         AudioDeviceID dev = devs[i];
         if (dev == builtinId) {
-          CapsuleLog("Swapping device %d!\n", (unsigned int) i);
+          capsule::Log("Subverting audio device %d for capture", (unsigned int) i);
           devs[i] = soundflowerId;
         }
       }
@@ -112,7 +120,7 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
         settingUpPlayThrough = true;
         playThroughHost = new CAPlayThroughHost(soundflowerId, builtinId);
         if (!playThroughHost) {
-          CapsuleLog("ERROR: playThroughHost init failed!");
+          capsule::Log("ERROR: playThroughHost init failed!");
           return status;
         }
         playThroughHost->Start();
@@ -120,10 +128,10 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
       }
     }
   } else {
-    /* CapsuleLog("Called AudioObjectGetPropertyData with unknown parameters"); */
-    /* CapsuleLog("mElement is %u instead of %u", inAddress->mElement, devlist_address.mElement); */
-    /* CapsuleLog("mScope is %u instead of %u", inAddress->mScope, devlist_address.mScope); */
-    /* CapsuleLog("mSelector is %u instead of %u", inAddress->mSelector, devlist_address.mSelector); */
+    /* capsule::Log("Called AudioObjectGetPropertyData with unknown parameters"); */
+    /* capsule::Log("mElement is %u instead of %u", inAddress->mElement, devlist_address.mElement); */
+    /* capsule::Log("mScope is %u instead of %u", inAddress->mScope, devlist_address.mScope); */
+    /* capsule::Log("mSelector is %u instead of %u", inAddress->mSelector, devlist_address.mSelector); */
   }
 
   return status;

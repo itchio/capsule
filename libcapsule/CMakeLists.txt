@@ -42,11 +42,10 @@ if(APPLE)
   list(APPEND libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/macos/hooks.cc
     ${libcapsule_SOURCE_DIR}/macos/gl_hooks.cc
-    ${libcapsule_SOURCE_DIR}/macos/capsule_macos_utils.mm
-    ${libcapsule_SOURCE_DIR}/macos/capsule_NSWindow.mm
-    ${libcapsule_SOURCE_DIR}/macos/capsule_NSApplication.mm
-    ${libcapsule_SOURCE_DIR}/macos/capsule_CGL.mm
-    ${libcapsule_SOURCE_DIR}/macos/capsule_CoreAudio.mm
+    ${libcapsule_SOURCE_DIR}/macos/swizzle.mm
+    ${libcapsule_SOURCE_DIR}/macos/ns_application.mm
+    ${libcapsule_SOURCE_DIR}/macos/cgl.mm
+    ${libcapsule_SOURCE_DIR}/macos/core_audio.mm
 
     ${libcapsule_SOURCE_DIR}/macos/playthrough/CAPlayThrough.cc
     ${libcapsule_SOURCE_DIR}/macos/playthrough/CARingBuffer.cc

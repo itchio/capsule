@@ -13,7 +13,7 @@ void __attribute__((constructor)) CapsuleConstructor() {
 
   capsule::Log("DYLD_INSERT_LIBRARIES: %s",
                lab::env::Get("DYLD_INSERT_LIBRARIES").c_str());
-  capsule::Log("LD_PRELOAD: %s", lab::env::get("LD_PRELOAD").c_str());
+  capsule::Log("LD_PRELOAD: %s", lab::env::Get("LD_PRELOAD").c_str());
 
   capsule::io::Init();
 }

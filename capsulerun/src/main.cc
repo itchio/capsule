@@ -1,6 +1,4 @@
 
-#include <capsulerun.h>
-
 #include <lab/platform.h>
 #include <lab/paths.h>
 #include <lab/strings.h>
@@ -172,12 +170,7 @@ int main (int argc, char **argv) {
 #endif
 
     capsule::Runner runner{&args, executor};
-#if defined(LAB_MACOS)
-    std::thread main_thread(&capsule::Runner::Run, &runner);
-    capsule::RunApp();
-#else
     runner.Run();
-#endif
 
 #if defined(LAB_WINDOWS)
     free(argv);

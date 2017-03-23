@@ -35,6 +35,10 @@ void MainLoop::Run () {
       MICROPROFILE_SCOPE(MainLoopProcess);
       auto pkt = messages::GetPacket(buf);
       switch (pkt->message_type()) {
+        case messages::Message_HotkeyPressed: {
+          CaptureFlip();
+          break;
+        }
         case messages::Message_VideoSetup: {
           auto vs = static_cast<const messages::VideoSetup*>(pkt->message());
           StartSession(vs);

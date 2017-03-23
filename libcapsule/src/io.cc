@@ -82,7 +82,7 @@ static void PollInfile() {
     }
 }
 
-void LAB_STDCALL WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch) {
+void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch) {
     Log("writing video format");
     for (int i = 0; i < kNumBuffers; i++) {
         frame_locked[i] = false;
@@ -142,7 +142,7 @@ void LAB_STDCALL WriteVideoFormat(int width, int height, int format, bool vflip,
 
 int is_skipping;
 
-void LAB_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size) {
+void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size) {
     if (IsFrameLocked(next_frame_index)) {
         if (!is_skipping) {
             Log("frame buffer overrun (at %d)! skipping until further notice", next_frame_index);
@@ -176,7 +176,23 @@ void LAB_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t fra
     next_frame_index = (next_frame_index + 1) % kNumBuffers;
 }
 
-void LAB_STDCALL Init () {
+void WriteHotkeyPressed() {
+    flatbuffers::FlatBufferBuilder builder(1024);
+
+    messages::HotkeyPressedBuilder hkp_builder(builder);
+    auto hkp = hkp_builder.Finish();
+
+    messages::PacketBuilder pkt_builder(builder);
+    pkt_builder.add_message_type(messages::Message_HotkeyPressed);
+    pkt_builder.add_message(hkp.Union());
+    auto pkt = pkt_builder.Finish();
+
+    builder.Finish(pkt);
+
+    lab::packet::Fwrite(builder, out_file);
+}
+
+void Init() {
     Log("Our pipe path is %s", lab::env::Get("CAPSULE_PIPE_PATH").c_str());
 
     {
