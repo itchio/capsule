@@ -32,7 +32,6 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/session.cc
   ${capsulerun_SOURCE_DIR}/connection.cc
   ${capsulerun_SOURCE_DIR}/fps_counter.cc
-  ${microprofile_SOURCE_DIR}/microprofile.cpp
 )
 
 if(WIN32)
@@ -68,6 +67,7 @@ add_executable(capsulerun ${capsulerun_SRC})
 
 target_link_libraries(capsulerun shoom)
 target_link_libraries(capsulerun lab)
+target_link_libraries(capsulerun microprofile)
 
 if(WIN32)
   add_dependencies(capsulerun capsule_deps)
@@ -76,9 +76,6 @@ if(WIN32)
   foreach(NEEDED_LIB avutil.lib avcodec.lib avformat.lib swscale.lib swresample.lib)
     target_link_libraries(capsulerun ${FFMPEG_LIBRARY_DIR}/${NEEDED_LIB})
   endforeach(NEEDED_LIB)
-
-  # needed for microprofile
-  target_link_libraries(capsulerun ws2_32.lib)
 endif()
 
 if(APPLE)

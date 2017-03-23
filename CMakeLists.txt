@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
+add_subdirectory(microprofile)
+
 project(capsule)
 
 add_subdirectory(vendor/shoom)
@@ -77,8 +79,6 @@ if(WIN32)
   endif()
 endif()
 
-add_definitions(-DMICROPROFILE_USE_CONFIG)
-set(microprofile_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/microprofile)
 set(microprofile_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/microprofile)
 
 add_subdirectory(lab)
