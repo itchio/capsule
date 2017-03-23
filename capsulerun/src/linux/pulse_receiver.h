@@ -12,7 +12,7 @@
 namespace capsule {
 namespace audio {
 
-static const int kAudioNbBuffers = 16;
+static const int kAudioNbBuffers = 64;
 static const int kAudioNbSamples = 128;
 
 enum BufferState {
