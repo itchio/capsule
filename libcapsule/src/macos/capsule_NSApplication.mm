@@ -1,24 +1,23 @@
 
-#include "capsule.h"
 #include "capsule_macos.h"
 
 #import <OpenGL/OpenGL.h>
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
 
+#include "../logging.h"
+
 @implementation NSApplication (Tracking)
 
 + (void)load {
-  CapsuleLog("Loading NSApplication");
+  capsule::Log("Loading NSApplication");
 
   static dispatch_once_t onceToken;
   dispatch_once(&onceToken, ^{
-    CapsuleLog("Swizzling sendEvent implementations");
+    capsule::Log("Swizzling sendEvent implementations");
     CapsuleSwizzle([self class], @selector(sendEvent:), @selector(capsule_sendEvent:));
   });
 }
-
-// static CapsuleFixedRecorder *recorder;
 
 - (void)capsule_sendEvent:(NSEvent*)event {
   // NSLog(@"NSApplication event: %@", event);

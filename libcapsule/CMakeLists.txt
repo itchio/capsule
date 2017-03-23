@@ -45,7 +45,7 @@ if(APPLE)
     ${libcapsule_SOURCE_DIR}/macos/capsule_macos_utils.mm
     ${libcapsule_SOURCE_DIR}/macos/capsule_NSWindow.mm
     ${libcapsule_SOURCE_DIR}/macos/capsule_NSApplication.mm
-    ${libcapsule_SOURCE_DIR}/macos/capsule_CGL.mm
+    ${libcapsule_SOURCE_DIR}/macos/capsule_cgl.mm
     ${libcapsule_SOURCE_DIR}/macos/capsule_CoreAudio.mm
 
     ${libcapsule_SOURCE_DIR}/macos/playthrough/CAPlayThrough.cc

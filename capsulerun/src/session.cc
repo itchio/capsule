@@ -4,8 +4,7 @@
 #include "video_receiver.h"
 #include "audio_receiver.h"
 #include "encoder.h"
-
-#include <capsulerun.h>
+#include "macros.h"
 
 namespace capsule {
 

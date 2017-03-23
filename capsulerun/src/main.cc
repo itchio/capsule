@@ -1,6 +1,4 @@
 
-#include <capsulerun.h>
-
 #include <lab/platform.h>
 #include <lab/paths.h>
 #include <lab/strings.h>
@@ -46,6 +44,12 @@ int main () {
     lab::strings::FromWideChar(argv_w[i], (char **) &argv[i]);
   }
 #else // LAB_WINDOWS
+
+#if defined(LAB_MACOS)
+namespace capsule {
+void RunApp();
+} // namespace capsule
+#endif // LAB_MACOS
 
 int main (int argc, char **argv) {
 

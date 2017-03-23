@@ -36,7 +36,6 @@ class VideoReceiver {
     encoder::VideoFormat vfmt_;
     shoom::Shm *shm_;
 
-    char *mapped_;
     LockingQueue<FrameInfo> queue_;
 
     int num_frames_;

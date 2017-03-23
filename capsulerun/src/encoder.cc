@@ -28,6 +28,7 @@ extern "C" {
 
 #include "fps_counter.h"
 #include "macros.h"
+#include "logging.h"
 
 MICROPROFILE_DEFINE(EncoderMain, "Encoder", "Main", MP_WHITE);
 MICROPROFILE_DEFINE(EncoderCycle, "Encoder", "Cycle", MP_WHITE);
