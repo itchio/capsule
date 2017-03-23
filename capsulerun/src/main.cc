@@ -69,6 +69,7 @@ int main (int argc, char **argv) {
     OPT_GROUP("Basic options"),
     OPT_STRING('d', "dir", &args.dir, "where to output .mp4 videos (defaults to current directory)"),
     OPT_STRING(0, "pipe", &args.dir, "named pipe to listen on (defaults to unique name)"),
+    OPT_BOOLEAN(0, "headless", &args.headless, "do not launch a process, just connect to pipe and behave as an encoder"),
     OPT_GROUP("Video options"),
     OPT_INTEGER(0, "crf", &args.crf, "output quality. sane values range from 18 (~visually lossless) to 28 (fast but looks bad)"),
     OPT_INTEGER(0, "size_divider", &args.size_divider, "size divider: default 1, accepted values 2 or 4"),
@@ -100,27 +101,31 @@ int main (int argc, char **argv) {
 
   const int num_positional_args = 1;
   if (argc < num_positional_args) {
-    argparse_usage(&argparse);
-    exit(1);
-  }
-
-  args.exec = argv[0];
-  args.exec_argc = argc - num_positional_args;
-  args.exec_argv = argv + num_positional_args;
+    if (!args.headless) {
+      argparse_usage(&argparse);
+      exit(1);
+    } else {
+      // all good
+    }
+  } else {
+    args.exec = argv[0];
+    args.exec_argc = argc - num_positional_args;
+    args.exec_argv = argv + num_positional_args;
 
 #if !defined(LAB_WINDOWS)
-  // on non-windows platforms, exec_argv needs to include the executable
-  int real_exec_argc = args.exec_argc + 1;
-  char **real_exec_argv = (char **) calloc(real_exec_argc + 1, sizeof(char *));
+    // on non-windows platforms, exec_argv needs to include the executable
+    int real_exec_argc = args.exec_argc + 1;
+    char **real_exec_argv = (char **) calloc(real_exec_argc + 1, sizeof(char *));
 
-  real_exec_argv[0] = args.exec;
-  for (int i = 0; i < args.exec_argc; i++) {
-    real_exec_argv[i + 1] = args.exec_argv[i];
-  }
+    real_exec_argv[0] = args.exec;
+    for (int i = 0; i < args.exec_argc; i++) {
+      real_exec_argv[i + 1] = args.exec_argv[i];
+    }
 
-  args.exec_argc = real_exec_argc;
-  args.exec_argv = real_exec_argv;
+    args.exec_argc = real_exec_argc;
+    args.exec_argv = real_exec_argv;
 #endif // !LAB_WINDOWS
+  }
 
   CapsuleLog("thanks for flying capsule on %s", lab::kPlatform);
 

@@ -28,6 +28,7 @@ struct MainArgs {
   const char *x264_preset;
 
   const char *pipe;
+  int headless;
 };
 
 }
