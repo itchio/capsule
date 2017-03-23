@@ -45,12 +45,6 @@ int main () {
   }
 #else // LAB_WINDOWS
 
-#if defined(LAB_MACOS)
-namespace capsule {
-void RunApp();
-} // namespace capsule
-#endif // LAB_MACOS
-
 int main (int argc, char **argv) {
 
 #endif // !LAB_WINDOWS
@@ -176,12 +170,7 @@ int main (int argc, char **argv) {
 #endif
 
     capsule::Runner runner{&args, executor};
-#if defined(LAB_MACOS)
-    std::thread main_thread(&capsule::Runner::Run, &runner);
-    capsule::RunApp();
-#else
     runner.Run();
-#endif
 
 #if defined(LAB_WINDOWS)
     free(argv);

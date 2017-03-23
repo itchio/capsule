@@ -1,8 +1,8 @@
 
-#include "capsule_macos.h"
-
+#include <Cocoa/Cocoa.h>
 #include <OpenGL/OpenGL.h>
 
+#include "interpose.h"
 #include "../capture.h"
 #include "../gl_capture.h"
 
@@ -31,3 +31,4 @@ CGLError CapsuleCglFlushDrawable (CGLContextObj ctx) {
 }
 
 DYLD_INTERPOSE(CapsuleCglFlushDrawable, CGLFlushDrawable)
+

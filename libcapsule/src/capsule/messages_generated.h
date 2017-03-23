@@ -11,6 +11,8 @@ namespace messages {
 
 struct Packet;
 
+struct HotkeyPressed;
+
 struct CaptureStart;
 
 struct CaptureStop;
@@ -35,11 +37,12 @@ enum PixFmt {
 
 enum Message {
   Message_NONE = 0,
-  Message_CaptureStart = 1,
-  Message_CaptureStop = 2,
-  Message_VideoSetup = 3,
-  Message_VideoFrameCommitted = 4,
-  Message_VideoFrameProcessed = 5,
+  Message_HotkeyPressed = 1,
+  Message_CaptureStart = 2,
+  Message_CaptureStop = 3,
+  Message_VideoSetup = 4,
+  Message_VideoFrameCommitted = 5,
+  Message_VideoFrameProcessed = 6,
   Message_MIN = Message_NONE,
   Message_MAX = Message_VideoFrameProcessed
 };
@@ -47,6 +50,7 @@ enum Message {
 inline const char **EnumNamesMessage() {
   static const char *names[] = {
     "NONE",
+    "HotkeyPressed",
     "CaptureStart",
     "CaptureStop",
     "VideoSetup",
@@ -64,6 +68,10 @@ inline const char *EnumNameMessage(Message e) {
 
 template<typename T> struct MessageTraits {
   static const Message enum_value = Message_NONE;
+};
+
+template<> struct MessageTraits<HotkeyPressed> {
+  static const Message enum_value = Message_HotkeyPressed;
 };
 
 template<> struct MessageTraits<CaptureStart> {
@@ -100,6 +108,25 @@ struct Packet FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const void *message() const {
     return GetPointer<const void *>(VT_MESSAGE);
   }
+  template<typename T> const T *message_as() const;
+  const HotkeyPressed *message_as_HotkeyPressed() const {
+    return (message_type() == Message_HotkeyPressed)? static_cast<const HotkeyPressed *>(message()) : nullptr;
+  }
+  const CaptureStart *message_as_CaptureStart() const {
+    return (message_type() == Message_CaptureStart)? static_cast<const CaptureStart *>(message()) : nullptr;
+  }
+  const CaptureStop *message_as_CaptureStop() const {
+    return (message_type() == Message_CaptureStop)? static_cast<const CaptureStop *>(message()) : nullptr;
+  }
+  const VideoSetup *message_as_VideoSetup() const {
+    return (message_type() == Message_VideoSetup)? static_cast<const VideoSetup *>(message()) : nullptr;
+  }
+  const VideoFrameCommitted *message_as_VideoFrameCommitted() const {
+    return (message_type() == Message_VideoFrameCommitted)? static_cast<const VideoFrameCommitted *>(message()) : nullptr;
+  }
+  const VideoFrameProcessed *message_as_VideoFrameProcessed() const {
+    return (message_type() == Message_VideoFrameProcessed)? static_cast<const VideoFrameProcessed *>(message()) : nullptr;
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint8_t>(verifier, VT_MESSAGE_TYPE) &&
@@ -108,6 +135,30 @@ struct Packet FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.EndTable();
   }
 };
+
+template<> inline const HotkeyPressed *Packet::message_as<HotkeyPressed>() const {
+  return message_as_HotkeyPressed();
+}
+
+template<> inline const CaptureStart *Packet::message_as<CaptureStart>() const {
+  return message_as_CaptureStart();
+}
+
+template<> inline const CaptureStop *Packet::message_as<CaptureStop>() const {
+  return message_as_CaptureStop();
+}
+
+template<> inline const VideoSetup *Packet::message_as<VideoSetup>() const {
+  return message_as_VideoSetup();
+}
+
+template<> inline const VideoFrameCommitted *Packet::message_as<VideoFrameCommitted>() const {
+  return message_as_VideoFrameCommitted();
+}
+
+template<> inline const VideoFrameProcessed *Packet::message_as<VideoFrameProcessed>() const {
+  return message_as_VideoFrameProcessed();
+}
 
 struct PacketBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
@@ -137,6 +188,34 @@ inline flatbuffers::Offset<Packet> CreatePacket(
   PacketBuilder builder_(_fbb);
   builder_.add_message(message);
   builder_.add_message_type(message_type);
+  return builder_.Finish();
+}
+
+struct HotkeyPressed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           verifier.EndTable();
+  }
+};
+
+struct HotkeyPressedBuilder {
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  HotkeyPressedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  HotkeyPressedBuilder &operator=(const HotkeyPressedBuilder &);
+  flatbuffers::Offset<HotkeyPressed> Finish() {
+    const auto end = fbb_.EndTable(start_, 0);
+    auto o = flatbuffers::Offset<HotkeyPressed>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<HotkeyPressed> CreateHotkeyPressed(
+    flatbuffers::FlatBufferBuilder &_fbb) {
+  HotkeyPressedBuilder builder_(_fbb);
   return builder_.Finish();
 }
 
@@ -506,6 +585,10 @@ inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Mess
   switch (type) {
     case Message_NONE: {
       return true;
+    }
+    case Message_HotkeyPressed: {
+      auto ptr = reinterpret_cast<const HotkeyPressed *>(obj);
+      return verifier.VerifyTable(ptr);
     }
     case Message_CaptureStart: {
       auto ptr = reinterpret_cast<const CaptureStart *>(obj);

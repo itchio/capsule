@@ -1,11 +1,13 @@
 
-#include "capsule_macos.h"
 #include "playthrough/CAPlayThrough.h"
 
 #include <CoreAudio/CoreAudio.h>
 #include <CoreServices/CoreServices.h>
 #include <AudioToolbox/AudioToolbox.h>
 
+#include <lab/strings.h>
+
+#include "interpose.h"
 #include "../logging.h"
 
 static CAPlayThroughHost *playThroughHost;
@@ -30,8 +32,10 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
        )
       ) {
 
-    AudioDeviceID soundflowerId = -1;
-    AudioDeviceID builtinId = -1;
+    AudioDeviceID soundflowerId = 0;
+    AudioDeviceID builtinId = 0;
+    bool found_soundflower;
+    bool found_builtin;
     UInt32 size;
     OSStatus nStatus = AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &devlist_address, 0, NULL, &size);
     if (nStatus != kAudioHardwareNoError) {
@@ -87,19 +91,21 @@ OSStatus capsule_AudioObjectGetPropertyData (AudioObjectID objectID, const Audio
 
       // capsule::Log("Device #%d: %s", (unsigned int) i, ptr);
 
-      if (strcmp("Soundflower (2ch)", ptr) == 0) {
+      if (lab::strings::CEquals("Soundflower (2ch)", ptr)) {
         // capsule::Log("Found the soundflower!")
         soundflowerId = dev;
+        found_soundflower = true;
       }
-      if (strcmp("Built-in Output", ptr) == 0) {
+      if (lab::strings::CEquals("Built-in Output", ptr)) {
         // capsule::Log("Found the built-in output!")
         builtinId = dev;
+        found_builtin = true;
       }
 
       free(ptr);
     }
 
-    if (builtinId != -1 && soundflowerId != -1) {
+    if (found_builtin && found_soundflower) {
       numDevs = *ioDataSize / sizeof(AudioDeviceID);
       devs = (AudioDeviceID*) outData;
       for (UInt32 i = 0; i < numDevs; i++) {

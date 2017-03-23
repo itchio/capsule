@@ -4,9 +4,10 @@
 namespace capsule {
 namespace io {
 
-void LAB_STDCALL Init();
-void LAB_STDCALL WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch);
-void LAB_STDCALL WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size);
+void Init();
+void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch);
+void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size);
+void WriteHotkeyPressed();
 
 } // namespace io
 } // namespace capsule
