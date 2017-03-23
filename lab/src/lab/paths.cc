@@ -74,8 +74,6 @@ std::string DirName(const std::string path) {
 }
 
 std::string Join(const std::string a, const std::string b) {
-  fprintf(stderr, "joining %s and %s with %s\n", a.c_str(), b.c_str(), std::string(kSeparator));
-  fflush(stderr);
   return a + std::string(kSeparator) + b;
 }
 

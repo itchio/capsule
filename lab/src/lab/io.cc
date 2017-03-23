@@ -15,8 +15,6 @@ FILE* Fopen(std::string path, std::string mode) {
   free(mode_w);  
   return result;
 #else
-  fprintf(stderr, "fopening %s\n", path.c_str());
-  fflush(stderr);
   return fopen(path.c_str(), mode.c_str());
 #endif
 }
