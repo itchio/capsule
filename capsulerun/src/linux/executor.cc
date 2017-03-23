@@ -12,6 +12,7 @@
 
 namespace capsule {
 namespace linux {
+
 void Process::Wait(ProcessFate *fate) {
   int child_status;
   pid_t wait_result;
