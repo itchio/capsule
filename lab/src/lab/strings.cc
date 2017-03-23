@@ -42,7 +42,7 @@ void FromWideChar (const wchar_t *ws, char **s) {
     // the rest of the program won't run right
     DWORD err = GetLastError();
     fprintf(stderr, "While converting string to utf-8 (sizing): %d (%x)", err, err);
-    exit(127);
+    exit(131);
   }
 
   int num_chars = ret;
@@ -62,7 +62,7 @@ void FromWideChar (const wchar_t *ws, char **s) {
   if (ret == 0) {
     DWORD err = GetLastError();
     fprintf(stderr, "While converting string to utf-8 (conversion): %d (%x)", err, err);
-    exit(127);
+    exit(132);
   }
 }
 

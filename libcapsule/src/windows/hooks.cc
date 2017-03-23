@@ -32,6 +32,8 @@ void InstallHooks () {
 
 } // namespace capsule
 
+extern "C" {
+
 BOOL LAB_STDCALL DllMain(void *hinstDLL, int reason, void *reserved) {
   // don't actually do anything here, since what we can do from DllMain
   // is limited (no LoadLibrary, etc.)
@@ -50,4 +52,6 @@ DWORD __declspec(dllexport) CapsuleWindowsInit() {
   capsule::InstallHooks();
 
   return ERROR_SUCCESS;
+}
+
 }
