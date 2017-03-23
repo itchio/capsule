@@ -19,6 +19,10 @@
 
 #if defined(LAB_WINDOWS)
 #include "windows/executor.h"
+#elif defined(LAB_MACOS)
+#include "macos/executor.h"
+#elif defined(LAB_LINUX)
+#include "linux/executor.h"
 #endif
 
 #include <microprofile.h>
@@ -163,7 +167,7 @@ int main (int argc, char **argv) {
     executor = new capsule::windows::Executor();
 #elif defined(LAB_MACOS)
     executor = new capsule::macos::Executor();
-#elif
+#elif defined(LAB_LINUX)
     executor = new capsule::linux::Executor();
 #endif
 

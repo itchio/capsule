@@ -27,9 +27,9 @@ namespace lab {
 namespace paths {
 
 #if defined(LAB_WINDOWS)
-std::string kSeparator = "\\";
+const char *kSeparator = "\\";
 #else
-std::string kSeparator = "/";
+const char *kSeparator = "/";
 #endif
 
 // TODO: error reporting?
@@ -68,13 +68,15 @@ std::string SelfPath() {
   return self_path;
 }
 
-std::string DirName(const std::string &path) {
+std::string DirName(const std::string path) {
   size_t slash_index = path.find_last_of(kSeparator);
   return path.substr(0, slash_index);
 }
 
-std::string Join(const std::string &a, const std::string &b) {
-  return a + kSeparator + b;
+std::string Join(const std::string a, const std::string b) {
+  fprintf(stderr, "joining %s and %s with %s\n", a.c_str(), b.c_str(), std::string(kSeparator));
+  fflush(stderr);
+  return a + std::string(kSeparator) + b;
 }
 
 std::string PipePath(std::string name) {

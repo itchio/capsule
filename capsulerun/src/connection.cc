@@ -29,7 +29,7 @@
 #if defined(LAB_WINDOWS)
 
 static HANDLE CreatePipe(
-  std::string &pipe_path,
+  std::string pipe_path,
   DWORD pipe_mode
 ) {
   HANDLE handle = CreateNamedPipeA(
@@ -53,7 +53,7 @@ static HANDLE CreatePipe(
 #else // LAB_WINDOWS
 
 static void CreateFifo (
-    std::string &fifo_path
+    std::string fifo_path
 ) {
   // remove previous fifo if any  
   unlink(fifo_path.c_str());
@@ -108,12 +108,12 @@ void Connection::Connect() {
   }
 #else // LAB_WINDOWS
   fifo_r_ = OpenFifo(r_path_, O_RDONLY);
-  if (!fifo_r) {
+  if (!fifo_r_) {
     return;
   }
 
   fifo_w_ = OpenFifo(w_path_, O_WRONLY);
-  if (!fifo_w) {
+  if (!fifo_w_) {
     return;
   }
 #endif // !LAB_WINDOWS

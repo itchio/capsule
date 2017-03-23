@@ -17,5 +17,9 @@ bool Set(std::string name, std::string value);
 std::string Expand(std::string input);
 #endif // LAB_WINDOWS
 
+#if defined(LAB_LINUX) || defined(LAB_MACOS)
+char **GetBlock();
+#endif // LAB_LINUX || LAB_MACOS
+
 } // namespace env
 } // namespace lab

@@ -12,6 +12,8 @@
 #undef WIN32_LEAN_AND_MEAN
 #endif // LAB_WINDOWS
 
+extern char **environ;
+
 namespace lab {
 namespace env {
 
@@ -117,6 +119,12 @@ std::string Expand(std::string input) {
     return result;
 }
 #endif // LAB_WINDOWS
+
+#if defined(LAB_LINUX) || defined(LAB_MACOS)
+char **GetBlock() {
+    return environ;
+}
+#endif // LAB_LINUX || LAB_MACOS
 
 } // namespace env
 } // namespace lab

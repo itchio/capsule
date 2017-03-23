@@ -6,11 +6,26 @@
 namespace capsule {
 namespace linux {
 
+class Process : public ProcessInterface {
+  public:
+    Process(pid_t pid) :
+      pid_(pid) {};
+    ~Process() override;
+
+    void Wait(ProcessFate *fate) override;
+
+  private:
+    pid_t pid_ = -1;
+};
+
 class Executor : public ExecutorInterface {
   public:
     Executor();
     ~Executor() override;
-}
+
+    ProcessInterface *LaunchProcess(MainArgs *args) override;
+    AudioReceiverFactory GetAudioReceiverFactory() override;
+};
 
 } // namespace linux
 } // namespace capsule

@@ -53,9 +53,8 @@ void Runner::WaitForChild () {
     }
   } else if (fate.status == kProcessStatusSignaled) {
     CapsuleLog("Child killed by signal %d", fate.code);
-    if (!conn_->IsConnected()) {
-      exit(fate.code);
-    }
+  } else if (fate.status == kProcessStatusUnknown) {
+    CapsuleLog("Child left in unknown state");
   }
 
   if (!conn_->IsConnected()) {
