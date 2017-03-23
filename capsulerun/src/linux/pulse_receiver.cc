@@ -26,7 +26,7 @@ PulseReceiver::PulseReceiver() {
   const char *dev = "alsa_output.pci-0000_00_1b.0.analog-stereo.monitor";
 
   int pa_err = 0;
-  ctx_ = capsule::pulse::New(NULL,             // server
+  ctx_ = capsule::pulse::SimpleNew(NULL,             // server
                       "capsule",        // name
                       PA_STREAM_RECORD, // direction
                       dev,              // device
@@ -78,7 +78,7 @@ bool PulseReceiver::ReadFromPa() {
     }
 
     int pa_err;
-    int ret = capsule::pulse::Read(ctx_, in_buffer_, buffer_size_, &pa_err);
+    int ret = capsule::pulse::SimpleRead(ctx_, in_buffer_, buffer_size_, &pa_err);
     if (ret < 0) {
         fprintf(stderr, "Could not read from pulseaudio, error %d (%x)\n", pa_err, pa_err);
         return false;
@@ -143,7 +143,7 @@ void PulseReceiver::Stop() {
   {
     std::lock_guard<std::mutex> lock(pa_mutex_);
     if (ctx_) {
-      capsule::pulse::Free(ctx_);
+      capsule::pulse::SimpleFree(ctx_);
     }
     ctx_ = nullptr;
   }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdio.h>
+
 // Change these to suit your needs
 // #define CAPSULERUN_PROFILE
 // #define CAPSULERUN_DEBUG

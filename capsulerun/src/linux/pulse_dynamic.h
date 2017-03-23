@@ -1,8 +1,9 @@
 #pragma once
 
 #include <pulse/simple.h>
-#include <pulse/error.h>
-#include <pulse/gccmacro.h>
+#include <pulse/context.h>
+#include <pulse/introspect.h>
+#include <pulse/mainloop.h>
 
 namespace capsule {
 namespace pulse {
@@ -18,7 +19,7 @@ typedef pa_simple* (*pa_simple_new_t)(
   const pa_buffer_attr *attr,
   int *error
 );
-extern pa_simple_new_t New;
+extern pa_simple_new_t SimpleNew;
 
 typedef int (*pa_simple_read_t)(
   pa_simple *s,
@@ -26,12 +27,68 @@ typedef int (*pa_simple_read_t)(
   size_t bytes,
   int *error
 );
-extern pa_simple_read_t Read;
+extern pa_simple_read_t SimpleRead;
 
 typedef int (*pa_simple_free_t)(
   pa_simple *s
 );
-extern pa_simple_free_t Free;
+extern pa_simple_free_t SimpleFree;
+
+typedef pa_mainloop *(*pa_mainloop_new_t)();
+extern pa_mainloop_new_t MainLoopNew;
+
+typedef pa_mainloop_api *(*pa_mainloop_get_api_t)(
+  pa_mainloop *loop
+);
+extern pa_mainloop_get_api_t MainLoopGetApi;
+
+typedef void (*pa_mainloop_run_t)(
+  pa_mainloop *loop,
+  int *retval
+);
+extern pa_mainloop_run_t MainLoopRun;
+
+typedef void (*pa_mainloop_quit_t)(
+  pa_mainloop *loop,
+  int retval
+);
+extern pa_mainloop_quit_t MainLoopQuit;
+
+typedef void (*pa_mainloop_free_t)(
+  pa_mainloop *loop
+);
+extern pa_mainloop_free_t MainLoopFree;
+
+typedef pa_context *(*pa_context_new_t)(
+  pa_mainloop_api *api,
+  const char *name
+);
+extern pa_context_new_t ContextNew;
+
+typedef pa_context_state_t (*pa_context_get_state_t)(
+  pa_context *ctx
+);
+extern pa_context_get_state_t ContextGetState;
+
+typedef void (*pa_context_get_server_info_t)(
+  pa_context *ctx,
+  pa_server_info_cb_t cb,
+  void *userdata
+);
+extern pa_context_get_server_info_t ContextGetServerInfo;
+
+typedef void (*pa_context_get_sink_info_by_name_t)(
+  pa_context *ctx,
+  const char *name,
+  pa_sink_info_cb_t cb,
+  void *userdata
+);
+extern pa_context_get_sink_info_by_name_t ContextGetSinkInfoByName;
+
+typedef void (*pa_context_disconnect_t)(
+  pa_context *ctx
+);
+extern pa_context_disconnect_t ContextDisconnect;
 
 bool Load();
 
