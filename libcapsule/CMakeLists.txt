@@ -24,15 +24,24 @@ include_directories(
 )
 
 set(libcapsule_SRC
-    ${libcapsule_SOURCE_DIR}/capsule.cc
-    ${libcapsule_SOURCE_DIR}/gl_capture.cc
-    ${libcapsule_SOURCE_DIR}/io.cc
-    ${libcapsule_SOURCE_DIR}/timer.cc
     ${libcapsule_SOURCE_DIR}/logging.cc
+    ${libcapsule_SOURCE_DIR}/ensure.cc
+    ${libcapsule_SOURCE_DIR}/io.cc
+    ${libcapsule_SOURCE_DIR}/capture.cc
+    ${libcapsule_SOURCE_DIR}/gl_capture.cc
 )
+
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+  list(APPEND libcapsule_SRC
+    ${libcapsule_SOURCE_DIR}/linux/hooks.cc
+    ${libcapsule_SOURCE_DIR}/linux/gl_hooks.cc
+  )
+endif()
 
 if(APPLE)
   list(APPEND libcapsule_SRC
+    ${libcapsule_SOURCE_DIR}/macos/hooks.cc
+    ${libcapsule_SOURCE_DIR}/macos/gl_hooks.cc
     ${libcapsule_SOURCE_DIR}/macos/capsule_macos_utils.mm
     ${libcapsule_SOURCE_DIR}/macos/capsule_NSWindow.mm
     ${libcapsule_SOURCE_DIR}/macos/capsule_NSApplication.mm
@@ -49,6 +58,7 @@ endif()
 if(WIN32)
   list(APPEND libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/windows/hooks.cc
+    ${libcapsule_SOURCE_DIR}/windows/gl_hooks.cc
     ${libcapsule_SOURCE_DIR}/windows/process_hooks.cc
     ${libcapsule_SOURCE_DIR}/windows/dxgi_hooks.cc
     ${libcapsule_SOURCE_DIR}/windows/dxgi_vtable_helpers.cc

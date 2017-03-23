@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 namespace lab {
 namespace strings {
@@ -66,6 +67,14 @@ void FromWideChar (const wchar_t *ws, char **s) {
 }
 
 #endif // LAB_WINDOWS
+
+bool CContains (const char *needle, const char *haystack) {
+  return nullptr != strstr(needle, haystack);
+}
+
+bool CEquals (const char *a, const char *b) {
+  return 0 == strcmp(a, b);
+}
 
 } // namespace strings
 } // namespace lab

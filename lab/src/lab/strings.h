@@ -23,5 +23,8 @@ void FromWideChar (const wchar_t *ws, char **s);
 
 #endif // LAB_WINDOWS
 
+bool CContains (const char *needle, const char *haystack);
+bool CEquals (const char *a, const char *b);
+
 } // namespace strings
 } // namespace lab

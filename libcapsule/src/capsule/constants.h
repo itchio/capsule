@@ -16,5 +16,3 @@ enum PixFmt {
 static const int kNumBuffers = 3;
 
 } // namespace capsule
-
-#include "opengl-constants.h"

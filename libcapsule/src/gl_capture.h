@@ -1,6 +1,11 @@
+
 #pragma once
 
 #include <stddef.h>
+
+#include <lab/platform.h>
+#include "logging.h"
+#include "dynlib.h"
 
 typedef unsigned int GLenum;
 typedef unsigned int GLbitfield;
@@ -79,122 +84,111 @@ typedef ptrdiff_t GLsizeiptrARB;
 // state getters
 
 typedef GLenum(LAB_STDCALL *glGetError_t)();
-static glGetError_t _glGetError;
+extern glGetError_t _glGetError;
 
 typedef void *(LAB_STDCALL *glGetIntegerv_t)(GLenum pname, GLint *data);
-static glGetIntegerv_t _glGetIntegerv;
+extern glGetIntegerv_t _glGetIntegerv;
 
 // textures
 
 typedef void(LAB_STDCALL *glGenTextures_t)(GLsizei n, GLuint *buffers);
-static glGenTextures_t _glGenTextures;
+extern glGenTextures_t _glGenTextures;
 
 typedef void(LAB_STDCALL *glBindTexture_t)(GLenum target, GLuint texture);
-static glBindTexture_t _glBindTexture;
+extern glBindTexture_t _glBindTexture;
 
 typedef void(LAB_STDCALL *glTexImage2D_t)(GLenum target, GLint level,
                                               GLint internal_format,
                                               GLsizei width, GLsizei height,
                                               GLint border, GLenum format,
                                               GLenum type, const GLvoid *data);
-static glTexImage2D_t _glTexImage2D;
+extern glTexImage2D_t _glTexImage2D;
 
 typedef void(LAB_STDCALL *glGetTexImage_t)(GLenum target, GLint level,
                                                GLenum format, GLenum type,
                                                GLvoid *img);
-static glGetTexImage_t _glGetTexImage;
+extern glGetTexImage_t _glGetTexImage;
 
 typedef void(LAB_STDCALL *glDeleteTextures_t)(GLsizei n,
                                                   const GLuint *buffers);
-static glDeleteTextures_t _glDeleteTextures;
+extern glDeleteTextures_t _glDeleteTextures;
 
 // buffers
 
 typedef void(LAB_STDCALL *glGenBuffers_t)(GLsizei n, GLuint *buffers);
-static glGenBuffers_t _glGenBuffers;
+extern glGenBuffers_t _glGenBuffers;
 
 typedef void(LAB_STDCALL *glBindBuffer_t)(GLenum target, GLuint buffer);
-static glBindBuffer_t _glBindBuffer;
+extern glBindBuffer_t _glBindBuffer;
 
 typedef void(LAB_STDCALL *glReadBuffer_t)(GLenum);
-static glReadBuffer_t _glReadBuffer;
+extern glReadBuffer_t _glReadBuffer;
 
 typedef void(LAB_STDCALL *glDrawBuffer_t)(GLenum mode);
-static glDrawBuffer_t _glDrawBuffer;
+extern glDrawBuffer_t _glDrawBuffer;
 
 typedef void(LAB_STDCALL *glBufferData_t)(GLenum target, GLsizeiptrARB size,
                                               const GLvoid *data, GLenum usage);
-static glBufferData_t _glBufferData;
+extern glBufferData_t _glBufferData;
 
 typedef GLvoid *(LAB_STDCALL *glMapBuffer_t)(GLenum target, GLenum access);
-static glMapBuffer_t _glMapBuffer;
+extern glMapBuffer_t _glMapBuffer;
 
 typedef GLboolean(LAB_STDCALL *glUnmapBuffer_t)(GLenum target);
-static glUnmapBuffer_t _glUnmapBuffer;
+extern glUnmapBuffer_t _glUnmapBuffer;
 
 typedef void(LAB_STDCALL *glDeleteBuffers_t)(GLsizei n,
                                                  const GLuint *buffers);
-static glDeleteBuffers_t _glDeleteBuffers;
+extern glDeleteBuffers_t _glDeleteBuffers;
 
 // framebuffers
 
 typedef void(LAB_STDCALL *glGenFramebuffers_t)(GLsizei n, GLuint *buffers);
-static glGenFramebuffers_t _glGenFramebuffers;
+extern glGenFramebuffers_t _glGenFramebuffers;
 
 typedef void(LAB_STDCALL *glBindFramebuffer_t)(GLenum target,
                                                    GLuint framebuffer);
-static glBindFramebuffer_t _glBindFramebuffer;
+extern glBindFramebuffer_t _glBindFramebuffer;
 
     typedef void(LAB_STDCALL *glBlitFramebuffer_t)(
         GLint srcX0, GLint srcY0, GLint srcX1, GLint srcY1, GLint dstX0,
         GLint dstY0, GLint dstX1, GLint dstY1, GLbitfield mask, GLenum filter);
-static glBlitFramebuffer_t _glBlitFramebuffer;
+extern glBlitFramebuffer_t _glBlitFramebuffer;
 
 typedef void(LAB_STDCALL *glFramebufferTexture2D_t)(GLenum target,
                                                         GLenum attachment,
                                                         GLenum textarget,
                                                         GLuint texture,
                                                         GLint level);
-static glFramebufferTexture2D_t _glFramebufferTexture2D;
+extern glFramebufferTexture2D_t _glFramebufferTexture2D;
 
 typedef void(LAB_STDCALL *glDeleteFramebuffers_t)(GLsizei n,
                                                       GLuint *framebuffers);
-static glDeleteFramebuffers_t _glDeleteFramebuffers;
+extern glDeleteFramebuffers_t _glDeleteFramebuffers;
 
-// platform-specific
+namespace capsule {
+namespace gl {
 
-typedef void* (*terryglGetProcAddress_t)(const char*);
+#define GLSYM(sym) { \
+  _ ## sym = (sym ## _t) GetProcAddress(#sym);\
+  if (! _ ## sym) { \
+    Log("Could not find GL function %s", #sym); \
+    return false; \
+  } \
+}
 
-#if defined(LAB_LINUX)
+extern const char *kDefaultOpengl;
 
-// this intercepts swapbuffers for games statically-linked
-// against libGL. Others go through dlopen, which we intercept
-// as well.
-void glXSwapBuffers (void *a, void *b);
+extern LibHandle handle;
 
-typedef int (*glXQueryExtension_t)(void*, void*, void*);
-static glXQueryExtension_t _glXQueryExtension;
+bool EnsureOpengl();
+void Capture (int width, int height);
 
-typedef void (*glXSwapBuffers_t)(void*, void*);
-static glXSwapBuffers_t _glXSwapBuffers;
+// Must have platform-specific implementation
+bool LoadOpengl (const char *path);
 
-typedef terryglGetProcAddress_t glXGetProcAddressARB_t;
-static glXGetProcAddressARB_t _glXGetProcAddressARB;
+// Must have platform-specific implementation
+void *GetProcAddress(const char *symbol);
 
-#define terryglGetProcAddress _glXGetProcAddressARB
-
-#elif defined(LAB_WINDOWS)
-
-typedef terryglGetProcAddress_t wglGetProcAddress_t;
-static wglGetProcAddress_t _wglGetProcAddress;
-
-#define terryglGetProcAddress _wglGetProcAddress
-
-#elif defined(LAB_MACOS)
-
-typedef terryglGetProcAddress_t glGetProcAddress_t;
-static glGetProcAddress_t _glGetProcAddress;
-
-#define terryglGetProcAddress _glGetProcAddress
-
-#endif // LAB_MACOS
+}
+}

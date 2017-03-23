@@ -12,11 +12,11 @@
 #define dlsym GetProcAddress
 #define RTLD_NOW 0
 #define RTLD_LOCAL 0
-#define LIBHANDLE HMODULE
+#define LibHandle HMODULE
 
 #else // LAB_WINDOWS
 
 #include <dlfcn.h>
-#define LIBHANDLE void*
+#define LibHandle void*
 
 #endif // !LAB_WINDOWS

@@ -293,8 +293,6 @@ void Run(MainArgs *args, Params *params) {
       exit(1);
     }
 
-    CapsuleLog("found audio codec");
-
     ac = avcodec_alloc_context3(acodec);
     if (!ac) {
         CapsuleLog("could not allocate audio codec context");
@@ -437,15 +435,6 @@ void Run(MainArgs *args, Params *params) {
     vframe->linesize[2] = width * 4;
   }
 
-  CapsuleLog("initial offsets: %p %p (%" PRIdS " from first) %p (%" PRIdS " from first), linesize: %d %d %d",
-    vframe->data[0],
-    vframe->data[1], vframe->data[1] - vframe->data[0],
-    vframe->data[2], vframe->data[2] - vframe->data[0],
-    vframe->linesize[0],
-    vframe->linesize[1],
-    vframe->linesize[2]
-  );
-
   // initialize swrescale context
   // FIXME: we're actually never using that for now
   if (params->has_audio) {
@@ -531,17 +520,6 @@ void Run(MainArgs *args, Params *params) {
 
       vnext_pts = timestamp;
       vframe->pts = vnext_pts;
-
-      if (frame_count < 3) {
-        CapsuleLog("initial offsets: %p %p (%" PRIdS " from first) %p (%" PRIdS " from first), linesize: %d %d %d",
-          vframe->data[0],
-          vframe->data[1], vframe->data[1] - vframe->data[0],
-          vframe->data[2], vframe->data[2] - vframe->data[0],
-          vframe->linesize[0],
-          vframe->linesize[1],
-          vframe->linesize[2]
-        );
-      }
 
       // write video frame
       {
