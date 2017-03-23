@@ -75,7 +75,7 @@ void Run(MainArgs *args, Params *params) {
     width, height, (int) vfmt_in.format, (int) vfmt_in.vflip,
     (int) linesize, (int) (width * components));
 
-  const int buffer_size = height * linesize;
+  const size_t buffer_size = height * linesize;
   uint8_t *buffer = (uint8_t*) malloc(buffer_size);
   if (!buffer) {
     CapsuleLog("could not allocate buffer");
@@ -479,14 +479,11 @@ void Run(MainArgs *args, Params *params) {
     exit(1);
   }
 
-  size_t last_print_read = 0;
-
   vframe->pts = 0;
   int vnext_pts = 0;
   int anext_pts = 0;
 
   int last_frame = 0;
-  float factor = 1.0;
   int64_t timestamp = 0;
   int64_t first_timestamp = -1;
   int64_t last_timestamp = 0;
@@ -494,12 +491,7 @@ void Run(MainArgs *args, Params *params) {
 
   int samples_received = 0;
   int samples_used = 0;
-  int in_sample_size  = 0;
   float *in_samples;
-
-  if (params->has_audio) {
-    in_sample_size = afmt_in.channels * afmt_in.samplewidth / 8;
-  }
 
   int samples_filled = 0;
   int frame_count = 0;

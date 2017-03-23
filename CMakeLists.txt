@@ -1,10 +1,12 @@
 cmake_minimum_required(VERSION 2.8)
 
+add_subdirectory(lab)
 add_subdirectory(microprofile)
+add_subdirectory(argparse)
+add_subdirectory(vendor/shoom)
 
 project(capsule)
 
-add_subdirectory(vendor/shoom)
 set(shoom_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/shoom/include)
 
 option(OSX_UNIVERSAL "Build an OSX universal binary" ON)
@@ -81,6 +83,5 @@ endif()
 
 set(microprofile_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/microprofile)
 
-add_subdirectory(lab)
 add_subdirectory(libcapsule)
 add_subdirectory(capsulerun)

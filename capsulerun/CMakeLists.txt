@@ -11,6 +11,7 @@ set(capsulerun_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(capsulerun_INCLUDE_DIRS SYSTEM)
 
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/src)
+set(argparse_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../argparse)
 set(lab_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lab/src)
 
 include_directories(
@@ -19,6 +20,7 @@ include_directories(
   ${capsulerun_INCLUDE_DIR}
   ${libcapsule_INCLUDE_DIR}
   ${microprofile_INCLUDE_DIR}
+  ${argparse_INCLUDE_DIR}
   ${lab_INCLUDE_DIR}
 )
 
@@ -26,7 +28,6 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/runner.cc
   ${capsulerun_SOURCE_DIR}/main.cc
   ${capsulerun_SOURCE_DIR}/encoder.cc
-  ${capsulerun_SOURCE_DIR}/argparse.c
   ${capsulerun_SOURCE_DIR}/main_loop.cc
   ${capsulerun_SOURCE_DIR}/video_receiver.cc
   ${capsulerun_SOURCE_DIR}/session.cc
@@ -68,6 +69,7 @@ add_executable(capsulerun ${capsulerun_SRC})
 target_link_libraries(capsulerun shoom)
 target_link_libraries(capsulerun lab)
 target_link_libraries(capsulerun microprofile)
+target_link_libraries(capsulerun argparse)
 
 if(WIN32)
   add_dependencies(capsulerun capsule_deps)

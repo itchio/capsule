@@ -18,6 +18,5 @@ else()
 endif()
 
 if(WIN32)
-# needed for microprofile
 target_link_libraries(microprofile ws2_32.lib)
 endif()

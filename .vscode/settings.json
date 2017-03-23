@@ -5,7 +5,10 @@
       "string": "cpp",
       "xfunctional": "cpp",
       "xiosbase": "cpp",
-      "xlocale": "cpp"
+      "xlocale": "cpp",
+      "array": "cpp",
+      "initializer_list": "cpp",
+      "utility": "cpp"
     },
     "files.exclude": {
       "**/.git": true,

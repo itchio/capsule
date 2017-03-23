@@ -20,14 +20,15 @@ class Session {
 
     encoder::Params encoder_params_;
 
+  private:
+    std::thread *encoder_thread_;
+    MainArgs *args_;
+
+  public:
     // these need to be public for the C callbacks (to avoid
     // another level of indirection)
     video::VideoReceiver *video_;
     audio::AudioReceiver *audio_;
-
-  private:
-    std::thread *encoder_thread_;
-    MainArgs *args_;
 };
 
 } // namespace capsule

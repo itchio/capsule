@@ -1,6 +1,8 @@
 
 #include "main_loop.h"
 
+#include <lab/logging.h>
+
 #include <microprofile.h>
 
 MICROPROFILE_DEFINE(MainLoopMain, "MainLoop", "Main", 0xff0000);
@@ -93,7 +95,7 @@ void MainLoop::EndSession () {
 }
 
 void MainLoop::JoinSessions () {
-  CapsuleLog("MainLoop::join_sessions: joining %d sessions", old_sessions_.size())
+  CapsuleLog("MainLoop::join_sessions: joining %" PRIdS " sessions", old_sessions_.size())
 
   for (Session *session: old_sessions_) {
     CapsuleLog("MainLoop::join_sessions: joining session_ %p", session)
