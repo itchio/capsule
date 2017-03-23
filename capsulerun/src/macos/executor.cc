@@ -43,17 +43,19 @@ Executor::Executor() {
 }
 
 ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
-  std::string libcapsule32_path = lab::paths::Join(std::string(args->libpath), "libcapsule32.dylib");
   std::string libcapsule64_path = lab::paths::Join(std::string(args->libpath), "libcapsule64.dylib");
 
   std::string dyld_insert = lab::env::Get("DYLD_INSERT_LIBRARIES");
   if (dyld_insert != "") {
     dyld_insert += ":";
   }
-  dyld_insert += ":" + libcapsule32_path + ":" + libcapsule64_path;
+  dyld_insert += libcapsule64_path;
   std::string dyld_insert_var = "DYLD_INSERT_LIBRARIES=" + dyld_insert;
 
-  auto pipe_var = "CAPSULE_PIPE_PATH" + std::string(args->pipe);
+  std::string pipe_var = "CAPSULE_PIPE_PATH=" + std::string(args->pipe);
+  CapsuleLog("pipe_var: %s", pipe_var.c_str());
+  CapsuleLog("dyld_insert_var: %s", dyld_insert_var.c_str());
+
   char *env_additions[] = {
     const_cast<char *>(dyld_insert_var.c_str()),
     const_cast<char *>(pipe_var.c_str()),
@@ -77,6 +79,10 @@ ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
 
   CapsuleLog("PID %d given to %s", child_pid, args->exec);
   return new Process(child_pid);
+}
+
+AudioReceiverFactory Executor::GetAudioReceiverFactory() {
+  return nullptr;
 }
 
 Executor::~Executor() {

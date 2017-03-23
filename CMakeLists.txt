@@ -9,16 +9,11 @@ project(capsule)
 
 set(shoom_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/shoom/include)
 
-option(OSX_UNIVERSAL "Build an OSX universal binary" ON)
-
 set(CAPSULE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libcapsule/include)
 
 # Universal binary only makes sense on OSX
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  if(OSX_UNIVERSAL)
-    message(STATUS "Building universal OSX binaries")
-    set(COMPILE_FLAGS "${COMPILE_FLAGS} -arch i386 -arch x86_64")
-  endif()
+  set(COMPILE_FLAGS "${COMPILE_FLAGS} -arch x86_64")
 endif()
 
 # custom FindXXX.cmake files, toolchains, etc.

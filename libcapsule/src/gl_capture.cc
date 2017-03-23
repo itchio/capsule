@@ -148,7 +148,7 @@ bool LAB_STDCALL LoadOpengl (const char *opengl_path) {
 #elif defined(LAB_WINDOWS)
   GLSYM(wglGetProcAddress)
 #elif defined(LAB_MACOS)
-  GLSYM(glGetProcAddress)
+  // GLSYM(glGetProcAddress)
 #endif
 
   return true;

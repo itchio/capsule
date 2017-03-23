@@ -15,7 +15,7 @@ class Process: public ProcessInterface {
     void Wait(ProcessFate *fate) override;
 
   private:
-    pid_t pid = -1;
+    pid_t pid_ = -1;
 };
 
 class Executor : public ExecutorInterface {

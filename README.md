@@ -180,8 +180,9 @@ MESA_GLSL_VERSION_OVERRIDE=150
 
 Pretty much the same as Linux.
 
-Note: homebrew-installed versions of ffmpeg & x264 are *not* universal, so
-you might need `-DOSX_UNIVERSAL=OFF` and do 64-bit only.
+homebrew-installed ffmpeg & x264 are fine.
+
+Note: capsule only supports 64-bit macOS for minimal headaches.
 
 capsulerun doesn't grok app bundles, so launch the exec directly: macOS is smart
 enough to do the right thing.
