@@ -29,7 +29,6 @@
 
 #include <string>
 
-#include "quote.h"
 #include "wasapi_receiver.h"
 #include "../logging.h"
 
@@ -97,7 +96,7 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
     }
 
     std::wstring arg_w = arg;
-    ArgvQuote(arg_w, command_line_w, false);
+    lab::strings::ArgvQuote(arg_w, command_line_w, false);
   }
 
   Log("Launching '%S' with args '%S'", executable_path_w, command_line_w.c_str());

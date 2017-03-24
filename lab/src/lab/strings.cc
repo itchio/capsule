@@ -66,6 +66,48 @@ void FromWideChar (const wchar_t *ws, char **s) {
   }
 }
 
+void ArgvQuote(const std::wstring &argument, std::wstring &command_line,
+               bool force) {
+
+  // Unless we're told otherwise, don't quote unless we actually
+  // need to do so --- hopefully avoid problems if programs won't
+  // parse quotes properly
+  if (force == false && argument.empty() == false &&
+      argument.find_first_of(L" \t\n\v\"") == std::string::npos) {
+    command_line.append(argument);
+  } else {
+    command_line.push_back(L'"');
+
+    for (auto it = argument.begin();; ++it) {
+      int number_backslashes = 0;
+
+      while (it != argument.end() && *it == L'\\') {
+        ++it;
+        ++number_backslashes;
+      }
+
+      if (it == argument.end()) {
+        // Escape all backslashes, but let the terminating
+        // double quotation mark we add below be interpreted
+        // as a metacharacter.
+        command_line.append(number_backslashes * 2, L'\\');
+        break;
+      } else if (*it == L'"') {
+        // Escape all backslashes and the following
+        // double quotation mark.
+        command_line.append(number_backslashes * 2 + 1, L'\\');
+        command_line.push_back(*it);
+      } else {
+        // Backslashes aren't special here.
+        command_line.append(number_backslashes, L'\\');
+        command_line.push_back(*it);
+      }
+    }
+
+    command_line.push_back(L'"');
+  }
+}
+
 #endif // LAB_WINDOWS
 
 bool CContains (const char *needle, const char *haystack) {

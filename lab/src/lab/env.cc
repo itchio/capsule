@@ -12,7 +12,9 @@
 #undef WIN32_LEAN_AND_MEAN
 #endif // LAB_WINDOWS
 
+#if defined(LAB_LINUX) || defined(LAB_MACOS)
 extern char **environ;
+#endif
 
 namespace lab {
 namespace env {
