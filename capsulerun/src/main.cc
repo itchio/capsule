@@ -30,10 +30,13 @@
 #include <shellapi.h> // CommandLineToArgvW
 #endif // LAB_WINDOWS
 
+#include <microprofile.h>
+
 #include <string>
 
 #include "argparse.h"
 #include "runner.h"
+#include "logging.h"
 
 #if defined(LAB_WINDOWS)
 #include "windows/executor.h"
@@ -42,8 +45,6 @@
 #elif defined(LAB_LINUX)
 #include "linux/executor.h"
 #endif
-
-#include <microprofile.h>
 
 MICROPROFILE_DEFINE(MAIN, "MAIN", "Main", 0xff0000);
 
@@ -147,7 +148,7 @@ int main (int argc, char **argv) {
 #endif // !LAB_WINDOWS
   }
 
-  CapsuleLog("thanks for flying capsule on %s", lab::kPlatform);
+  capsule::Log("thanks for flying capsule on %s", lab::kPlatform);
 
   if (args.priority) {
 #if defined(LAB_WINDOWS)
@@ -159,29 +160,29 @@ int main (int argc, char **argv) {
     } else if (0 == strcmp(args.priority, "high")) {
       hr = SetPriorityClass(hProcess, HIGH_PRIORITY_CLASS);
     } else {
-      CapsuleLog("Invalid priority parameter %s, expected above-normal or high", args.priority);
+      capsule::Log("Invalid priority parameter %s, expected above-normal or high", args.priority);
     }
 
     if (FAILED(hr)) {
-      CapsuleLog("Failed to set process priority: %d (%x), continuing", hr, hr)
+      capsule::Log("Failed to set process priority: %d (%x), continuing", hr, hr);
     }
 #else // LAB_WINDOWS
-    CapsuleLog("priority parameter not yet supported on %s", lab::kPlatform);
+    capsule::Log("priority parameter not yet supported on %s", lab::kPlatform);
 #endif // !LAB_WINDOWS
   }
 
   std::string self_path = lab::paths::SelfPath();
-  CapsuleLog("Running from: %s", self_path.c_str());
+  capsule::Log("Running from: %s", self_path.c_str());
 
   std::string lib_path = lab::paths::DirName(self_path);
   args.libpath = lib_path.c_str();
 
-  CapsuleLog("Library path: %s", lib_path.c_str());
+  capsule::Log("Library path: %s", lib_path.c_str());
 
   if (!args.pipe) {
     args.pipe = "capsule";
   }
-  CapsuleLog("Pipe name: %s", args.pipe);
+  capsule::Log("Pipe name: %s", args.pipe);
 
   {
     MICROPROFILE_SCOPE(MAIN);

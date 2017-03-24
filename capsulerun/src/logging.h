@@ -21,6 +21,10 @@
 
 #pragma once
 
-#include <stdio.h>
+#include <lab/logging.h>
 
-#define CapsuleLog(...) { fprintf(stdout, "[capsulerun] "); fprintf(stdout, __VA_ARGS__); fprintf(stdout, "\n"); fflush(stdout); }
+namespace capsule {
+
+void Log(const char *format, ...);
+
+} // namespace capsule

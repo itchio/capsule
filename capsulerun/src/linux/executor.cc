@@ -29,6 +29,7 @@
 #include <lab/env.h>
 
 #include "pulse_receiver.h"
+#include "../logging.h"
 
 namespace capsule {
 namespace linux {
@@ -40,7 +41,7 @@ void Process::Wait(ProcessFate *fate) {
   do {
     wait_result = waitpid(pid_, &child_status, 0);
     if (wait_result == -1) {
-      CapsuleLog("Could not wait on child (error %d): %s", wait_result, strerror(wait_result));
+      Log("Could not wait on child (error %d): %s", wait_result, strerror(wait_result));
       fate->status = kProcessStatusUnknown;
       fate->code = 127;
       return;
@@ -73,7 +74,7 @@ ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
   pid_t child_pid;
 
   if (!lab::env::Set("LD_PRELOAD", ldpreload_var)) {
-    CapsuleLog("Couldn't set up library injection");
+    Log("Couldn't set up library injection");
     return nullptr;
   }
 
@@ -94,10 +95,10 @@ ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
   );
 
   if (child_err != 0) {
-    CapsuleLog("Spawning child failed with error %d: %s", child_err, strerror(child_err));
+    Log("Spawning child failed with error %d: %s", child_err, strerror(child_err));
   }
 
-  CapsuleLog("PID %d given to %s", child_pid, args->exec)
+  Log("PID %d given to %s", child_pid, args->exec)
   return new Process(child_pid);
 }
 

@@ -24,7 +24,7 @@
 #include <dlfcn.h>
 #include <string.h>
 
-#include "../macros.h"
+#include "../logging.h"
 
 namespace capsule {
 namespace pulse {
@@ -56,7 +56,7 @@ bool Load() {
 #define PULSESYM(var, sym) { \
   var = reinterpret_cast<sym ## _t>(dlsym(handle, #sym));\
   if (! var) { \
-    CapsuleLog("Could not find PulseAudio function %s", #sym); \
+    Log("Could not find PulseAudio function %s", #sym); \
     return false; \
   } \
 }
@@ -66,7 +66,7 @@ bool Load() {
     handle = dlopen("libpulse-simple.so.0", RTLD_NOW);
   }
   if (!handle) {
-    CapsuleLog("Could not load libpulse-simple.so(.0)");
+    Log("Could not load libpulse-simple.so(.0)");
     return false;
   }
 
@@ -79,7 +79,7 @@ bool Load() {
     handle = dlopen("libpulse.so.0", RTLD_NOW);
   }
   if (!handle) {
-    CapsuleLog("Could not load libpulse.so(.0)");
+    Log("Could not load libpulse.so(.0)");
     return false;
   }
 
@@ -128,7 +128,7 @@ void StateCb(pa_context *ctx, void *userdata) {
     break;
   }
   case PA_CONTEXT_FAILED: {
-    CapsuleLog("Failed to connect to PulseAudio");
+    Log("Failed to connect to PulseAudio");
     auto ss = reinterpret_cast<SinkSeeker *>(userdata);
     MainloopQuit(ss->loop, 1);
     break;

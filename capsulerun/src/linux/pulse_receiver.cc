@@ -22,7 +22,7 @@
 
 #include "pulse_receiver.h"
 
-#include "../macros.h"
+#include "../logging.h"
 
 #include <chrono>
 
@@ -35,17 +35,17 @@ PulseReceiver::PulseReceiver() {
   memset(&afmt_, 0, sizeof(afmt_));
 
   if (!pulse::Load()) {
-    CapsuleLog("PulseReceiver: could not load pulse library");
+    capsule::Log("PulseReceiver: could not load pulse library");
     return;
   }
 
   auto dev = pulse::GetDefaultSinkMonitor();
   if (!dev) {
-    CapsuleLog("PulseReceiver: could not determine default sink");
+    capsule::Log("PulseReceiver: could not determine default sink");
     return;
   }
 
-  CapsuleLog("PulseReceiver: will record sink %s", dev);
+  capsule::Log("PulseReceiver: will record sink %s", dev);
 
   static const pa_sample_spec ss = {
       .format = PA_SAMPLE_FLOAT32LE,
@@ -68,7 +68,7 @@ PulseReceiver::PulseReceiver() {
   free(dev);
 
   if (!ctx_) {
-    CapsuleLog(
+    capsule::Log(
         "PulseReceiver: Could not create pulseaudio context, error %d (%x)",
         pa_err, pa_err);
     return;
@@ -126,7 +126,7 @@ bool PulseReceiver::ReadFromPa() {
       // no room for it, just skip those then
       if (!overrun_) {
         overrun_ = true;
-        CapsuleLog("PulseReceiver: buffer overrun (captured audio but "
+        capsule::Log("PulseReceiver: buffer overrun (captured audio but "
                    "nowhere to place it)\n");
       }
       // keep trying tho

@@ -62,6 +62,7 @@ void Log(const char *format, ...) {
   va_end(args);
 
   fprintf(stderr, "\n");
+  fflush(stderr);
 }
 
 } // namespace capsule

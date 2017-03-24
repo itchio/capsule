@@ -23,7 +23,7 @@
 
 #include <string>
 
-#include "macros.h"
+#include "logging.h"
 #include "hotkey.h"
 
 namespace capsule {
@@ -34,19 +34,19 @@ void Runner::Run () {
   if (args_->exec) {
     process_ = executor_->LaunchProcess(args_);
     if (!process_) {
-      CapsuleLog("Couldn't start child, bailing out");
+      Log("Couldn't start child, bailing out");
       exit(127);
     }
 
-    CapsuleLog("Watching on child in the background");
+    Log("Watching on child in the background");
     wait_thread_ = new std::thread(&Runner::WaitForChild, this);
   }
 
-  CapsuleLog("Connecting pipe...");
+  Log("Connecting pipe...");
   conn_->Connect();
 
   if (!conn_->IsConnected()) {
-    CapsuleLog("Couldn't connect pipe, bailing out");
+    Log("Couldn't connect pipe, bailing out");
     exit(127);
   }
 
@@ -67,14 +67,14 @@ void Runner::WaitForChild () {
 
   if (fate.status == kProcessStatusExited) {
     if (fate.code == 0) {
-      CapsuleLog("Child exited gracefully");
+      Log("Child exited gracefully");
     } else {
-      CapsuleLog("Child exited with code %d", fate.code);
+      Log("Child exited with code %d", fate.code);
     }
   } else if (fate.status == kProcessStatusSignaled) {
-    CapsuleLog("Child killed by signal %d", fate.code);
+    Log("Child killed by signal %d", fate.code);
   } else if (fate.status == kProcessStatusUnknown) {
-    CapsuleLog("Child left in unknown state");
+    Log("Child left in unknown state");
   }
 
   if (!conn_->IsConnected()) {

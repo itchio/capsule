@@ -31,7 +31,7 @@
 
 #include "quote.h"
 #include "wasapi_receiver.h"
-#include "../macros.h"
+#include "../logging.h"
 
 namespace capsule {
 namespace windows {
@@ -78,7 +78,7 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
   env_success &= lab::env::Set("CAPSULE_PIPE_PATH", std::string(args->pipe));
   env_success &= lab::env::Set("CAPSULE_LIBRARY_PATH", libcapsule_path);
   if (!env_success) {
-    CapsuleLog("Could not set environment variables for the child");
+    Log("Could not set environment variables for the child");
     return nullptr;
   }
 
@@ -100,8 +100,8 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
     ArgvQuote(arg_w, command_line_w, false);
   }
 
-  CapsuleLog("Launching '%S' with args '%S'", executable_path_w, command_line_w.c_str());
-  CapsuleLog("Injecting '%S'", libcapsule_path_w);
+  Log("Launching '%S' with args '%S'", executable_path_w, command_line_w.c_str());
+  Log("Injecting '%S'", libcapsule_path_w);
   const char* libcapsule_init_function_name = "CapsuleWindowsInit";
 
   DWORD err = NktHookLibHelpers::CreateProcessWithDllW(
@@ -121,9 +121,9 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
   );
 
   if (err == ERROR_SUCCESS) {
-    CapsuleLog("Process #%lu successfully launched with dll injected!", pi.dwProcessId);
+    Log("Process #%lu successfully launched with dll injected!", pi.dwProcessId);
   } else {
-    CapsuleLog("Error %lu: Cannot launch process and inject dll.", err);
+    Log("Error %lu: Cannot launch process and inject dll.", err);
     return nullptr;
   }
 
@@ -139,7 +139,7 @@ AudioReceiverFactory Executor::GetAudioReceiverFactory() {
 }
 
 Executor::~Executor() {
-  // stub
+  // muffin
 }
 
 }

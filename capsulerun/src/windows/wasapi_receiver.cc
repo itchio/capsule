@@ -29,7 +29,7 @@
 // TODO: signal errors without exceptions
 #include <stdexcept>
 
-#include "../macros.h"
+#include "../logging.h"
 
 MICROPROFILE_DEFINE(WasapiReceiveFrames, "Wasapi", "WasapiReceiveFrames", 0xff00ff00);
 
@@ -87,7 +87,7 @@ WasapiReceiver::WasapiReceiver() {
   }
 
   // Print endpoint friendly name and endpoint ID.
-  CapsuleLog("WasapiReceiver: Capturing from: \"%S\"", var_name.pwszVal);
+  capsule::Log("WasapiReceiver: Capturing from: \"%S\"", var_name.pwszVal);
 
   PropVariantClear(&var_name);
   SafeRelease(props);
@@ -126,7 +126,7 @@ WasapiReceiver::WasapiReceiver() {
     throw std::runtime_error("Could not get buffer size");
   }
 
-  CapsuleLog("WasapiReceiver: Buffer frame count: %d", buffer_frame_count);
+  capsule::Log("WasapiReceiver: Buffer frame count: %d", buffer_frame_count);
 
   hr = audio_client_->GetService(
       IID_IAudioCaptureClient,
@@ -165,7 +165,7 @@ void *WasapiReceiver::ReceiveFrames(int *frames_received) {
   if (num_frames_received_ > 0) {
     hr = capture_client_->ReleaseBuffer(num_frames_received_);
     if (FAILED(hr)) {
-      CapsuleLog("WasapiReceiver: Could not release buffer: error %d (%x)\n", hr, hr);
+      capsule::Log("WasapiReceiver: Could not release buffer: error %d (%x)\n", hr, hr);
       stopped_ = true;
       *frames_received = 0;
       return nullptr;
@@ -187,7 +187,7 @@ void *WasapiReceiver::ReceiveFrames(int *frames_received) {
       num_frames_received_ = 0;
       return nullptr;
     } else {
-      CapsuleLog("WasapiReceiver: Could not get buffer: error %d (%x)\n", hr, hr);
+      capsule::Log("WasapiReceiver: Could not get buffer: error %d (%x)\n", hr, hr);
       stopped_ = true;
       *frames_received = 0;
       return nullptr;
@@ -204,7 +204,7 @@ void WasapiReceiver::Stop() {
 
   HRESULT hr = audio_client_->Stop();
   if (FAILED(hr)) {
-    CapsuleLog("WasapiReceiver: Could not stop audio client: error %d (%x)", hr, hr);
+    capsule::Log("WasapiReceiver: Could not stop audio client: error %d (%x)", hr, hr);
   }
   stopped_ = true;
 }

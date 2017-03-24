@@ -41,13 +41,12 @@ extern "C" {
 #endif // WIN32
 
 #include <microprofile.h>
-#include <lab/logging.h>
 #include <lab/env.h>
 
 #include <chrono>
 
 #include "fps_counter.h"
-#include "macros.h"
+#include "logging.h"
 #include "logging.h"
 
 MICROPROFILE_DEFINE(EncoderMain, "Encoder", "Main", MP_WHITE);
@@ -92,14 +91,14 @@ void Run(MainArgs *args, Params *params) {
   int components = 4;
   int linesize = vfmt_in.pitch;
 
-  CapsuleLog("video resolution: %dx%d, format %d, vflip %d, pitch %d (%d computed)",
+  Log("video resolution: %dx%d, format %d, vflip %d, pitch %d (%d computed)",
     width, height, (int) vfmt_in.format, (int) vfmt_in.vflip,
     (int) linesize, (int) (width * components));
 
   const size_t buffer_size = height * linesize;
   uint8_t *buffer = (uint8_t*) malloc(buffer_size);
   if (!buffer) {
-    CapsuleLog("could not allocate buffer");
+    Log("could not allocate buffer");
     exit(1);
   }
 
@@ -109,11 +108,11 @@ void Run(MainArgs *args, Params *params) {
   if (params->has_audio) {
     ret = params->receive_audio_format(params->private_data, &afmt_in);
     if (ret != 0) {
-      CapsuleLog("could not receive audio format");
+      Log("could not receive audio format");
       exit(1);
     }
 
-    CapsuleLog("audio format: %d channels, %d samplerate, %d samplewidth",
+    Log("audio format: %d channels, %d samplerate, %d samplewidth",
       afmt_in.channels, afmt_in.samplerate, afmt_in.samplewidth);
   }
 
@@ -142,7 +141,7 @@ void Run(MainArgs *args, Params *params) {
   // allocate output media context
   avformat_alloc_output_context2(&oc, fmt, NULL, NULL);
   if (!oc) {
-      CapsuleLog("could not allocate output context");
+      Log("could not allocate output context");
       exit(1);
   }
   oc->oformat = fmt;
@@ -150,14 +149,14 @@ void Run(MainArgs *args, Params *params) {
   /* open the output file, if needed */
   ret = avio_open(&oc->pb, output_path, AVIO_FLAG_WRITE);
   if (ret < 0) {
-      CapsuleLog("Could not open '%s'", output_path);
+      Log("Could not open '%s'", output_path);
       exit(1);
   }
 
   // video stream
   video_st = avformat_new_stream(oc, NULL);
   if (!video_st) {
-      CapsuleLog("could not allocate video stream");
+      Log("could not allocate video stream");
       exit(1);
   }
   video_st->id = oc->nb_streams - 1;
@@ -166,7 +165,7 @@ void Run(MainArgs *args, Params *params) {
   if (params->has_audio) {
     audio_st = avformat_new_stream(oc, NULL);
     if (!audio_st) {
-        CapsuleLog("could not allocate audio stream");
+        Log("could not allocate audio stream");
         exit(1);
     }
     audio_st->id = oc->nb_streams - 1;
@@ -175,15 +174,15 @@ void Run(MainArgs *args, Params *params) {
   // video codec
   vcodec = avcodec_find_encoder(vcodec_id);
   if (!vcodec) {
-    CapsuleLog("could not find video codec");
+    Log("could not find video codec");
     exit(1);
   }
 
-  CapsuleLog("found video codec");
+  Log("found video codec");
 
   vc = avcodec_alloc_context3(vcodec);
   if (!vc) {
-      CapsuleLog("could not allocate video codec context");
+      Log("could not allocate video codec context");
       exit(1);
   }
 
@@ -197,13 +196,13 @@ void Run(MainArgs *args, Params *params) {
     } else if (0 == strcmp(args->pix_fmt, "yuv444p")) {
       vc->pix_fmt = AV_PIX_FMT_YUV444P;
     } else {
-      CapsuleLog("Unknown pix_fmt specified: %s - using default", args->pix_fmt);
+      Log("Unknown pix_fmt specified: %s - using default", args->pix_fmt);
     }
   }
 
   bool do_swscale = true;
   if (vfmt_in.format == capsule::kPixFmtYuv444P) {
-    CapsuleLog("GPU color conversion enabled, ignoring user output settings and picking yuv444p");
+    Log("GPU color conversion enabled, ignoring user output settings and picking yuv444p");
     vc->pix_fmt = AV_PIX_FMT_YUV444P;
     do_swscale = false;
   }
@@ -214,7 +213,7 @@ void Run(MainArgs *args, Params *params) {
   //   if (args->divider == 2 || args->divider == 4) {
   //     divider = args->divider;
   //   } else {
-  //     CapsuleLog("Invalid size divider %d: must be 2 or 4. Ignoring...", args->divider);
+  //     Log("Invalid size divider %d: must be 2 or 4. Ignoring...", args->divider);
   //   }
   // }
 
@@ -229,7 +228,7 @@ void Run(MainArgs *args, Params *params) {
     out_height++;
   }
 
-  CapsuleLog("output resolution: %dx%d", out_width, out_height);
+  Log("output resolution: %dx%d", out_width, out_height);
 
   vc->width = out_width;
   vc->height = out_height;
@@ -254,11 +253,11 @@ void Run(MainArgs *args, Params *params) {
   if (args->crf != -1) {
     if (args->crf >= 0 && args->crf <= 51) {
       if (args->crf < 18 || args->crf > 28) {
-        CapsuleLog("Warning: sane crf values lie within 18-28, using crf %d at your own risks", args->crf)
+        Log("Warning: sane crf values lie within 18-28, using crf %d at your own risks", args->crf);
       }
       crf = args->crf;
     } else {
-      CapsuleLog("Invalid crf value %d (must be in the 0-51 range), ignoring", args->crf)
+      Log("Invalid crf value %d (must be in the 0-51 range), ignoring", args->crf);
     }
   }
 
@@ -271,19 +270,19 @@ void Run(MainArgs *args, Params *params) {
     if (args->threads > 0 && args->threads <= 32) {
       vc->thread_count = args->threads;
     } else {
-      CapsuleLog("Invalid threads parameter %d, ignoring", args->threads)
+      Log("Invalid threads parameter %d, ignoring", args->threads);
     }
   }
 
   if (vc->thread_count > 1) {
-    CapsuleLog("Activating frame-level threading with %d threads", vc->thread_count);
+    Log("Activating frame-level threading with %d threads", vc->thread_count);
     vc->thread_type = FF_THREAD_FRAME;
   }
 
   vc->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
   if (vc->pix_fmt == AV_PIX_FMT_YUV444P) {
-    CapsuleLog("Warning: can't use baseline because yuv444p colorspace selected. Encoding will take more CPU.")
+    Log("Warning: can't use baseline because yuv444p colorspace selected. Encoding will take more CPU.");
   } else {
     vc->profile = FF_PROFILE_H264_BASELINE;
   }
@@ -296,13 +295,13 @@ void Run(MainArgs *args, Params *params) {
 
   ret = avcodec_open2(vc, vcodec, NULL);
   if (ret < 0) {
-    CapsuleLog("could not open video codec");
+    Log("could not open video codec");
     exit(1);
   }
 
   ret = avcodec_parameters_from_context(video_st->codecpar, vc);
   if (ret < 0) {
-    CapsuleLog("could not copy video codec parameters");
+    Log("could not copy video codec parameters");
     exit(1);
   }
 
@@ -310,13 +309,13 @@ void Run(MainArgs *args, Params *params) {
   if (params->has_audio) {
     acodec = avcodec_find_encoder(acodec_id);
     if (!acodec) {
-      CapsuleLog("could not find audio codec");
+      Log("could not find audio codec");
       exit(1);
     }
 
     ac = avcodec_alloc_context3(acodec);
     if (!ac) {
-        CapsuleLog("could not allocate audio codec context");
+        Log("could not allocate audio codec context");
         exit(1);
     }
 
@@ -331,13 +330,13 @@ void Run(MainArgs *args, Params *params) {
 
     ret = avcodec_open2(ac, acodec, NULL);
     if (ret < 0) {
-      CapsuleLog("could not open audio codec");
+      Log("could not open audio codec");
       exit(1);
     }
 
     ret = avcodec_parameters_from_context(audio_st->codecpar, ac);
     if (ret < 0) {
-      CapsuleLog("could not copy audio codec parameters");
+      Log("could not copy audio codec parameters");
       exit(1);
     }
   }
@@ -345,7 +344,7 @@ void Run(MainArgs *args, Params *params) {
   // video frame
   vframe = av_frame_alloc();
   if (!vframe) {
-    CapsuleLog("could not allocate video frame");
+    Log("could not allocate video frame");
     exit(1);
   }
   vframe->format = vc->pix_fmt;
@@ -420,7 +419,7 @@ void Run(MainArgs *args, Params *params) {
     // FIXME: just messing around
     bool misalign_planes = lab::env::Get("MISALIGN_PLANES") == "1";
     if (misalign_planes) {
-      CapsuleLog("Purposefully misaligning planes to confirm suspicions about x264 performance");
+      Log("Purposefully misaligning planes to confirm suspicions about x264 performance");
       size_t frame_buffer_size = vc->width * 4 * vc->height;
       uint8_t *frame_buffer = (uint8_t *) malloc(frame_buffer_size);
       vframe->data[0] = frame_buffer;

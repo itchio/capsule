@@ -24,7 +24,7 @@
 #include "video_receiver.h"
 #include "audio_receiver.h"
 #include "encoder.h"
-#include "macros.h"
+#include "logging.h"
 
 namespace capsule {
 
@@ -72,7 +72,7 @@ void Session::Stop () {
 }
 
 void Session::Join () {
-  CapsuleLog("Waiting for encoder thread...");
+  Log("Waiting for encoder thread...");
   encoder_thread_->join();
 }
 

@@ -33,6 +33,7 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/session.cc
   ${capsulerun_SOURCE_DIR}/connection.cc
   ${capsulerun_SOURCE_DIR}/fps_counter.cc
+  ${capsulerun_SOURCE_DIR}/logging.cc
 )
 
 if(WIN32)

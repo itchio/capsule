@@ -21,14 +21,13 @@
 
 #include <stdexcept>
 
-#include <lab/logging.h>
 #include <lab/packet.h>
 #include <capsule/messages_generated.h>
 
 #include <microprofile.h>
 
 #include "video_receiver.h"
-#include "macros.h"
+#include "logging.h"
 
 MICROPROFILE_DEFINE(VideoReceiverWait, "VideoReceiver", "VWait", MP_CHOCOLATE3);
 MICROPROFILE_DEFINE(VideoReceiverCopy1, "VideoReceiver", "VCopy1", MP_CORNSILK3);
@@ -44,8 +43,8 @@ VideoReceiver::VideoReceiver (Connection *conn, encoder::VideoFormat vfmt, shoom
 
   num_frames_ = num_frames;
   frame_size_ = static_cast<size_t>(vfmt_.pitch * vfmt_.height);
-  CapsuleLog("VideoReceiver: initializing, buffer of %d frames", num_frames_);
-  CapsuleLog("VideoReceiver: total buffer size in RAM: %.2f MB", (float) (frame_size_ * num_frames_) / 1024.0f / 1024.0f);
+  Log("VideoReceiver: initializing, buffer of %d frames", num_frames_);
+  Log("VideoReceiver: total buffer size in RAM: %.2f MB", (float) (frame_size_ * num_frames_) / 1024.0f / 1024.0f);
   buffer_ = (char *) calloc(num_frames_, frame_size_);
 
   buffer_state_ = (int *) calloc(num_frames_, sizeof(int));

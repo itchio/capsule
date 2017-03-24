@@ -20,6 +20,7 @@
  */
 
 #include "../hotkey.h"
+#include "../logging.h"
 
 #include <thread>
 
@@ -31,14 +32,13 @@ static void Poll (MainLoop *ml) {
 
   if (!success) {
     DWORD err = GetLastError();
-    CapsuleLog("Could not register hotkey: %d (%x)", err, err);
+    Log("Could not register hotkey: %d (%x)", err, err);
     return;
   }
 
   MSG msg = {0};
   while (GetMessage(&msg, NULL, 0, 0) != 0) {
     if (msg.message = WM_HOTKEY) {
-      CapsuleLog("capsule_hotkey_poll: Starting capture!");
       ml->CaptureFlip();
     }
   }
