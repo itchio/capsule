@@ -68,7 +68,7 @@ int main (int argc, char **argv) {
     OPT_HELP(),
     OPT_GROUP("Basic options"),
     OPT_STRING('d', "dir", &args.dir, "where to output .mp4 videos (defaults to current directory)"),
-    OPT_STRING(0, "pipe", &args.dir, "named pipe to listen on (defaults to unique name)"),
+    OPT_STRING(0, "pipe", &args.pipe, "named pipe to listen on (defaults to unique name)"),
     OPT_BOOLEAN(0, "headless", &args.headless, "do not launch a process, just connect to pipe and behave as an encoder"),
     OPT_GROUP("Video options"),
     OPT_INTEGER(0, "crf", &args.crf, "output quality. sane values range from 18 (~visually lossless) to 28 (fast but looks bad)"),
@@ -95,7 +95,7 @@ int main (int argc, char **argv) {
     // header
     "\ncapsulerun is a wrapper to inject libcapsule into applications.",
     // footer
-    ""
+    "\ncapsule is released under the GPL v2 license, see https://github.com/itchio/capsule"
   );
   argc = argparse_parse(&argparse, argc, (const char **) argv);
 
@@ -161,6 +161,7 @@ int main (int argc, char **argv) {
   if (!args.pipe) {
     args.pipe = "capsule";
   }
+  CapsuleLog("Pipe name: %s", args.pipe);
 
   {
     MICROPROFILE_SCOPE(MAIN);
