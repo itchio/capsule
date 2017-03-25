@@ -1,13 +1,17 @@
 cmake_minimum_required(VERSION 2.8)
 
-add_subdirectory(lab)
 add_subdirectory(microprofile)
 add_subdirectory(argparse)
+
+set(SHOOM_BUILD_TESTS OFF CACHE BOOL "Build shoom tests")
 add_subdirectory(vendor/shoom)
+set(LAB_BUILD_TESTS OFF CACHE BOOL "Build lab tests")
+add_subdirectory(vendor/lab)
 
 project(capsule)
 
 set(shoom_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/shoom/include)
+set(lab_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/lab/src)
 
 set(CAPSULE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/libcapsule/include)
 

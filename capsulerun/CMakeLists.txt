@@ -12,7 +12,6 @@ set(capsulerun_INCLUDE_DIRS SYSTEM)
 
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/src)
 set(argparse_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../argparse)
-set(lab_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lab/src)
 
 include_directories(
   ${shoom_INCLUDE_DIR}

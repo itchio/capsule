@@ -67,11 +67,8 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
 
   ZeroMemory(&pi, sizeof(pi));  
 
-  wchar_t *executable_path_w;
-  lab::strings::ToWideChar(args->exec, &executable_path_w);
-
-  wchar_t *libcapsule_path_w;
-  lab::strings::ToWideChar(libcapsule_path.c_str(), &libcapsule_path_w);
+  auto executable_path_w = lab::strings::ToWide(std::string(args->exec));
+  auto libcapsule_path_w = lab::strings::ToWide(libcapsule_path);
 
   bool env_success = true;
   env_success &= lab::env::Set("CAPSULE_PIPE_PATH", std::string(args->pipe));
@@ -85,17 +82,13 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
 
   std::wstring command_line_w;
   for (int i = 0; i < args->exec_argc; i++) {
-    wchar_t *arg;
-    // this "leaks" mem, but it's one time, so don't care
-    lab::strings::ToWideChar(args->exec_argv[i], &arg);
+    auto arg_w = lab::strings::ToWide(args->exec_argv[i]);
 
     if (first_arg) {
       first_arg = false;
     } else {
       command_line_w.append(L" ");
     }
-
-    std::wstring arg_w = arg;
     lab::strings::ArgvQuote(arg_w, command_line_w, false);
   }
 
@@ -104,7 +97,7 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
   const char* libcapsule_init_function_name = "CapsuleWindowsInit";
 
   DWORD err = NktHookLibHelpers::CreateProcessWithDllW(
-    executable_path_w, // applicationName
+    (LPCWSTR) executable_path_w.c_str(), // applicationName
     (LPWSTR) command_line_w.c_str(), // commandLine
     NULL, // processAttributes
     NULL, // threadAttributes
@@ -114,7 +107,7 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
     NULL, // currentDirectory
     &si, // startupInfo
     &pi, // processInfo
-    libcapsule_path_w, // dllName
+    (LPCWSTR) libcapsule_path_w.c_str(), // dllName
     NULL, // signalCompletedEvent
     libcapsule_init_function_name // initFunctionName
   );

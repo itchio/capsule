@@ -1,4 +1,24 @@
 
+/*
+ *  lab - a general-purpose C++ toolkit
+ *  Copyright (C) 2017, Amos Wenger
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details:
+ * https://github.com/itchio/lab/blob/master/LICENSE
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+
 #include "env.h"
 
 #include <stdlib.h>
@@ -19,7 +39,9 @@ extern char **environ;
 namespace lab {
 namespace env {
 
+#if defined(LAB_WINDOWS)
 const int kMaxCharacters = 16 * 1024;
+#endif
 
 char **MergeBlocks (char **a, char **b) {
     size_t total_size = 0;
@@ -57,22 +79,17 @@ char **MergeBlocks (char **a, char **b) {
 
 std::string Get(std::string name) {
 #if defined(LAB_WINDOWS)
-    wchar_t *name_w;
-    strings::ToWideChar(name.c_str(), &name_w);
+    auto name_w = strings::ToWide(name);
     const size_t value_w_characters = kMaxCharacters;
-    wchar_t *value_w = reinterpret_cast<wchar_t *>(calloc(value_w_characters, sizeof(wchar_t)));
-    int ret = GetEnvironmentVariableW(name_w, value_w, value_w_characters);
-    free(name_w);
+    wchar_t *value_w = new wchar_t[value_w_characters];
+    int ret = GetEnvironmentVariableW(name_w.c_str(), value_w, value_w_characters);
 
     if (ret == 0) {
-        free(value_w);
+        delete[] value_w;
         return "";
     } else {
-        char *value;
-        strings::FromWideChar(value_w, &value);
-        free(value_w);
-        std::string result = std::string(value);
-        free(value);
+        auto result = strings::FromWide(std::wstring(value_w));
+        delete[] value_w;
         return result;
     }
 #else // LAB_WINDOWS
@@ -88,15 +105,10 @@ std::string Get(std::string name) {
 
 bool Set(std::string name, std::string value) {
 #if defined(LAB_WINDOWS)
-    wchar_t *name_w;
-    strings::ToWideChar(name.c_str(), &name_w);
-    wchar_t *value_w;
-    strings::ToWideChar(value.c_str(), &value_w);
+    auto name_w = strings::ToWide(name);
+    auto value_w = strings::ToWide(value);
 
-    BOOL result = SetEnvironmentVariableW(name_w, value_w);
-    free(name_w);
-    free(value_w);
-    return result == TRUE;
+    return TRUE == SetEnvironmentVariableW(name_w.c_str(), value_w.c_str());
 #else  // LAB_WINDOWS
     int result = setenv(name.c_str(), value.c_str(), 1 /* overwrite */);
     return result == 0;
@@ -105,19 +117,14 @@ bool Set(std::string name, std::string value) {
 
 #if defined(LAB_WINDOWS)
 std::string Expand(std::string input) {
-    wchar_t *input_w;
-    strings::ToWideChar(input.c_str(), &input_w);
+    auto input_w = strings::ToWide(input.c_str());
     const size_t output_w_characters = kMaxCharacters;
-    wchar_t *output_w = reinterpret_cast<wchar_t *>(calloc(output_w_characters, sizeof(wchar_t)));
+    wchar_t *output_w = new wchar_t[output_w_characters];
 
-    ExpandEnvironmentStringsW(input_w, output_w, output_w_characters);
-    free(input_w);
+    ExpandEnvironmentStringsW(input_w.c_str(), output_w, output_w_characters);
 
-    char* output;
-    strings::FromWideChar(output_w, &output);
-    std::string result = std::string(output);
-    free(output_w);
-    free(output);
+    auto result = strings::FromWide(std::wstring(output_w));
+    delete[] output_w;
     return result;
 }
 #endif // LAB_WINDOWS

@@ -7,7 +7,6 @@ endif()
 
 set(libcapsule_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-set(lab_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lab/src)
 
 if(WIN32)
     find_package(OpenGL REQUIRED)

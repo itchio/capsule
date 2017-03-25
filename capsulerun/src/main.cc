@@ -62,7 +62,8 @@ int main () {
   // argv must be null-terminated, calloc zeroes so this works out.
   char **argv = (char **) calloc(argc + 1, sizeof(char *));
   for (int i = 0; i < argc; i++) {
-    lab::strings::FromWideChar(argv_w[i], (char **) &argv[i]);
+    auto arg = lab::strings::FromWide(std::wstring(argv_w[i]));
+    argv[i] = _strdup(arg.c_str());
   }
 #else // LAB_WINDOWS
 
