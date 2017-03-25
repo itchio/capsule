@@ -98,7 +98,7 @@ ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
     Log("Spawning child failed with error %d: %s", child_err, strerror(child_err));
   }
 
-  Log("PID %d given to %s", child_pid, args->exec)
+  Log("PID %d given to %s", child_pid, args->exec);
   return new Process(child_pid);
 }
 

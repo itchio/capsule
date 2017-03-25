@@ -45,8 +45,6 @@ endif()
 
 if(APPLE)
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/macos/DDHotKeyCenter.m
-    ${capsulerun_SOURCE_DIR}/macos/DDHotKeyUtilities.m
     ${capsulerun_SOURCE_DIR}/macos/hotkey.mm
     ${capsulerun_SOURCE_DIR}/macos/executor.cc
   )
