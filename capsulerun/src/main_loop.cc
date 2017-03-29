@@ -174,7 +174,7 @@ void MainLoop::StartSession (const messages::VideoSetup *vs) {
     Log("Audio capture disabled by command-line flag");
   } else {
     auto as = vs->audio();
-    if (as->channels() > 0) {
+    if (as) {
       Log("Got audio intercept! %d channels, %d rate, sample format %d",
         as->channels(),
         as->rate(),
