@@ -61,16 +61,25 @@ void MainLoop::Run () {
           break;
         }
         case messages::Message_VideoSetup: {
-          auto vs = static_cast<const messages::VideoSetup*>(pkt->message());
+          auto vs = pkt->message_as_VideoSetup();
           StartSession(vs);
           break;
         }
         case messages::Message_VideoFrameCommitted: {
-          auto vfc = static_cast<const messages::VideoFrameCommitted*>(pkt->message());
+          auto vfc = pkt->message_as_VideoFrameCommitted();
           if (session_ && session_->video_) {
             session_->video_->FrameCommitted(vfc->index(), vfc->timestamp());
           } else {
             Log("no session, ignoring VideoFrameCommitted");
+          }
+          break;
+        }
+        case messages::Message_AudioFramesCommitted: {
+          auto afc = pkt->message_as_AudioFramesCommitted();
+          if (session_ && session_->audio_) {
+            session_->audio_->FramesCommitted(afc->offset(), afc->frames());
+          } else {
+            Log("no session, ignoring AudioFramesCommitted");
           }
           break;
         }

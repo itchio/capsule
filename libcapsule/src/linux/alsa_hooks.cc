@@ -64,14 +64,6 @@ typedef ssize_t (*snd_pcm_frames_to_bytes_t)(
 );
 static snd_pcm_frames_to_bytes_t snd_pcm_frames_to_bytes = nullptr;
 
-typedef int (*snd_async_add_pcm_handler_t)(
-  snd_async_handler_t **handler,
-  snd_pcm_t *pcm,
-  snd_async_callback_t callback,
-  void *private_data
-);
-static snd_async_add_pcm_handler_t snd_async_add_pcm_handler = nullptr;
-
 typedef int (*snd_pcm_mmap_begin_t)(
   snd_pcm_t *pcm,
   const snd_pcm_channel_area_t **areas,
@@ -112,15 +104,19 @@ typedef int (*snd_pcm_hw_params_get_rate_t)(
 );
 static snd_pcm_hw_params_get_rate_t snd_pcm_hw_params_get_rate;
 
+typedef int (*snd_pcm_hw_params_get_access_t)(
+  snd_pcm_hw_params_t *params,
+  snd_pcm_access_t *access
+);
+static snd_pcm_hw_params_get_access_t snd_pcm_hw_params_get_access;
+
 static struct AlsaState {
   bool seen_write;
-  bool seen_callback;
   bool seen_mmap;
 } state = {0};
 
 enum AlsaMethod {
   kAlsaMethodWrite = 0,
-  kAlsaMethodCallback,
   kAlsaMethodMmap,
 };
 
@@ -195,6 +191,18 @@ const char *FormatName(snd_pcm_format_t format) {
   }
 }
 
+const char *AccessName(snd_pcm_access_t access) {
+#define ALSA_ACCESS_CASE(acc) case (acc): return #acc;
+  switch (access) {
+    ALSA_ACCESS_CASE(SND_PCM_ACCESS_MMAP_INTERLEAVED)
+    ALSA_ACCESS_CASE(SND_PCM_ACCESS_MMAP_NONINTERLEAVED)
+    ALSA_ACCESS_CASE(SND_PCM_ACCESS_MMAP_COMPLEX)
+    ALSA_ACCESS_CASE(SND_PCM_ACCESS_RW_INTERLEAVED)
+    ALSA_ACCESS_CASE(SND_PCM_ACCESS_RW_NONINTERLEAVED)
+    default: return "<not known by AccessName>";
+  }
+}
+
 void NotifyIntercept(snd_pcm_t *pcm) {
   snd_pcm_hw_params_t *params;
   snd_pcm_hw_params_alloca(&params);
@@ -209,6 +217,7 @@ void NotifyIntercept(snd_pcm_t *pcm) {
   alsa::EnsureSymbol((void**) &alsa::snd_pcm_hw_params_get_format, "snd_pcm_hw_params_get_format");
   alsa::EnsureSymbol((void**) &alsa::snd_pcm_hw_params_get_channels, "snd_pcm_hw_params_get_channels");
   alsa::EnsureSymbol((void**) &alsa::snd_pcm_hw_params_get_rate, "snd_pcm_hw_params_get_rate");
+  alsa::EnsureSymbol((void**) &alsa::snd_pcm_hw_params_get_access, "snd_pcm_hw_params_get_access");
 
   snd_pcm_format_t format;  
   ret = alsa::snd_pcm_hw_params_get_format(params, &format);
@@ -232,8 +241,15 @@ void NotifyIntercept(snd_pcm_t *pcm) {
     return;
   }
 
-  Log("ALSA config: %s format, %d channels, %d rate",
-    FormatName(format), channels, rate
+  snd_pcm_access_t access;  
+  ret = snd_pcm_hw_params_get_access(params, &access);
+  if (ret != 0) {
+    Log("ALSA: Couldn't retrieve HW params access, error %d", ret);
+    return;
+  }
+
+  Log("ALSA config: %s format, %d channels, %d rate, %s access",
+    FormatName(format), channels, rate, AccessName(access)
   );
 
   if (format != SND_PCM_FORMAT_FLOAT_LE) {
@@ -251,14 +267,6 @@ void SawMethod(snd_pcm_t *pcm, AlsaMethod method) {
       if (!state.seen_write) {
         capsule::Log("ALSA: saw write method");
         state.seen_write = true;
-        NotifyIntercept(pcm);
-      }
-      break;
-    }
-    case kAlsaMethodCallback: {
-      if (!state.seen_callback) {
-        capsule::Log("ALSA: saw callback method");
-        state.seen_callback = true;
         NotifyIntercept(pcm);
       }
       break;
@@ -332,21 +340,6 @@ snd_pcm_sframes_t snd_pcm_writei(
     fwrite(buffer, static_cast<size_t>(bytes), 1, _raw);
   }
 
-  return ret;
-}
-
-// interposed ALSA function
-int snd_async_add_pcm_handler(
-  snd_async_handler_t **handler,
-  snd_pcm_t *pcm,
-  snd_async_callback_t callback,
-  void *private_data
-) {
-  capsule::alsa::SawMethod(pcm, capsule::alsa::kAlsaMethodCallback);
-  capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_async_add_pcm_handler, "snd_async_add_pcm_handler");
-
-  auto ret = capsule::alsa::snd_async_add_pcm_handler(handler, pcm, callback, private_data);
-  capsule::Log("snd_async_add_pcm_handler: ret %d, handler address = %p", ret, *handler);
   return ret;
 }
 

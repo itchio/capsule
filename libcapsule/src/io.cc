@@ -49,6 +49,7 @@ int next_frame_index = 0;
 
 shoom::Shm *shm;
 shoom::Shm *audio_shm;
+size_t audio_frame_size;
 size_t audio_shm_committed_offset;
 size_t audio_shm_processed_offset;
 
@@ -77,7 +78,7 @@ static void PollInfile() {
         auto pkt = messages::GetPacket(buf);
         switch (pkt->message_type()) {
             case messages::Message_CaptureStart: {
-                auto cps = static_cast<const messages::CaptureStart *>(pkt->message());
+                auto cps = pkt->message_as_CaptureStart();
                 Log("poll_infile: received CaptureStart");
                 capture::Settings settings;
                 settings.fps = cps->fps();
@@ -101,8 +102,13 @@ static void PollInfile() {
                 break;
             }
             case messages::Message_VideoFrameProcessed: {
-                auto vfp = static_cast<const messages::VideoFrameProcessed *>(pkt->message());
+                auto vfp = pkt->message_as_VideoFrameProcessed();
                 UnlockFrame(vfp->index());
+                break;
+            }
+            case messages::Message_AudioFramesProcessed: {
+                auto afp = pkt->message_as_AudioFramesProcessed();
+                Log("AudioFramesProcessed: offset %d frames %d", afp->offset(), afp->frames());
                 break;
             }
             default:
@@ -126,9 +132,11 @@ void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pit
         // let's say we want a 4 second buffer
         int64_t seconds = 4;
         // assuming F32LE
+        Ensure("audio intercept format is F32LE", state->audio_intercept_format == messages::SampleFmt_F32LE);
         int64_t sample_size = 4;
 
-        int64_t audio_shmem_size = sample_size * seconds * (int64_t) state->audio_intercept_rate * (int64_t) state->audio_intercept_channels;
+        audio_frame_size = sample_size * (int64_t) state->audio_intercept_rate * (int64_t) state->audio_intercept_channels;
+        int64_t audio_shmem_size = seconds * audio_frame_size;
         std::string audio_shmem_path = "capsule_audio.shm";
         audio_shm = new shoom::Shm(audio_shmem_path, static_cast<size_t>(audio_shmem_size));
         audio_shm_committed_offset = 0;
