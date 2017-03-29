@@ -28,6 +28,9 @@
 #include "../ensure.h"
 #include "dlopen_hooks.h"
 
+// #define DebugLog(...) capsule::Log(__VA_ARGS__)
+#define DebugLog(...)
+
 namespace capsule {
 namespace alsa {
 
@@ -82,6 +85,44 @@ typedef snd_pcm_sframes_t (*snd_pcm_mmap_commit_t)(
 );
 static snd_pcm_mmap_commit_t snd_pcm_mmap_commit = nullptr;
 
+static struct AlsaState {
+  bool seen_write;
+  bool seen_callback;
+  bool seen_mmap;
+} state = {0};
+
+enum AlsaMethod {
+  kAlsaMethodWrite = 0,
+  kAlsaMethodCallback,
+  kAlsaMethodMmap,
+};
+
+void SawMethod(AlsaMethod method) {
+  switch (method) {
+    case kAlsaMethodWrite: {
+      if (!state.seen_write) {
+        capsule::Log("ALSA: saw write method");
+        state.seen_write = true;
+      }
+      break;
+    }
+    case kAlsaMethodCallback: {
+      if (!state.seen_callback) {
+        capsule::Log("ALSA: saw callback method");
+        state.seen_callback = true;
+      }
+      break;
+    }
+    case kAlsaMethodMmap: {
+      if (!state.seen_mmap) {
+        capsule::Log("ALSA: saw mmap method");
+        state.seen_mmap = true;
+      }
+      break;
+    }
+  }
+}
+
 void EnsureSymbol(void **ptr, const char *name) {
   static void* handle = nullptr;
 
@@ -123,10 +164,11 @@ snd_pcm_sframes_t snd_pcm_writen(
   void **bufs,
   snd_pcm_uframes_t size
 ) {
+  capsule::alsa::SawMethod(capsule::alsa::kAlsaMethodWrite);
   capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_writen, "snd_pcm_writen");
 
   auto ret = capsule::alsa::snd_pcm_writen(pcm, bufs, size);
-  capsule::Log("snd_pcm_writen: %d frames written", (int) ret);
+  DebugLog("snd_pcm_writen: %d frames written", (int) ret);
   return ret;
 }
 
@@ -138,10 +180,11 @@ snd_pcm_sframes_t snd_pcm_writei(
   const void *buffer,
   snd_pcm_uframes_t size
 ) {
+  capsule::alsa::SawMethod(capsule::alsa::kAlsaMethodWrite);
   capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_writei, "snd_pcm_writei");
 
   auto ret = capsule::alsa::snd_pcm_writei(pcm, buffer, size);
-  capsule::Log("snd_pcm_writei: %d frames written", (int) ret);
+  DebugLog("snd_pcm_writei: %d frames written", (int) ret);
 
   {
     if (!_raw) {
@@ -150,7 +193,7 @@ snd_pcm_sframes_t snd_pcm_writei(
     }
     capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_frames_to_bytes, "snd_pcm_frames_to_bytes");
     auto bytes = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(ret));
-    capsule::Log("snd_pcm_writei: ...that's %" PRIdS " bytes", bytes);
+    DebugLog("snd_pcm_writei: ...that's %" PRIdS " bytes", bytes);
     fwrite(buffer, static_cast<size_t>(bytes), 1, _raw);
   }
 
@@ -164,6 +207,7 @@ int snd_async_add_pcm_handler(
   snd_async_callback_t callback,
   void *private_data
 ) {
+  capsule::alsa::SawMethod(capsule::alsa::kAlsaMethodCallback);
   capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_async_add_pcm_handler, "snd_async_add_pcm_handler");
 
   auto ret = capsule::alsa::snd_async_add_pcm_handler(handler, pcm, callback, private_data);
@@ -180,15 +224,16 @@ int snd_pcm_mmap_begin(
   snd_pcm_uframes_t *offset,
   snd_pcm_uframes_t *frames
 ) {
+  capsule::alsa::SawMethod(capsule::alsa::kAlsaMethodMmap);
   capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_mmap_begin, "snd_pcm_mmap_begin");
 
-  capsule::Log("snd_pcm_mmap_begin: input offset %d, input frames %d",
+  DebugLog("snd_pcm_mmap_begin: input offset %d, input frames %d",
     (int) *offset, (int) *frames);
   auto ret = capsule::alsa::snd_pcm_mmap_begin(pcm, areas, offset, frames);
-  capsule::Log("snd_pcm_mmap_begin: ret %d, offset %d, frames %d", (int) ret,
+  DebugLog("snd_pcm_mmap_begin: ret %d, offset %d, frames %d", (int) ret,
     (int) *offset, (int) *frames);
   if (ret == 0) {
-    capsule::Log("snd_pcm_mmap_begin: area first: %u, step %u", areas[0]->first, areas[0]->step);
+    DebugLog("snd_pcm_mmap_begin: area first: %u, step %u", areas[0]->first, areas[0]->step);
     _last_areas = *areas;
   }
   return ret;
@@ -210,14 +255,14 @@ snd_pcm_sframes_t snd_pcm_mmap_commit(
     capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_frames_to_bytes, "snd_pcm_frames_to_bytes");
     auto bytes = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(frames));
     auto byte_offset = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(offset));
-    capsule::Log("snd_pcm_mmap_commit: ...that's %" PRIdS " bytes", bytes);
+    DebugLog("snd_pcm_mmap_commit: ...that's %" PRIdS " bytes", bytes);
     auto area = _last_areas[0];
     auto buffer = reinterpret_cast<uint8_t*>(area.addr) + (area.first / 8) + byte_offset;
     fwrite(reinterpret_cast<void*>(buffer), static_cast<size_t>(bytes), 1, _raw);
   }
 
   auto ret = capsule::alsa::snd_pcm_mmap_commit(pcm, offset, frames);
-  capsule::Log("snd_pcm_mmap_commit: ret %d, offset %d, frames %d", (int) ret,
+  DebugLog("snd_pcm_mmap_commit: ret %d, offset %d, frames %d", (int) ret,
     (int) offset, (int) frames);
   return ret;
 }
