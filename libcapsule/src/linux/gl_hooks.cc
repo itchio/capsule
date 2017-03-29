@@ -29,6 +29,7 @@
 namespace capsule {
 namespace gl {
 
+// using the leading underscore convention because of GLSYM
 typedef int (*glXQueryExtension_t)(void*, void*, void*);
 static glXQueryExtension_t _glXQueryExtension = nullptr;
 
@@ -67,18 +68,20 @@ void *GetProcAddress (const char *symbol) {
 } // namespace gl
 } // namespace capsule
 
-// intercepts
 extern "C" {
 
+// interposed libGL function
 void glXSwapBuffers (void *a, void *b) {
   capsule::gl::Capture(0, 0);
   return capsule::gl::_glXSwapBuffers(a, b);
 }
 
+// interposed libGL function
 int glXQueryExtension (void *a, void *b, void *c) {
   return capsule::gl::_glXQueryExtension(a, b, c);
 }
 
+// interposed libGL function
 void* glXGetProcAddressARB (const char *name) {
   if (lab::strings::CEquals(name, "glXSwapBuffers")) {
     capsule::Log("Hooking glXSwapBuffers");
