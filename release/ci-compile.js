@@ -119,7 +119,7 @@ function ci_compile_linux (arch) {
     $.sh(`rm -rf ${spec.dir}`)
     $.sh(`mkdir -p ${spec.dir}`)
     $.cd(spec.dir, function () {
-      $($.sh(`cmake ..`))
+      $($.sh(`cmake -DCAPSULE_DEPS_PREFIX=/usr/capsule ..`))
       $($.sh(`make install`))
     })
     $.sh(`mkdir -p compile-artifacts/${osarch}`)

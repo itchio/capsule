@@ -96,7 +96,7 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   include(FindPkgConfig)
-  set(ENV{PKG_CONFIG_PATH} "$ENV{HOME}/Dev/ffmpeg-prefix/lib/pkgconfig:${CAPSULE_FFMPEG_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+  set(ENV{PKG_CONFIG_PATH} "$ENV{HOME}/Dev/ffmpeg-prefix/lib/pkgconfig:${CAPSULE_DEPS_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 
   foreach(NEEDED_LIB libavutil libavcodec libavformat libswscale libswresample x264)
     PKG_CHECK_MODULES(${NEEDED_LIB}_PKG ${NEEDED_LIB})
