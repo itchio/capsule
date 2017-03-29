@@ -67,6 +67,21 @@ typedef int (*snd_async_add_pcm_handler_t)(
 );
 static snd_async_add_pcm_handler_t snd_async_add_pcm_handler = nullptr;
 
+typedef int (*snd_pcm_mmap_begin_t)(
+  snd_pcm_t *pcm,
+  const snd_pcm_channel_area_t **areas,
+  snd_pcm_uframes_t *offset,
+  snd_pcm_uframes_t *frames
+);
+static snd_pcm_mmap_begin_t snd_pcm_mmap_begin = nullptr;
+
+typedef snd_pcm_sframes_t (*snd_pcm_mmap_commit_t)(
+  snd_pcm_t *pcm,
+  snd_pcm_uframes_t offset,
+  snd_pcm_uframes_t frames
+);
+static snd_pcm_mmap_commit_t snd_pcm_mmap_commit = nullptr;
+
 void EnsureSymbol(void **ptr, const char *name) {
   static void* handle = nullptr;
 
@@ -115,28 +130,29 @@ snd_pcm_sframes_t snd_pcm_writen(
   return ret;
 }
 
+static FILE *_raw;
+
 // interposed ALSA function
 snd_pcm_sframes_t snd_pcm_writei(
   snd_pcm_t *pcm,
   const void *buffer,
   snd_pcm_uframes_t size
 ) {
-  static FILE *raw;
-  if (!raw) {
-    raw = fopen("capsule.rawaudio", "wb");
-    capsule::Ensure("opened raw", !!raw);
-  }
-
   capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_writei, "snd_pcm_writei");
-  capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_frames_to_bytes, "snd_pcm_frames_to_bytes");
 
   auto ret = capsule::alsa::snd_pcm_writei(pcm, buffer, size);
   capsule::Log("snd_pcm_writei: %d frames written", (int) ret);
 
-  auto bytes = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(ret));
-  capsule::Log("snd_pcm_writei: ...that's %" PRIdS " bytes", bytes);
-
-  fwrite(buffer, static_cast<size_t>(bytes), 1, raw);
+  {
+    if (!_raw) {
+      _raw = fopen("capsule.rawaudio", "wb");
+      capsule::Ensure("opened raw", !!_raw);
+    }
+    capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_frames_to_bytes, "snd_pcm_frames_to_bytes");
+    auto bytes = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(ret));
+    capsule::Log("snd_pcm_writei: ...that's %" PRIdS " bytes", bytes);
+    fwrite(buffer, static_cast<size_t>(bytes), 1, _raw);
+  }
 
   return ret;
 }
@@ -152,6 +168,57 @@ int snd_async_add_pcm_handler(
 
   auto ret = capsule::alsa::snd_async_add_pcm_handler(handler, pcm, callback, private_data);
   capsule::Log("snd_async_add_pcm_handler: ret %d, handler address = %p", ret, *handler);
+  return ret;
+}
+
+static const snd_pcm_channel_area_t *_last_areas = nullptr;
+
+// interposed ALSA function
+int snd_pcm_mmap_begin(
+  snd_pcm_t *pcm,
+  const snd_pcm_channel_area_t **areas,
+  snd_pcm_uframes_t *offset,
+  snd_pcm_uframes_t *frames
+) {
+  capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_mmap_begin, "snd_pcm_mmap_begin");
+
+  capsule::Log("snd_pcm_mmap_begin: input offset %d, input frames %d",
+    (int) *offset, (int) *frames);
+  auto ret = capsule::alsa::snd_pcm_mmap_begin(pcm, areas, offset, frames);
+  capsule::Log("snd_pcm_mmap_begin: ret %d, offset %d, frames %d", (int) ret,
+    (int) *offset, (int) *frames);
+  if (ret == 0) {
+    capsule::Log("snd_pcm_mmap_begin: area first: %u, step %u", areas[0]->first, areas[0]->step);
+    _last_areas = *areas;
+  }
+  return ret;
+}
+
+// interposed ALSA function
+snd_pcm_sframes_t snd_pcm_mmap_commit(
+  snd_pcm_t *pcm,
+  snd_pcm_uframes_t offset,
+  snd_pcm_uframes_t frames
+) {
+  capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_mmap_commit, "snd_pcm_mmap_commit");
+
+  if (_last_areas) {
+    if (!_raw) {
+      _raw = fopen("capsule.rawaudio", "wb");
+      capsule::Ensure("opened raw", !!_raw);
+    }
+    capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_frames_to_bytes, "snd_pcm_frames_to_bytes");
+    auto bytes = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(frames));
+    auto byte_offset = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(offset));
+    capsule::Log("snd_pcm_mmap_commit: ...that's %" PRIdS " bytes", bytes);
+    auto area = _last_areas[0];
+    auto buffer = reinterpret_cast<uint8_t*>(area.addr) + (area.first / 8) + byte_offset;
+    fwrite(reinterpret_cast<void*>(buffer), static_cast<size_t>(bytes), 1, _raw);
+  }
+
+  auto ret = capsule::alsa::snd_pcm_mmap_commit(pcm, offset, frames);
+  capsule::Log("snd_pcm_mmap_commit: ret %d, offset %d, frames %d", (int) ret,
+    (int) offset, (int) frames);
   return ret;
 }
 
