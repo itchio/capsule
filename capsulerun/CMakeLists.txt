@@ -31,6 +31,7 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/encoder.cc
   ${capsulerun_SOURCE_DIR}/main_loop.cc
   ${capsulerun_SOURCE_DIR}/video_receiver.cc
+  ${capsulerun_SOURCE_DIR}/audio_intercept_receiver.cc
   ${capsulerun_SOURCE_DIR}/session.cc
   ${capsulerun_SOURCE_DIR}/connection.cc
   ${capsulerun_SOURCE_DIR}/fps_counter.cc

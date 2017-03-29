@@ -19,24 +19,50 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#pragma once
+#include "audio_intercept_receiver.h"
 
-#include "encoder.h"
+#include "logging.h"
 
 namespace capsule {
 namespace audio {
 
-class AudioReceiver {
-  public:
-    virtual ~AudioReceiver() {};
+AudioInterceptReceiver::AudioInterceptReceiver(Connection *conn, const messages::AudioSetup &as) {
+  conn_ = conn;
 
-    virtual int ReceiveFormat(encoder::AudioFormat *afmt) = 0;
-    virtual void *ReceiveFrames(int *frames_received) = 0;
-    virtual void FramesCommitted(int64_t, int64_t) {
-      // muffin
-    };
-    virtual void Stop() = 0;
-};
+  Log("Got audio intercept! %d channels, %d rate, sample format %d",
+    as.channels(),
+    as.rate(),
+    as.sample_fmt()
+  );
+  Log("shm area is %d bytes at %s",
+    as.shmem()->size(),
+    as.shmem()->path()->c_str()
+  );
+}
 
-} // namespace audio
-} // namespace capsule
+AudioInterceptReceiver::~AudioInterceptReceiver() {
+  // stub
+}
+
+int AudioInterceptReceiver::ReceiveFormat(encoder::AudioFormat *afmt) {
+  // stub
+  afmt->channels = 0;
+  return -1;
+}
+
+void *AudioInterceptReceiver::ReceiveFrames(int *frames_received) {
+  // stub
+  *frames_received = 0;
+  return nullptr;
+}
+
+void AudioInterceptReceiver::FramesCommitted(int64_t offset, int64_t frames) {
+  Log("frames committed: %d offset, %d frames", offset, frames);
+}
+
+void AudioInterceptReceiver::Stop() {
+  // stub
+}
+
+}
+}

@@ -24,6 +24,7 @@
 #include <microprofile.h>
 
 #include "logging.h"
+#include "audio_intercept_receiver.h"
 
 MICROPROFILE_DEFINE(MainLoopMain, "MainLoop", "Main", 0xff0000);
 MICROPROFILE_DEFINE(MainLoopCycle, "MainLoop", "Cycle", 0xff00ff38);
@@ -175,15 +176,7 @@ void MainLoop::StartSession (const messages::VideoSetup *vs) {
   } else {
     auto as = vs->audio();
     if (as) {
-      Log("Got audio intercept! %d channels, %d rate, sample format %d",
-        as->channels(),
-        as->rate(),
-        as->sample_fmt()
-      );
-      Log("shm area is %d bytes at %s",
-        as->shmem()->size(),
-        as->shmem()->path()->c_str()
-      );
+      audio = new audio::AudioInterceptReceiver(conn_, *as);
     } else if (audio_receiver_factory_) {
       Log("No audio intercept, trying factory");
       audio = audio_receiver_factory_();

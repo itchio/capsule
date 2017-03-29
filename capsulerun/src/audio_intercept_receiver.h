@@ -21,56 +21,28 @@
 
 #pragma once
 
-#include <thread>
-#include <mutex>
+#include <capsule/messages_generated.h>
 
-#include "../audio_receiver.h"
-#include "../encoder.h"
-#include "pulse_dynamic.h"
+#include "audio_receiver.h"
+#include "connection.h"
+#include "encoder.h"
 
 namespace capsule {
 namespace audio {
 
-static const int kAudioNbBuffers = 64;
-static const int kAudioNbSamples = 128;
-
-enum BufferState {
-  kBufferStateAvailable = 0,
-  kBufferStateCommitted,
-  kBufferStateProcessing,
-};
-
-class PulseReceiver : public AudioReceiver {
+class AudioInterceptReceiver : public AudioReceiver {
   public:
-    PulseReceiver();
-    virtual ~PulseReceiver() override;
+    AudioInterceptReceiver(Connection *conn, const messages::AudioSetup &as);
+    virtual ~AudioInterceptReceiver() override;
 
+    virtual void FramesCommitted(int64_t offset, int64_t frames) override;
     virtual int ReceiveFormat(encoder::AudioFormat *afmt) override;
     virtual void *ReceiveFrames(int *frames_received) override;
     virtual void Stop() override;
 
   private:
-    void ReadLoop();
-    bool ReadFromPa();
-
-    encoder::AudioFormat afmt_;
-    pa_simple *ctx_ = nullptr;
-
-    uint8_t *in_buffer_ = nullptr;
-
-    uint8_t *buffers_ = nullptr;
-    size_t buffer_size_;
-    int buffer_state_[kAudioNbBuffers];
-    int commit_index_ = 0;
-    int process_index_ = 0;
-
-    std::thread *pa_thread_ = nullptr;
-    std::mutex buffer_mutex_;
-    std::mutex pa_mutex_;
-
-    bool overrun_ = false;
-    bool initialized_ = false;
+    Connection *conn_ = nullptr;
 };
 
-} // namespace audio
-} // namespace capsule
+}
+}
