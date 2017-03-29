@@ -10,8 +10,6 @@ set(libcapsule_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/src)
 set(capsulerun_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 set(capsulerun_INCLUDE_DIRS SYSTEM)
 
-find_package(ALSA REQUIRED)
-
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/src)
 set(argparse_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../argparse)
 
@@ -23,7 +21,6 @@ include_directories(
   ${microprofile_INCLUDE_DIR}
   ${argparse_INCLUDE_DIR}
   ${lab_INCLUDE_DIR}
-  ${ALSA_INCLUDE_DIR}
 )
 
 set(capsulerun_SRC

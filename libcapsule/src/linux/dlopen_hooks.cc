@@ -50,13 +50,19 @@ void *NakedOpen(const char* path, int flags) {
 extern "C" {
 
 void* dlopen (const char *filename, int flag) {
+  static bool faked_alsa = false;
+  static bool faked_gl = false;
+
   if (filename != nullptr && lab::strings::CContains(filename, "libGL.so.1")) {
     capsule::gl::LoadOpengl(filename);
 
     if (lab::strings::CEquals(filename, "libGL.so.1")) {
       // load libGL symbols into our space
       capsule::dl::NakedOpen(filename, flag);
-      capsule::Log("dlopen: faking libGL (for %s)", filename);
+      if (!faked_gl) {
+        faked_gl = true;
+        capsule::Log("dlopen: faking libGL (for %s)", filename);
+      }
       // then return our own space, so our intercepts still work
       return capsule::dl::NakedOpen(nullptr, RTLD_NOW|RTLD_LOCAL);
     } else {
@@ -68,7 +74,10 @@ void* dlopen (const char *filename, int flag) {
   } else if (filename != nullptr && lab::strings::CContains(filename, "libasound.so.2")) {
     // load libasound into our space
     capsule::dl::NakedOpen(filename, flag);
-    capsule::Log("dlopen: faking libasound (for %s)", filename);
+    if (!faked_alsa) {
+      faked_alsa = true;
+      capsule::Log("dlopen: faking libasound (for %s)", filename);
+    }
     // then return our own space, so our intercepts still work
     return capsule::dl::NakedOpen(nullptr, RTLD_NOW|RTLD_LOCAL);
   } else {

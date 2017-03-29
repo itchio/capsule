@@ -37,6 +37,11 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
     ${libcapsule_SOURCE_DIR}/linux/gl_hooks.cc
     ${libcapsule_SOURCE_DIR}/linux/alsa_hooks.cc
   )
+
+  find_package(ALSA REQUIRED)
+  include_directories(
+    ${ALSA_INCLUDE_DIR}
+  )
 endif()
 
 if(APPLE)
