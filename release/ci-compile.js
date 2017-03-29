@@ -125,14 +125,6 @@ function ci_compile_linux (arch) {
     $.sh(`mkdir -p compile-artifacts/${osarch}`)
 
     $($.sh(`cp -rf ${spec.dir}/dist/* compile-artifacts/${osarch}/`))
-
-    const libs = $.get_output('ldd build/capsulerun/capsulerun | grep -E "lib(av|sw)" | cut -d " " -f 1 | sed -E "s/^[[:space:]]*//g"').trim().split('\n')
-    for (const lib of libs) {
-      if (lib.length === 0) {
-        continue
-      }
-      $($.sh(`cp -f ${spec.prefix}/lib/${lib} compile-artifacts/${osarch}/`))
-    }
   }
 }
 
