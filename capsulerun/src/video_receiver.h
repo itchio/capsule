@@ -53,17 +53,17 @@ class VideoReceiver {
     void Stop();
 
   private:
-    Connection *conn_;
+    Connection *conn_ = nullptr;
     encoder::VideoFormat vfmt_;
-    shoom::Shm *shm_;
+    shoom::Shm *shm_ = nullptr;
 
     LockingQueue<FrameInfo> queue_;
 
-    int num_frames_;
-    size_t frame_size_;
-    int commit_index_;
-    char *buffer_;
-    int *buffer_state_;
+    int num_frames_ = 0;
+    size_t frame_size_ = 0;
+    int commit_index_ = 0;
+    char *buffer_ = nullptr;
+    int *buffer_state_ = nullptr;
     std::mutex buffer_mutex_;
 
     bool stopped_ = false;

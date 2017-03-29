@@ -44,7 +44,14 @@ class AudioInterceptReceiver : public AudioReceiver {
   private:
     Connection *conn_ = nullptr;
     encoder::AudioFormat afmt_;
-    shoom::Shm *shm_;
+    shoom::Shm *shm_ = nullptr;
+
+    int num_frames_ = 0;
+    size_t frame_size_ = 0;
+    int commit_index_ = 0;
+    int sent_index_ = 0;
+    int processed_index_ = 0;
+    char *buffer_ = nullptr;
 
     bool initialized_ = false;
 };

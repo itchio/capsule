@@ -267,12 +267,13 @@ void WriteAudioFrames(char *data, size_t frames) {
         Log("not enough size available in audio_shm, skipping");
     } else {
         Log("putting %" PRIdS " frames", frames);
-        memcpy(audio_shm->Data(), data, needed_size);
+        char *dst = (char*) audio_shm->Data() + audio_shm_committed_offset;
+        memcpy(dst, data, needed_size);
 
         flatbuffers::FlatBufferBuilder builder(64);
         auto afc = messages::CreateAudioFramesCommitted(
             builder,
-            audio_shm_committed_offset,
+            audio_shm_committed_offset / audio_frame_size,
             frames
         );
 

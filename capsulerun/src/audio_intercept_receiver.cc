@@ -59,6 +59,14 @@ AudioInterceptReceiver::AudioInterceptReceiver(Connection *conn, const messages:
 
   shm_ = shm;
 
+  size_t sample_size = (afmt_.samplewidth / 8);
+  frame_size_ = afmt_.channels * sample_size;
+
+  int64_t buffered_seconds = 4;
+  num_frames_ = afmt_.samplerate * buffered_seconds;
+
+  buffer_ = (char*) calloc(num_frames_, frame_size_);
+
   initialized_ = true;
 }
 
@@ -78,14 +86,37 @@ int AudioInterceptReceiver::ReceiveFormat(encoder::AudioFormat *afmt) {
   return 0;
 }
 
+void AudioInterceptReceiver::FramesCommitted(int64_t offset, int64_t frames) {
+  Log("AudioInterceptReceiver: frames committed: %d offset, %d frames", offset, frames);
+
+  size_t avail_frames = num_frames_ - commit_index_;
+  if (avail_frames > 0 && (size_t) frames <= avail_frames) {
+    Log("AudioInterceptReceiver: storing %d frames (shm size = %" PRIdS ")", frames, shm_->Size());
+    char *src = (char*) shm_->Data() + (offset * frame_size_);
+    char *dst = buffer_ + (commit_index_ * frame_size_);
+    memcpy(dst, src, frames * frame_size_);
+
+    commit_index_ += frames;
+  } else {
+    Log("AudioInterceptReceiver: no space for frames");
+  }
+}
+
 void *AudioInterceptReceiver::ReceiveFrames(int *frames_received) {
   // stub
   *frames_received = 0;
-  return nullptr;
-}
 
-void AudioInterceptReceiver::FramesCommitted(int64_t offset, int64_t frames) {
-  Log("AudioInterceptReceiver: frames committed: %d offset, %d frames", offset, frames);
+  if (sent_index_ < commit_index_) {
+    size_t avail_frames = commit_index_ - sent_index_;
+    *frames_received = avail_frames;
+    Log("AudioInterceptReceiver: receiving %" PRIdS " frames", avail_frames);
+
+    char *ret = buffer_ + (sent_index_ * frame_size_);
+    sent_index_ += avail_frames;
+    return ret;
+  }
+
+  return nullptr;
 }
 
 void AudioInterceptReceiver::Stop() {
