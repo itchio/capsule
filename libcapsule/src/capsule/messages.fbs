@@ -41,6 +41,8 @@ union Message {
     VideoSetup,
     VideoFrameCommitted,
     VideoFrameProcessed,
+    AudioFramesCommitted,
+    AudioFramesProcessed,
 }
 
 table Packet {

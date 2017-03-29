@@ -22,6 +22,7 @@
 #pragma once
 
 #include <lab/types.h>
+#include <capsule/messages_generated.h>
 
 namespace capsule {
 namespace capture {
@@ -38,6 +39,9 @@ struct State {
   bool saw_dxgi;
 
   bool has_audio_intercept;
+  messages::SampleFmt audio_intercept_format;
+  int audio_intercept_rate;
+  int audio_intercept_channels;
 
   bool active;
   Settings settings;
@@ -58,7 +62,7 @@ void Stop();
 int64_t FrameTimestamp();
 
 void SawBackend(Backend backend);
-void HasAudioIntercept();
+void HasAudioIntercept(messages::SampleFmt format, int rate, int channels);
 State *GetState();
 
 } // namespace capture

@@ -153,10 +153,13 @@ void SawBackend(Backend backend) {
   }
 }
 
-void HasAudioIntercept() {
+void HasAudioIntercept(messages::SampleFmt format, int rate, int channels) {
   if (!state.has_audio_intercept) {
     Log("Has audio intercept!");
     state.has_audio_intercept = true;
+    state.audio_intercept_format = format;
+    state.audio_intercept_rate = rate;
+    state.audio_intercept_channels = channels;
   }
 }
 

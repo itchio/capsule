@@ -27,6 +27,7 @@
 #include "../logging.h"
 #include "../ensure.h"
 #include "../capture.h"
+#include "../io.h"
 #include "dlopen_hooks.h"
 
 // #define DebugLog(...) capsule::Log(__VA_ARGS__)
@@ -86,6 +87,31 @@ typedef snd_pcm_sframes_t (*snd_pcm_mmap_commit_t)(
 );
 static snd_pcm_mmap_commit_t snd_pcm_mmap_commit = nullptr;
 
+typedef int (*snd_pcm_hw_params_current_t)(
+  snd_pcm_t *pcm,
+  snd_pcm_hw_params_t *params
+);
+static snd_pcm_hw_params_current_t snd_pcm_hw_params_current;
+
+typedef int (*snd_pcm_hw_params_get_format_t)(
+  snd_pcm_hw_params_t *params,
+  snd_pcm_format_t *val
+);
+static snd_pcm_hw_params_get_format_t snd_pcm_hw_params_get_format;
+
+typedef int (*snd_pcm_hw_params_get_channels_t)(
+  snd_pcm_hw_params_t *params,
+  unsigned int *val
+);
+static snd_pcm_hw_params_get_channels_t snd_pcm_hw_params_get_channels;
+
+typedef int (*snd_pcm_hw_params_get_rate_t)(
+  snd_pcm_hw_params_t *params,
+  unsigned int *val,
+  int *dir
+);
+static snd_pcm_hw_params_get_rate_t snd_pcm_hw_params_get_rate;
+
 static struct AlsaState {
   bool seen_write;
   bool seen_callback;
@@ -97,35 +123,6 @@ enum AlsaMethod {
   kAlsaMethodCallback,
   kAlsaMethodMmap,
 };
-
-void SawMethod(AlsaMethod method) {
-  switch (method) {
-    case kAlsaMethodWrite: {
-      if (!state.seen_write) {
-        capsule::Log("ALSA: saw write method");
-        state.seen_write = true;
-        capsule::capture::HasAudioIntercept();
-      }
-      break;
-    }
-    case kAlsaMethodCallback: {
-      if (!state.seen_callback) {
-        capsule::Log("ALSA: saw callback method");
-        state.seen_callback = true;
-        capsule::capture::HasAudioIntercept();
-      }
-      break;
-    }
-    case kAlsaMethodMmap: {
-      if (!state.seen_mmap) {
-        capsule::Log("ALSA: saw mmap method");
-        state.seen_mmap = true;
-        capsule::capture::HasAudioIntercept();
-      }
-      break;
-    }
-  }
-}
 
 void EnsureSymbol(void **ptr, const char *name) {
   static void* handle = nullptr;
@@ -141,6 +138,140 @@ void EnsureSymbol(void **ptr, const char *name) {
 
   *ptr = dlsym(handle, name);
   Ensure(name, !!*ptr);
+}
+
+const char *FormatName(snd_pcm_format_t format) {
+#define ALSA_FORMAT_CASE(fmt) case (fmt): return #fmt;
+  switch (format) {
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_UNKNOWN)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S8)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U8)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S16_LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S16_BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U16_LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U16_BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S24_LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S24_BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U24_LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U24_BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S32_LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S32_BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U32_LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U32_BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_FLOAT_LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_FLOAT_BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_FLOAT64_LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_FLOAT64_BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_IEC958_SUBFRAME_LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_IEC958_SUBFRAME_BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_MU_LAW)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_A_LAW)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_IMA_ADPCM)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_MPEG)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_GSM)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_SPECIAL)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S24_3LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S24_3BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U24_3LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U24_3BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S20_3LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S20_3BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U20_3LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U20_3BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S18_3LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_S18_3BE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U18_3LE)
+    ALSA_FORMAT_CASE(SND_PCM_FORMAT_U18_3BE)
+    // ALSA_FORMAT_CASE(SND_PCM_FORMAT_S16)
+    // ALSA_FORMAT_CASE(SND_PCM_FORMAT_U16)
+    // ALSA_FORMAT_CASE(SND_PCM_FORMAT_S24)
+    // ALSA_FORMAT_CASE(SND_PCM_FORMAT_U24)
+    // ALSA_FORMAT_CASE(SND_PCM_FORMAT_S32)
+    // ALSA_FORMAT_CASE(SND_PCM_FORMAT_U32)
+    // ALSA_FORMAT_CASE(SND_PCM_FORMAT_FLOAT)
+    // ALSA_FORMAT_CASE(SND_PCM_FORMAT_FLOAT64)
+    // ALSA_FORMAT_CASE(SND_PCM_FORMAT_IEC958_SUBFRAME)
+    default: return "<not known by FormatName>";
+  }
+}
+
+void NotifyIntercept(snd_pcm_t *pcm) {
+  snd_pcm_hw_params_t *params;
+  snd_pcm_hw_params_alloca(&params);
+
+  alsa::EnsureSymbol((void**) &alsa::snd_pcm_hw_params_current, "snd_pcm_hw_params_current");
+  int ret = alsa::snd_pcm_hw_params_current(pcm, params);
+  if (ret != 0) {
+    Log("ALSA: Couldn't retrieve HW params, error %d", ret);
+    return;
+  }
+
+  alsa::EnsureSymbol((void**) &alsa::snd_pcm_hw_params_get_format, "snd_pcm_hw_params_get_format");
+  alsa::EnsureSymbol((void**) &alsa::snd_pcm_hw_params_get_channels, "snd_pcm_hw_params_get_channels");
+  alsa::EnsureSymbol((void**) &alsa::snd_pcm_hw_params_get_rate, "snd_pcm_hw_params_get_rate");
+
+  snd_pcm_format_t format;  
+  ret = alsa::snd_pcm_hw_params_get_format(params, &format);
+  if (ret != 0) {
+    Log("ALSA: Couldn't retrieve HW params format, error %d", ret);
+    return;
+  }
+
+  unsigned int channels = 0;
+  ret = alsa::snd_pcm_hw_params_get_channels(params, &channels);
+  if (ret != 0) {
+    Log("ALSA: Couldn't retrieve HW params channels, error %d", ret);
+    return;
+  }
+
+  unsigned int rate;
+  int dir;
+  ret = alsa::snd_pcm_hw_params_get_rate(params, &rate, &dir);
+  if (ret != 0) {
+    Log("ALSA: Couldn't retrieve HW params rate, error %d", ret);
+    return;
+  }
+
+  Log("ALSA config: %s format, %d channels, %d rate",
+    FormatName(format), channels, rate
+  );
+
+  if (format != SND_PCM_FORMAT_FLOAT_LE) {
+    Log("ALSA: format isn't FLOAT_LE, we don't handle that yet");
+    return;
+  }
+
+  // TODO: ensure that interleaved (or handle planar)
+  capture::HasAudioIntercept(messages::SampleFmt_F32LE, rate, channels);
+}
+
+void SawMethod(snd_pcm_t *pcm, AlsaMethod method) {
+  switch (method) {
+    case kAlsaMethodWrite: {
+      if (!state.seen_write) {
+        capsule::Log("ALSA: saw write method");
+        state.seen_write = true;
+        NotifyIntercept(pcm);
+      }
+      break;
+    }
+    case kAlsaMethodCallback: {
+      if (!state.seen_callback) {
+        capsule::Log("ALSA: saw callback method");
+        state.seen_callback = true;
+        NotifyIntercept(pcm);
+      }
+      break;
+    }
+    case kAlsaMethodMmap: {
+      if (!state.seen_mmap) {
+        capsule::Log("ALSA: saw mmap method");
+        state.seen_mmap = true;
+        NotifyIntercept(pcm);
+      }
+      break;
+    }
+  }
 }
 
 } // namespace alsa
@@ -168,7 +299,7 @@ snd_pcm_sframes_t snd_pcm_writen(
   void **bufs,
   snd_pcm_uframes_t size
 ) {
-  capsule::alsa::SawMethod(capsule::alsa::kAlsaMethodWrite);
+  capsule::alsa::SawMethod(pcm, capsule::alsa::kAlsaMethodWrite);
   capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_writen, "snd_pcm_writen");
 
   auto ret = capsule::alsa::snd_pcm_writen(pcm, bufs, size);
@@ -184,7 +315,7 @@ snd_pcm_sframes_t snd_pcm_writei(
   const void *buffer,
   snd_pcm_uframes_t size
 ) {
-  capsule::alsa::SawMethod(capsule::alsa::kAlsaMethodWrite);
+  capsule::alsa::SawMethod(pcm, capsule::alsa::kAlsaMethodWrite);
   capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_writei, "snd_pcm_writei");
 
   auto ret = capsule::alsa::snd_pcm_writei(pcm, buffer, size);
@@ -211,7 +342,7 @@ int snd_async_add_pcm_handler(
   snd_async_callback_t callback,
   void *private_data
 ) {
-  capsule::alsa::SawMethod(capsule::alsa::kAlsaMethodCallback);
+  capsule::alsa::SawMethod(pcm, capsule::alsa::kAlsaMethodCallback);
   capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_async_add_pcm_handler, "snd_async_add_pcm_handler");
 
   auto ret = capsule::alsa::snd_async_add_pcm_handler(handler, pcm, callback, private_data);
@@ -228,7 +359,7 @@ int snd_pcm_mmap_begin(
   snd_pcm_uframes_t *offset,
   snd_pcm_uframes_t *frames
 ) {
-  capsule::alsa::SawMethod(capsule::alsa::kAlsaMethodMmap);
+  capsule::alsa::SawMethod(pcm, capsule::alsa::kAlsaMethodMmap);
   capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_mmap_begin, "snd_pcm_mmap_begin");
 
   DebugLog("snd_pcm_mmap_begin: input offset %d, input frames %d",
@@ -252,17 +383,25 @@ snd_pcm_sframes_t snd_pcm_mmap_commit(
   capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_mmap_commit, "snd_pcm_mmap_commit");
 
   if (_last_areas) {
-    if (!_raw) {
-      _raw = fopen("capsule.rawaudio", "wb");
-      capsule::Ensure("opened raw", !!_raw);
+    // if (!_raw) {
+    //   _raw = fopen("capsule.rawaudio", "wb");
+    //   capsule::Ensure("opened raw", !!_raw);
+    // }
+    // capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_frames_to_bytes, "snd_pcm_frames_to_bytes");
+    // auto bytes = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(frames));
+    // auto byte_offset = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(offset));
+    // DebugLog("snd_pcm_mmap_commit: ...that's %" PRIdS " bytes", bytes);
+    // auto area = _last_areas[0];
+    // auto buffer = reinterpret_cast<uint8_t*>(area.addr) + (area.first / 8) + byte_offset;
+    // fwrite(reinterpret_cast<void*>(buffer), static_cast<size_t>(bytes), 1, _raw);
+
+    if (capsule::capture::Active()) {
+      capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_frames_to_bytes, "snd_pcm_frames_to_bytes");
+      auto byte_offset = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(offset));
+      auto area = _last_areas[0];
+      auto buffer = reinterpret_cast<uint8_t*>(area.addr) + (area.first / 8) + byte_offset;
+      capsule::io::WriteAudioFrames((char*) buffer, (size_t) frames);
     }
-    capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_frames_to_bytes, "snd_pcm_frames_to_bytes");
-    auto bytes = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(frames));
-    auto byte_offset = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(offset));
-    DebugLog("snd_pcm_mmap_commit: ...that's %" PRIdS " bytes", bytes);
-    auto area = _last_areas[0];
-    auto buffer = reinterpret_cast<uint8_t*>(area.addr) + (area.first / 8) + byte_offset;
-    fwrite(reinterpret_cast<void*>(buffer), static_cast<size_t>(bytes), 1, _raw);
   }
 
   auto ret = capsule::alsa::snd_pcm_mmap_commit(pcm, offset, frames);

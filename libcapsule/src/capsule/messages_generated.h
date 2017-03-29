@@ -56,8 +56,10 @@ enum Message {
   Message_VideoSetup = 4,
   Message_VideoFrameCommitted = 5,
   Message_VideoFrameProcessed = 6,
+  Message_AudioFramesCommitted = 7,
+  Message_AudioFramesProcessed = 8,
   Message_MIN = Message_NONE,
-  Message_MAX = Message_VideoFrameProcessed
+  Message_MAX = Message_AudioFramesProcessed
 };
 
 inline const char **EnumNamesMessage() {
@@ -69,6 +71,8 @@ inline const char **EnumNamesMessage() {
     "VideoSetup",
     "VideoFrameCommitted",
     "VideoFrameProcessed",
+    "AudioFramesCommitted",
+    "AudioFramesProcessed",
     nullptr
   };
   return names;
@@ -107,6 +111,14 @@ template<> struct MessageTraits<VideoFrameProcessed> {
   static const Message enum_value = Message_VideoFrameProcessed;
 };
 
+template<> struct MessageTraits<AudioFramesCommitted> {
+  static const Message enum_value = Message_AudioFramesCommitted;
+};
+
+template<> struct MessageTraits<AudioFramesProcessed> {
+  static const Message enum_value = Message_AudioFramesProcessed;
+};
+
 bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Message type);
 bool VerifyMessageVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
 
@@ -140,6 +152,12 @@ struct Packet FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const VideoFrameProcessed *message_as_VideoFrameProcessed() const {
     return (message_type() == Message_VideoFrameProcessed)? static_cast<const VideoFrameProcessed *>(message()) : nullptr;
   }
+  const AudioFramesCommitted *message_as_AudioFramesCommitted() const {
+    return (message_type() == Message_AudioFramesCommitted)? static_cast<const AudioFramesCommitted *>(message()) : nullptr;
+  }
+  const AudioFramesProcessed *message_as_AudioFramesProcessed() const {
+    return (message_type() == Message_AudioFramesProcessed)? static_cast<const AudioFramesProcessed *>(message()) : nullptr;
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint8_t>(verifier, VT_MESSAGE_TYPE) &&
@@ -171,6 +189,14 @@ template<> inline const VideoFrameCommitted *Packet::message_as<VideoFrameCommit
 
 template<> inline const VideoFrameProcessed *Packet::message_as<VideoFrameProcessed>() const {
   return message_as_VideoFrameProcessed();
+}
+
+template<> inline const AudioFramesCommitted *Packet::message_as<AudioFramesCommitted>() const {
+  return message_as_AudioFramesCommitted();
+}
+
+template<> inline const AudioFramesProcessed *Packet::message_as<AudioFramesProcessed>() const {
+  return message_as_AudioFramesProcessed();
 }
 
 struct PacketBuilder {
@@ -805,6 +831,14 @@ inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Mess
     }
     case Message_VideoFrameProcessed: {
       auto ptr = reinterpret_cast<const VideoFrameProcessed *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_AudioFramesCommitted: {
+      auto ptr = reinterpret_cast<const AudioFramesCommitted *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_AudioFramesProcessed: {
+      auto ptr = reinterpret_cast<const AudioFramesProcessed *>(obj);
       return verifier.VerifyTable(ptr);
     }
     default: return false;

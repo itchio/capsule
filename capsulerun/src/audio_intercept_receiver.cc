@@ -57,7 +57,7 @@ void *AudioInterceptReceiver::ReceiveFrames(int *frames_received) {
 }
 
 void AudioInterceptReceiver::FramesCommitted(int64_t offset, int64_t frames) {
-  Log("frames committed: %d offset, %d frames", offset, frames);
+  Log("AudioInterceptReceiver: frames committed: %d offset, %d frames", offset, frames);
 }
 
 void AudioInterceptReceiver::Stop() {

@@ -49,6 +49,8 @@ int next_frame_index = 0;
 
 shoom::Shm *shm;
 shoom::Shm *audio_shm;
+size_t audio_shm_committed_offset;
+size_t audio_shm_processed_offset;
 
 static bool IsFrameLocked(int i) {
     std::lock_guard<std::mutex> lock(frame_locked_mutex);
@@ -121,9 +123,17 @@ void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pit
     if (state->has_audio_intercept) {
         Log("has audio intercept!");
 
-        int64_t audio_shmem_size = 4096;
+        // let's say we want a 4 second buffer
+        int64_t seconds = 4;
+        // assuming F32LE
+        int64_t sample_size = 4;
+
+        int64_t audio_shmem_size = sample_size * seconds * (int64_t) state->audio_intercept_rate * (int64_t) state->audio_intercept_channels;
         std::string audio_shmem_path = "capsule_audio.shm";
         audio_shm = new shoom::Shm(audio_shmem_path, static_cast<size_t>(audio_shmem_size));
+        audio_shm_committed_offset = 0;
+        audio_shm_processed_offset = (size_t) audio_shmem_size;
+
         int ret = audio_shm->Create();
         if (ret != shoom::kOK) {
             Log("Could not create audio shared memory area: code %d", ret);
@@ -137,9 +147,9 @@ void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pit
 
         audio_setup = messages::CreateAudioSetup(
             builder,
-            2,
-            messages::SampleFmt_F32LE,
-            44100,
+            state->audio_intercept_channels,
+            state->audio_intercept_format,
+            state->audio_intercept_rate,
             audio_shmem
         );
     }
@@ -233,6 +243,47 @@ void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size
     lab::packet::Fwrite(builder, out_file);
 
     next_frame_index = (next_frame_index + 1) % kNumBuffers;
+}
+
+void WriteAudioFrames(char *data, size_t frames) {
+    if (!audio_shm) {
+        Log("WriteAudioFrames called but no audio_shm, ignoring");
+        return;
+    }
+ 
+    // assuming F32LE   
+    size_t sample_size = 4;
+    // assuming stereo
+    size_t channels = 2;
+
+    size_t needed_size = sample_size * channels * frames;
+    size_t avail_size = audio_shm->Size() - audio_shm_committed_offset;
+
+    if (avail_size < needed_size) {
+        // stubby
+        Log("not enough size available in audio_shm, skipping");
+    } else {
+        Log("putting %" PRIdS " frames", frames);
+        memcpy(audio_shm->Data(), data, needed_size);
+
+        flatbuffers::FlatBufferBuilder builder(64);
+        auto afc = messages::CreateAudioFramesCommitted(
+            builder,
+            audio_shm_committed_offset,
+            frames
+        );
+
+        auto pkt = messages::CreatePacket(
+            builder,
+            messages::Message_AudioFramesCommitted,
+            afc.Union()
+        );
+
+        builder.Finish(pkt);
+        lab::packet::Fwrite(builder, out_file);
+
+        audio_shm_committed_offset += needed_size;
+    }
 }
 
 void WriteHotkeyPressed() {
