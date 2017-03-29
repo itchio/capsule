@@ -58,7 +58,7 @@ void* dlopen (const char *filename, int flag) {
 
     if (lab::strings::CEquals(filename, "libGL.so.1")) {
       // load libGL symbols into our space
-      capsule::dl::NakedOpen(filename, flag);
+      capsule::dl::NakedOpen(filename, RTLD_NOW|RTLD_GLOBAL);
       if (!faked_gl) {
         faked_gl = true;
         capsule::Log("dlopen: faking libGL (for %s)", filename);
@@ -73,7 +73,7 @@ void* dlopen (const char *filename, int flag) {
     }
   } else if (filename != nullptr && lab::strings::CContains(filename, "libasound.so.2")) {
     // load libasound into our space
-    capsule::dl::NakedOpen(filename, flag);
+    capsule::dl::NakedOpen(filename, RTLD_NOW|RTLD_GLOBAL);
     if (!faked_alsa) {
       faked_alsa = true;
       capsule::Log("dlopen: faking libasound (for %s)", filename);
