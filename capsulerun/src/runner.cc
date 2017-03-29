@@ -1,9 +1,29 @@
 
+/*
+ *  capsule - the game recording and overlay toolkit
+ *  Copyright (C) 2017, Amos Wenger
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details:
+ * https://github.com/itchio/capsule/blob/master/LICENSE
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+
 #include "runner.h"
 
 #include <string>
 
-#include "macros.h"
+#include "logging.h"
 #include "hotkey.h"
 
 namespace capsule {
@@ -14,19 +34,19 @@ void Runner::Run () {
   if (args_->exec) {
     process_ = executor_->LaunchProcess(args_);
     if (!process_) {
-      CapsuleLog("Couldn't start child, bailing out");
+      Log("Couldn't start child, bailing out");
       exit(127);
     }
 
-    CapsuleLog("Watching on child in the background");
+    Log("Watching on child in the background");
     wait_thread_ = new std::thread(&Runner::WaitForChild, this);
   }
 
-  CapsuleLog("Connecting pipe...");
+  Log("Connecting pipe...");
   conn_->Connect();
 
   if (!conn_->IsConnected()) {
-    CapsuleLog("Couldn't connect pipe, bailing out");
+    Log("Couldn't connect pipe, bailing out");
     exit(127);
   }
 
@@ -47,14 +67,14 @@ void Runner::WaitForChild () {
 
   if (fate.status == kProcessStatusExited) {
     if (fate.code == 0) {
-      CapsuleLog("Child exited gracefully");
+      Log("Child exited gracefully");
     } else {
-      CapsuleLog("Child exited with code %d", fate.code);
+      Log("Child exited with code %d", fate.code);
     }
   } else if (fate.status == kProcessStatusSignaled) {
-    CapsuleLog("Child killed by signal %d", fate.code);
+    Log("Child killed by signal %d", fate.code);
   } else if (fate.status == kProcessStatusUnknown) {
-    CapsuleLog("Child left in unknown state");
+    Log("Child left in unknown state");
   }
 
   if (!conn_->IsConnected()) {

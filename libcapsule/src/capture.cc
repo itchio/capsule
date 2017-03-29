@@ -1,4 +1,24 @@
 
+/*
+ *  capsule - the game recording and overlay toolkit
+ *  Copyright (C) 2017, Amos Wenger
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details:
+ * https://github.com/itchio/capsule/blob/master/LICENSE
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+
 #include "capture.h"
 
 #include <string.h>
@@ -11,6 +31,10 @@
 
 #include "logging.h"
 
+#if defined(LAB_WINDOWS)
+#include "windows/win_capture.h"
+#endif
+
 namespace capsule {
 namespace capture {
 
@@ -22,7 +46,7 @@ static std::chrono::time_point<std::chrono::steady_clock> first_ts;
 
 std::mutex state_mutex;
 
-State state = {0};
+static State state = {0};
 
 bool Active () {
   std::lock_guard<std::mutex> lock(state_mutex);
@@ -129,6 +153,10 @@ void SawBackend(Backend backend) {
   }
 }
 
+State *GetState() {
+  return &state;
+}
+
 void Start (Settings *settings) {
 
 #if defined(LAB_WINDOWS)
@@ -141,13 +169,13 @@ void Start (Settings *settings) {
         }
     } else {
         // try dc capture then
-        bool success = DcCaptureInit();
+        bool success = dc::Init();
         if (!success) {
-            Log("Cannot start capture: no capture method available")
+            Log("Cannot start capture: no capture method available");
             return;
         }
 
-        if (CaptureTryStart(settings)) {
+        if (TryStart(settings)) {
             Log("Started DC capture");
             return;
         } else {

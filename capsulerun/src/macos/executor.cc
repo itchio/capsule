@@ -1,4 +1,24 @@
 
+/*
+ *  capsule - the game recording and overlay toolkit
+ *  Copyright (C) 2017, Amos Wenger
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details:
+ * https://github.com/itchio/capsule/blob/master/LICENSE
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+
 #include "executor.h"
 
 #include <spawn.h> // posix_spawn
@@ -6,6 +26,8 @@
 
 #include <lab/paths.h>
 #include <lab/env.h>
+
+#include "../logging.h"
 
 namespace capsule {
 namespace macos {
@@ -17,7 +39,7 @@ void Process::Wait(ProcessFate *fate) {
   do {
     wait_result = waitpid(pid_, &child_status, 0);
     if (wait_result == -1) {
-      CapsuleLog("Could not wait on child (error %d): %s", wait_result, strerror(wait_result));
+      Log("Could not wait on child (error %d): %s", wait_result, strerror(wait_result));
       fate->status = kProcessStatusUnknown;
       fate->code = 127;
       return;
@@ -39,7 +61,7 @@ Process::~Process() {
 }
 
 Executor::Executor() {
-  // stub
+  // muffin
 }
 
 ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
@@ -53,9 +75,6 @@ ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
   std::string dyld_insert_var = "DYLD_INSERT_LIBRARIES=" + dyld_insert;
 
   std::string pipe_var = "CAPSULE_PIPE_PATH=" + std::string(args->pipe);
-  CapsuleLog("pipe_var: %s", pipe_var.c_str());
-  CapsuleLog("dyld_insert_var: %s", dyld_insert_var.c_str());
-
   char *env_additions[] = {
     const_cast<char *>(dyld_insert_var.c_str()),
     const_cast<char *>(pipe_var.c_str()),
@@ -74,10 +93,10 @@ ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
     child_environ
   );
   if (child_err != 0) {
-    CapsuleLog("Spawning child failed with error %d: %s", child_err, strerror(child_err));
+    Log("Spawning child failed with error %d: %s", child_err, strerror(child_err));
   }
 
-  CapsuleLog("PID %d given to %s", child_pid, args->exec);
+  Log("PID %d given to %s", child_pid, args->exec);
   return new Process(child_pid);
 }
 

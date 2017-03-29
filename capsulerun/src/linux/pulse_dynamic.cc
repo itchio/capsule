@@ -1,10 +1,30 @@
 
+/*
+ *  capsule - the game recording and overlay toolkit
+ *  Copyright (C) 2017, Amos Wenger
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details:
+ * https://github.com/itchio/capsule/blob/master/LICENSE
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+
 #include "pulse_dynamic.h"
 
 #include <dlfcn.h>
 #include <string.h>
 
-#include "../macros.h"
+#include "../logging.h"
 
 namespace capsule {
 namespace pulse {
@@ -36,7 +56,7 @@ bool Load() {
 #define PULSESYM(var, sym) { \
   var = reinterpret_cast<sym ## _t>(dlsym(handle, #sym));\
   if (! var) { \
-    CapsuleLog("Could not find PulseAudio function %s", #sym); \
+    Log("Could not find PulseAudio function %s", #sym); \
     return false; \
   } \
 }
@@ -46,7 +66,7 @@ bool Load() {
     handle = dlopen("libpulse-simple.so.0", RTLD_NOW);
   }
   if (!handle) {
-    CapsuleLog("Could not load libpulse-simple.so(.0)");
+    Log("Could not load libpulse-simple.so(.0)");
     return false;
   }
 
@@ -59,7 +79,7 @@ bool Load() {
     handle = dlopen("libpulse.so.0", RTLD_NOW);
   }
   if (!handle) {
-    CapsuleLog("Could not load libpulse.so(.0)");
+    Log("Could not load libpulse.so(.0)");
     return false;
   }
 
@@ -108,7 +128,7 @@ void StateCb(pa_context *ctx, void *userdata) {
     break;
   }
   case PA_CONTEXT_FAILED: {
-    CapsuleLog("Failed to connect to PulseAudio");
+    Log("Failed to connect to PulseAudio");
     auto ss = reinterpret_cast<SinkSeeker *>(userdata);
     MainloopQuit(ss->loop, 1);
     break;

@@ -1,5 +1,14 @@
 
+cmake_minimum_required(VERSION 2.8)
+
 project(lab)
+
+option(LAB_BUILD_TESTS "Build tests for lab" ON)
+
+if (LAB_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(test)
+endif()
 
 set (SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
@@ -21,3 +30,4 @@ if (${CMAKE_GENERATOR} MATCHES "Visual")
 else()
     target_compile_options(lab PRIVATE -Wall -Wno-missing-braces -std=c++11 -fPIC)
 endif()
+

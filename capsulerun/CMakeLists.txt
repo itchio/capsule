@@ -12,7 +12,6 @@ set(capsulerun_INCLUDE_DIRS SYSTEM)
 
 set(libcapsule_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../libcapsule/src)
 set(argparse_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../argparse)
-set(lab_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../lab/src)
 
 include_directories(
   ${shoom_INCLUDE_DIR}
@@ -33,12 +32,12 @@ set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/session.cc
   ${capsulerun_SOURCE_DIR}/connection.cc
   ${capsulerun_SOURCE_DIR}/fps_counter.cc
+  ${capsulerun_SOURCE_DIR}/logging.cc
 )
 
 if(WIN32)
   list(APPEND capsulerun_SRC
     ${capsulerun_SOURCE_DIR}/windows/wasapi_receiver.cc
-    ${capsulerun_SOURCE_DIR}/windows/quote.cc
     ${capsulerun_SOURCE_DIR}/windows/hotkey.cc
     ${capsulerun_SOURCE_DIR}/windows/executor.cc
   )
@@ -46,8 +45,6 @@ endif()
 
 if(APPLE)
   list(APPEND capsulerun_SRC
-    ${capsulerun_SOURCE_DIR}/macos/DDHotKeyCenter.m
-    ${capsulerun_SOURCE_DIR}/macos/DDHotKeyUtilities.m
     ${capsulerun_SOURCE_DIR}/macos/hotkey.mm
     ${capsulerun_SOURCE_DIR}/macos/executor.cc
   )

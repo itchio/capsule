@@ -1,4 +1,24 @@
 
+/*
+ *  capsule - the game recording and overlay toolkit
+ *  Copyright (C) 2017, Amos Wenger
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details:
+ * https://github.com/itchio/capsule/blob/master/LICENSE
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+
 #include "wasapi_receiver.h"
 
 #include <microprofile.h>
@@ -9,7 +29,7 @@
 // TODO: signal errors without exceptions
 #include <stdexcept>
 
-#include "../macros.h"
+#include "../logging.h"
 
 MICROPROFILE_DEFINE(WasapiReceiveFrames, "Wasapi", "WasapiReceiveFrames", 0xff00ff00);
 
@@ -67,7 +87,7 @@ WasapiReceiver::WasapiReceiver() {
   }
 
   // Print endpoint friendly name and endpoint ID.
-  CapsuleLog("WasapiReceiver: Capturing from: \"%S\"", var_name.pwszVal);
+  capsule::Log("WasapiReceiver: Capturing from: \"%S\"", var_name.pwszVal);
 
   PropVariantClear(&var_name);
   SafeRelease(props);
@@ -106,7 +126,7 @@ WasapiReceiver::WasapiReceiver() {
     throw std::runtime_error("Could not get buffer size");
   }
 
-  CapsuleLog("WasapiReceiver: Buffer frame count: %d", buffer_frame_count);
+  capsule::Log("WasapiReceiver: Buffer frame count: %d", buffer_frame_count);
 
   hr = audio_client_->GetService(
       IID_IAudioCaptureClient,
@@ -145,7 +165,7 @@ void *WasapiReceiver::ReceiveFrames(int *frames_received) {
   if (num_frames_received_ > 0) {
     hr = capture_client_->ReleaseBuffer(num_frames_received_);
     if (FAILED(hr)) {
-      CapsuleLog("WasapiReceiver: Could not release buffer: error %d (%x)\n", hr, hr);
+      capsule::Log("WasapiReceiver: Could not release buffer: error %d (%x)\n", hr, hr);
       stopped_ = true;
       *frames_received = 0;
       return nullptr;
@@ -167,7 +187,7 @@ void *WasapiReceiver::ReceiveFrames(int *frames_received) {
       num_frames_received_ = 0;
       return nullptr;
     } else {
-      CapsuleLog("WasapiReceiver: Could not get buffer: error %d (%x)\n", hr, hr);
+      capsule::Log("WasapiReceiver: Could not get buffer: error %d (%x)\n", hr, hr);
       stopped_ = true;
       *frames_received = 0;
       return nullptr;
@@ -184,7 +204,7 @@ void WasapiReceiver::Stop() {
 
   HRESULT hr = audio_client_->Stop();
   if (FAILED(hr)) {
-    CapsuleLog("WasapiReceiver: Could not stop audio client: error %d (%x)", hr, hr);
+    capsule::Log("WasapiReceiver: Could not stop audio client: error %d (%x)", hr, hr);
   }
   stopped_ = true;
 }

@@ -1,4 +1,24 @@
 
+/*
+ *  capsule - the game recording and overlay toolkit
+ *  Copyright (C) 2017, Amos Wenger
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details:
+ * https://github.com/itchio/capsule/blob/master/LICENSE
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+
 #pragma once
 
 #include <ctype.h>
@@ -13,7 +33,11 @@
 #include <d3d9.h>
 #include <DirectXMath.h>
 
-#include <capsule/constants.h>
+#include "../capsule/constants.h"
+#include "../logging.h"
+
+namespace capsule {
+namespace dxgi {
 
 // When logging, it's not very helpful to have long sequences of hex instead of
 // the actual names of the objects in question.
@@ -141,7 +165,7 @@ static std::string NameFromIid(IID id) {
 	return iidString;
 }
 
-static std::string NameFromDxgiFormat(DXGI_FORMAT format) {
+static std::string NameFromFormat(DXGI_FORMAT format) {
   if (format == DXGI_FORMAT_UNKNOWN                     ) return "UNKNOWN";
   if (format == DXGI_FORMAT_R32G32B32A32_TYPELESS       ) return "R32G32B32A32_TYPELESS";
   if (format == DXGI_FORMAT_R32G32B32A32_FLOAT          ) return "R32G32B32A32_FLOAT";
@@ -265,7 +289,7 @@ static std::string NameFromDxgiFormat(DXGI_FORMAT format) {
   return "<unrecognized format>";
 }
 
-static inline DXGI_FORMAT FixDxgiFormat(DXGI_FORMAT format) {
+static inline DXGI_FORMAT FixFormat(DXGI_FORMAT format) {
 	switch ((unsigned long)format) {
 		case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
 			return DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -276,19 +300,21 @@ static inline DXGI_FORMAT FixDxgiFormat(DXGI_FORMAT format) {
 	return format;
 }
 
-static inline capsule::PixFmt DxgiFormatToPixFmt(DXGI_FORMAT format) {
-  switch (FixDxgiFormat(format)) {
+static inline PixFmt FormatToPixFmt(DXGI_FORMAT format) {
+  switch (FixFormat(format)) {
     case DXGI_FORMAT_B8G8R8A8_UNORM:
-      return capsule::kPixFmtBgra;
+      return kPixFmtBgra;
     case DXGI_FORMAT_B8G8R8X8_UNORM:
-      return capsule::kPixFmtBgra;
+      return kPixFmtBgra;
     case DXGI_FORMAT_R8G8B8A8_UNORM:
-      return capsule::kPixFmtRgba;
+      return kPixFmtRgba;
     case DXGI_FORMAT_R10G10B10A2_UNORM:
-      return capsule::kPixFmtRgb10A2;
+      return kPixFmtRgb10A2;
     default:
-      CapsuleLog("Unsupported DXGI format %s", NameFromDxgiFormat(format).c_str());
-      return capsule::kPixFmtUnknown;
+      Log("Unsupported DXGI format %s", NameFromFormat(format).c_str());
+      return kPixFmtUnknown;
   }
 }
 
+} // namespace dxgi
+} // namespace capsule

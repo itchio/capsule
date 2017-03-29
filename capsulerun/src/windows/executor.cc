@@ -1,4 +1,24 @@
 
+/*
+ *  capsule - the game recording and overlay toolkit
+ *  Copyright (C) 2017, Amos Wenger
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details:
+ * https://github.com/itchio/capsule/blob/master/LICENSE
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+
 #include "executor.h"
 
 #include <NktHookLib.h>
@@ -9,9 +29,8 @@
 
 #include <string>
 
-#include "quote.h"
 #include "wasapi_receiver.h"
-#include "../macros.h"
+#include "../logging.h"
 
 namespace capsule {
 namespace windows {
@@ -48,17 +67,14 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
 
   ZeroMemory(&pi, sizeof(pi));  
 
-  wchar_t *executable_path_w;
-  lab::strings::ToWideChar(args->exec, &executable_path_w);
-
-  wchar_t *libcapsule_path_w;
-  lab::strings::ToWideChar(libcapsule_path.c_str(), &libcapsule_path_w);
+  auto executable_path_w = lab::strings::ToWide(std::string(args->exec));
+  auto libcapsule_path_w = lab::strings::ToWide(libcapsule_path);
 
   bool env_success = true;
   env_success &= lab::env::Set("CAPSULE_PIPE_PATH", std::string(args->pipe));
   env_success &= lab::env::Set("CAPSULE_LIBRARY_PATH", libcapsule_path);
   if (!env_success) {
-    CapsuleLog("Could not set environment variables for the child");
+    Log("Could not set environment variables for the child");
     return nullptr;
   }
 
@@ -66,26 +82,22 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
 
   std::wstring command_line_w;
   for (int i = 0; i < args->exec_argc; i++) {
-    wchar_t *arg;
-    // this "leaks" mem, but it's one time, so don't care
-    lab::strings::ToWideChar(args->exec_argv[i], &arg);
+    auto arg_w = lab::strings::ToWide(args->exec_argv[i]);
 
     if (first_arg) {
       first_arg = false;
     } else {
       command_line_w.append(L" ");
     }
-
-    std::wstring arg_w = arg;
-    ArgvQuote(arg_w, command_line_w, false);
+    lab::strings::ArgvQuote(arg_w, command_line_w, false);
   }
 
-  CapsuleLog("Launching '%S' with args '%S'", executable_path_w, command_line_w.c_str());
-  CapsuleLog("Injecting '%S'", libcapsule_path_w);
+  Log("Launching '%S' with args '%S'", executable_path_w, command_line_w.c_str());
+  Log("Injecting '%S'", libcapsule_path_w);
   const char* libcapsule_init_function_name = "CapsuleWindowsInit";
 
   DWORD err = NktHookLibHelpers::CreateProcessWithDllW(
-    executable_path_w, // applicationName
+    (LPCWSTR) executable_path_w.c_str(), // applicationName
     (LPWSTR) command_line_w.c_str(), // commandLine
     NULL, // processAttributes
     NULL, // threadAttributes
@@ -95,15 +107,15 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
     NULL, // currentDirectory
     &si, // startupInfo
     &pi, // processInfo
-    libcapsule_path_w, // dllName
+    (LPCWSTR) libcapsule_path_w.c_str(), // dllName
     NULL, // signalCompletedEvent
     libcapsule_init_function_name // initFunctionName
   );
 
   if (err == ERROR_SUCCESS) {
-    CapsuleLog("Process #%lu successfully launched with dll injected!", pi.dwProcessId);
+    Log("Process #%lu successfully launched with dll injected!", pi.dwProcessId);
   } else {
-    CapsuleLog("Error %lu: Cannot launch process and inject dll.", err);
+    Log("Error %lu: Cannot launch process and inject dll.", err);
     return nullptr;
   }
 
@@ -119,7 +131,7 @@ AudioReceiverFactory Executor::GetAudioReceiverFactory() {
 }
 
 Executor::~Executor() {
-  // stub
+  // muffin
 }
 
 }

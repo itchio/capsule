@@ -1,8 +1,39 @@
 
-#include <capsule.h>
+/*
+ *  capsule - the game recording and overlay toolkit
+ *  Copyright (C) 2017, Amos Wenger
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details:
+ * https://github.com/itchio/capsule/blob/master/LICENSE
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+
 #include <thread>
 
-struct dc_data {
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#undef WIN32_LEAN_AND_MEAN
+
+#include "../capsule/constants.h"
+#include "../capture.h"
+#include "../logging.h"
+#include "../io.h"
+
+namespace capsule {
+namespace dc {
+
+struct State {
   HWND window;
   HDC hdc_target;
   int cx;
@@ -13,7 +44,7 @@ struct dc_data {
   char *frame_data;
 };
 
-static struct dc_data data = {0};
+static State state = {0};
 
 static HWND g_hwnd = NULL;
 std::thread *g_dc_thread;
@@ -33,7 +64,7 @@ static void FindHwnd(DWORD pid) {
     return;
   }
 
-  CapsuleLog("Looking for hwnd");
+  Log("Looking for hwnd");
   EnumWindows(EnumWindowsProc, pid);
 }
 
@@ -41,37 +72,38 @@ static void CaptureHwnd(HWND hwnd) {
   static bool first_frame = true;
   const int components = 4;
 
-  if (!capsule::CaptureReady()) {
+  if (!capture::Ready()) {
     return;
   }
 
-  auto timestamp = capsule::FrameTimestamp();
+  auto timestamp = capture::FrameTimestamp();
 
   if (first_frame) {
-    capsule::io::WriteVideoFormat(data.cx, data.cy, capsule::kPixFmtBgra, 1 /* vflip */, data.cx * components);
+    io::WriteVideoFormat(state.cx, state.cy, kPixFmtBgra, true /* vflip */,
+                         state.cx * components);
     first_frame = false;
   }
 
   // TODO: error checking
-  BitBlt(data.hdc,         // dest dc
+  BitBlt(state.hdc,         // dest dc
          0, 0,             // dest x, y
-         data.cx, data.cy, // dest width, height
-         data.hdc_target,  // src dc
+         state.cx, state.cy, // dest width, height
+         state.hdc_target,  // src dc
          0, 0,             // src x, y
          SRCCOPY);
 
-  int frame_data_size = data.cx * data.cy * components;
-  capsule::io::WriteVideoFrame(timestamp, data.frame_data, frame_data_size);
+  int frame_data_size = state.cx * state.cy * components;
+  io::WriteVideoFrame(timestamp, state.frame_data, frame_data_size);
 }
 
-static void DcCaptureCapture() {
-  CaptureHwnd(data.window);
+static void Capture() {
+  CaptureHwnd(state.window);
 }
 
-static void DcCaptureLoop() {
+static void Loop() {
   while (true) {
     Sleep(16); // FIXME: that's dumb
-    if (!capsule::CaptureActive()) {
+    if (!capture::Active()) {
       // TODO: proper cleanup somewhere
       // ReleaseDC(NULL, hdc_target);
       // DeleteDC(hdc);
@@ -79,78 +111,78 @@ static void DcCaptureLoop() {
       return;
     }
 
-    DcCaptureCapture();
+    Capture();
   }
 }
 
-static bool DcCaptureInitFormat() {
+static bool InitFormat() {
   bool success = false;
-  data.window = g_hwnd;
+  state.window = g_hwnd;
   g_hwnd = NULL;
 
   // TODO: error checking
-  data.hdc_target = GetDC(data.window);
+  state.hdc_target = GetDC(state.window);
 
   const int MAX_TITLE_LENGTH = 16384;
   wchar_t *window_title = new wchar_t[MAX_TITLE_LENGTH];
   window_title[0] = '\0';
   // TODO: error checking
-  GetWindowText(data.window, window_title, MAX_TITLE_LENGTH);
+  GetWindowText(state.window, window_title, MAX_TITLE_LENGTH);
 
-  CapsuleLog("dc_capture_init_format: initializing for window %S",
-              window_title);
+  Log("dc::InitFormat: initializing for window %S", window_title);
   delete[] window_title;
 
-  HDC hdc_target = GetDC(data.window);
+  HDC hdc_target = GetDC(state.window);
 
   RECT rect;
   // TODO: error checking
-  GetClientRect(data.window, &rect);
+  GetClientRect(state.window, &rect);
 
-  data.cx = rect.right;
-  data.cy = rect.bottom;
+  state.cx = rect.right;
+  state.cy = rect.bottom;
 
-  CapsuleLog("dc_capture_init_format: window size: %dx%d", data.cx, data.cy);
+  Log("dc_capture_init_format: window size: %dx%d", state.cx, state.cy);
 
   // TODO: error checking
-  data.hdc = CreateCompatibleDC(NULL);
+  state.hdc = CreateCompatibleDC(NULL);
   BITMAPINFO bi = {0};
   BITMAPINFOHEADER *bih = &bi.bmiHeader;
   bih->biSize = sizeof(BITMAPINFOHEADER);
   bih->biBitCount = 32;
-  bih->biWidth = data.cx;
-  bih->biHeight = data.cy;
+  bih->biWidth = state.cx;
+  bih->biHeight = state.cy;
   bih->biPlanes = 1;
 
   // TODO: error checking
-  data.bmp = CreateDIBSection(data.hdc, &bi, DIB_RGB_COLORS,
-                              (void **)&data.frame_data, NULL, 0);
+  state.bmp = CreateDIBSection(state.hdc, &bi, DIB_RGB_COLORS,
+                              (void **)&state.frame_data, nullptr, 0);
 
   // TODO: error checking
-  SelectObject(data.hdc, data.bmp);
+  SelectObject(state.hdc, state.bmp);
 
   return true;
 }
 
-bool DcCaptureInit() {
+bool Init() {
   DWORD pid = GetCurrentProcessId();
-  CapsuleLog("DcCaptureInit: our pid is %d", pid);
+  Log("dc::Init: our pid is %d", pid);
 
   g_hwnd = NULL;
   FindHwnd(pid);
   if (g_hwnd == NULL) {
-    CapsuleLog("DcCaptureInit: could not find a window, bailing out");
+    Log("dc::Init: could not find a window, bailing out");
     return false;
   }
-  CapsuleLog("DcCaptureInit: our hwnd is %p", g_hwnd);
+  Log("dc::Init: our hwnd is %p", g_hwnd);
 
-  if (!DcCaptureInitFormat()) {
+  if (!InitFormat()) {
     return false;
   }
 
-  std::thread dc_thread(DcCaptureLoop);
-  dc_thread.detach();
-  g_dc_thread = &dc_thread;
+  g_dc_thread = new std::thread(Loop);
 
   return true;
 }
+
+} // namespace dc
+} // namespace capsule

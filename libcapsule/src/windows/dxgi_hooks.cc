@@ -1,30 +1,53 @@
 
-#include <capsule.h>
-#include "win_capture.h"
+/*
+ *  capsule - the game recording and overlay toolkit
+ *  Copyright (C) 2017, Amos Wenger
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details:
+ * https://github.com/itchio/capsule/blob/master/LICENSE
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
 
+#include "../capsule.h"
+#include "../capture.h"
+#include "win_capture.h"
 #include "dxgi_vtable_helpers.h"
 #include "dxgi_util.h"
+
+namespace capsule {
+namespace dxgi {
 
 typedef void (* dxgi_draw_overlay_func_t)(void);
 typedef void (* dxgi_capture_func_t)(void *swap_ptr, void *backbuffer_ptr);
 typedef void (* dxgi_free_func_t)(void);
 
 // inspired from libobs
-struct dxgi_swap_data {
+struct SwapData {
   IDXGISwapChain *swap;
   dxgi_draw_overlay_func_t draw_overlay;
   dxgi_capture_func_t capture;
   dxgi_free_func_t free;
 };
 
-static struct dxgi_swap_data data = {};
+static SwapData data = {};
 
 ///////////////////////////////////////////////////
 // Detect D3D version, set up capture & free.
 // follows libobs's structure
 ///////////////////////////////////////////////////
 
-static bool setup_dxgi(IDXGISwapChain *swap) {
+static bool SetupDxgi(IDXGISwapChain *swap) {
   IUnknown *device;
   HRESULT hr;
 
@@ -35,21 +58,21 @@ static bool setup_dxgi(IDXGISwapChain *swap) {
 
   hr = swap->GetDevice(__uuidof(ID3D10Device), (void**) &device);
   if (SUCCEEDED(hr)) {
-    CapsuleLog("Found D3D10 Device!");
+    Log("Found D3D10 Device!");
     data.swap = swap;
-    data.capture = D3d10Capture;
-    data.free = D3d10Free;
+    data.capture = d3d10::Capture;
+    data.free = d3d10::Free;
     device->Release();
     return true;
   }
 
   hr = swap->GetDevice(__uuidof(ID3D11Device), (void**) &device);
   if (SUCCEEDED(hr)) {
-    CapsuleLog("Found D3D11 Device!");
+    Log("Found D3D11 Device!");
     data.swap = swap;
-    data.draw_overlay = D3d11DrawOverlay;
-    data.capture = D3d11Capture;
-    data.free = D3d11Free;
+    data.draw_overlay = d3d11::DrawOverlay;
+    data.capture = d3d11::Capture;
+    data.free = d3d11::Free;
     device->Release();
     return true;
   }
@@ -63,7 +86,7 @@ static inline IUnknown *get_dxgi_backbuffer (IDXGISwapChain *swap) {
 
   hr = swap->GetBuffer(0, __uuidof(IUnknown), (void**) &res);
   if (FAILED(hr)) {
-    CapsuleLog("get_dxgi_backbuffer: GetBuffer failed");
+    Log("get_dxgi_backbuffer: GetBuffer failed");
   }
 
   return res;
@@ -86,10 +109,10 @@ HRESULT LAB_STDCALL Present_hook (
   UINT SyncInterval,
   UINT Flags
 ) {
-  capdata.saw_dxgi = true;
+  capture::SawBackend(capture::kBackendDXGI);
 
   if (!data.swap) {
-    setup_dxgi(swap);
+    SetupDxgi(swap);
   }
 
   // libobs has logic to capture *after* Present (if you want to capture
@@ -112,7 +135,7 @@ HRESULT LAB_STDCALL Present_hook (
   return Present_real(swap, SyncInterval, Flags);
 }
 
-void install_present_hook (IDXGISwapChain *swap) {
+void InstallPresentHook (IDXGISwapChain *swap) {
   DWORD err;
 
   // Present
@@ -127,11 +150,183 @@ void install_present_hook (IDXGISwapChain *swap) {
       0
     );
     if (err != ERROR_SUCCESS) {
-      CapsuleLog("Hooking Present derped with error %d (%x)", err, err);
+      Log("Hooking Present derped with error %d (%x)", err, err);
     } else {
-      CapsuleLog("Installed Present hook");
+      Log("Installed Present hook");
     }
   }
+}
+
+///////////////////////////////////////////////
+// IDXGIFactory::CreateSwapChainForHwnd
+// Example users: Unity 5.x
+///////////////////////////////////////////////
+
+typedef HRESULT (LAB_STDCALL *CreateSwapChainForHwnd_t)(
+        IDXGIFactory2                   *factory,
+        IUnknown                        *pDevice,
+        HWND                            hWnd,
+  const DXGI_SWAP_CHAIN_DESC1           *pDesc,
+  const DXGI_SWAP_CHAIN_FULLSCREEN_DESC *pFullscreenDesc,
+        IDXGIOutput                     *pRestrictToOutput,
+        IDXGISwapChain1                 **ppSwapChain
+);
+static CreateSwapChainForHwnd_t CreateSwapChainForHwnd_real;
+static SIZE_T CreateSwapChainForHwnd_hookId = 0;
+
+HRESULT LAB_STDCALL CreateSwapChainForHwnd_hook (
+        IDXGIFactory2                   *factory,
+        IUnknown                        *pDevice,
+        HWND                            hWnd,
+  const DXGI_SWAP_CHAIN_DESC1           *pDesc,
+  const DXGI_SWAP_CHAIN_FULLSCREEN_DESC *pFullscreenDesc,
+        IDXGIOutput                     *pRestrictToOutput,
+        IDXGISwapChain1                 **ppSwapChain
+  ) {
+  Log("Before CreateSwapChainForHwnd!");
+
+  // this part is just a mix of curiosity of hubris, aka
+  // "we have an hWnd! we can do wonderful things with it!"
+  const size_t title_buffer_size = 1024;
+  wchar_t title_buffer[title_buffer_size];
+  title_buffer[0] = '\0';
+  GetWindowText(hWnd, title_buffer, title_buffer_size);
+  Log("Creating swapchain for window \"%S\"", title_buffer);
+
+  HRESULT res = CreateSwapChainForHwnd_real(factory, pDevice, hWnd, pDesc, pFullscreenDesc, pRestrictToOutput, ppSwapChain);
+  Log("After CreateSwapChainForHwnd!");
+
+  if (FAILED(res)) {
+    Log("Swap chain creation failed, bailing out");
+    return res;
+  }
+
+  if (!Present_hookId) {
+    // just a little fluff for fun
+    wchar_t new_title_buffer[title_buffer_size];
+    new_title_buffer[0] = '\0';
+    swprintf_s(new_title_buffer, title_buffer_size, L"[capsule] %s", title_buffer);
+    SetWindowText(hWnd, new_title_buffer);
+  }
+
+  InstallPresentHook(*ppSwapChain);
+
+  return res;
+}
+
+///////////////////////////////////////////////
+// IDXGIFactory::CreateSwapChain (Deprecated)
+// Example users: MonoGame
+///////////////////////////////////////////////
+
+typedef HRESULT (LAB_STDCALL *CreateSwapChain_t)(
+        IDXGIFactory2                   *factory,
+        IUnknown                        *pDevice,
+        DXGI_SWAP_CHAIN_DESC            *pDesc,
+        IDXGISwapChain                  **ppSwapChain
+);
+static CreateSwapChain_t CreateSwapChain_real;
+static SIZE_T CreateSwapChain_hookId = 0;
+
+HRESULT LAB_STDCALL CreateSwapChain_hook (
+        IDXGIFactory2                   *factory,
+        IUnknown                        *pDevice,
+        DXGI_SWAP_CHAIN_DESC            *pDesc,
+        IDXGISwapChain                  **ppSwapChain
+  ) {
+  Log("Before CreateSwapChain!");
+
+  HRESULT res = CreateSwapChain_real(factory, pDevice, pDesc, ppSwapChain);
+  Log("After CreateSwapChain!");
+
+  if (FAILED(res)) {
+    Log("Swap chain creation failed, bailing out");
+    return res;
+  }
+
+  InstallPresentHook(*ppSwapChain);
+
+  return res;
+}
+
+static void InstallSwapchainHooks (IDXGIFactory *factory) {
+  DWORD err;
+
+  // CreateSwapChainForHwnd
+  if (!CreateSwapChainForHwnd_hookId) {
+    LPVOID CreateSwapChainForHwnd_addr = capsule_get_IDXGIFactory_CreateSwapChainForHwnd_address((void *) factory);
+
+    err = cHookMgr.Hook(
+      &CreateSwapChainForHwnd_hookId,
+      (LPVOID *) &CreateSwapChainForHwnd_real,
+      CreateSwapChainForHwnd_addr,
+      CreateSwapChainForHwnd_hook,
+      0
+    );
+    if (err != ERROR_SUCCESS) {
+      Log("Hooking CreateSwapChainForHwnd derped with error %d (%x)", err, err);
+    }
+  }
+
+  // CreateSwapChain
+  if (!CreateSwapChain_hookId) {
+    LPVOID CreateSwapChain_addr = capsule_get_IDXGIFactory_CreateSwapChain_address((void *) factory);
+
+    err = cHookMgr.Hook(
+      &CreateSwapChain_hookId,
+      (LPVOID *) &CreateSwapChain_real,
+      CreateSwapChain_addr,
+      CreateSwapChain_hook,
+      0
+    );
+    if (err != ERROR_SUCCESS) {
+      Log("Hooking CreateSwapChain derped with error %d (%x)", err, err);
+    }
+  }
+}
+
+
+
+///////////////////////////////////////////////
+// CreateDXGIFactory (DXGI 1.0)
+///////////////////////////////////////////////
+
+typedef HRESULT (LAB_STDCALL *CreateDXGIFactory_t)(REFIID, void**);
+static CreateDXGIFactory_t CreateDXGIFactory_real;
+static SIZE_T CreateDXGIFactory_hookId = 0;
+
+HRESULT LAB_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
+  Log("CreateDXGIFactory called with riid: %s", NameFromIid(riid).c_str());
+  HRESULT res = CreateDXGIFactory_real(riid, ppFactory);
+
+  if (SUCCEEDED(res)) {
+    InstallSwapchainHooks((IDXGIFactory *) *ppFactory);
+  } else {
+    Log("CreateDXGIFactory failed!");
+  }
+
+  return res;
+}
+
+///////////////////////////////////////////////
+// CreateDXGIFactory1 (DXGI 1.1)
+///////////////////////////////////////////////
+
+typedef HRESULT (LAB_STDCALL *CreateDXGIFactory1_t)(REFIID, void**);
+static CreateDXGIFactory1_t CreateDXGIFactory1_real;
+static SIZE_T CreateDXGIFactory1_hookId;
+
+HRESULT LAB_STDCALL CreateDXGIFactory1_hook (REFIID riid, void** ppFactory) {
+  Log("Hooked_CreateDXGIFactory1 called with riid: %s", NameFromIid(riid).c_str());
+  HRESULT res = CreateDXGIFactory1_real(riid, ppFactory);
+
+  if (SUCCEEDED(res)) {
+    InstallSwapchainHooks((IDXGIFactory *) *ppFactory);
+  } else {
+    Log("CreateDXGIFactory failed!");
+  }
+
+  return res;
 }
 
 ///////////////////////////////////////////////
@@ -169,7 +364,7 @@ HRESULT LAB_STDCALL D3D11CreateDeviceAndSwapChain_hook (
         D3D_FEATURE_LEVEL    *pFeatureLevel,
         ID3D11DeviceContext  **ppImmediateContext 
 ) {
-  CapsuleLog("Before D3D11CreateDeviceAndSwapChain!");
+  Log("Before D3D11CreateDeviceAndSwapChain!");
 
   HRESULT res = D3D11CreateDeviceAndSwapChain_real(
     pAdapter, DriverType, Software, Flags,
@@ -179,199 +374,27 @@ HRESULT LAB_STDCALL D3D11CreateDeviceAndSwapChain_hook (
   );
 
   if (FAILED(res)) {
-    CapsuleLog("Swap chain creation failed, bailing out");
+    Log("Swap chain creation failed, bailing out");
     return res;
   }
 
   // don't be fooled by the fact that this function is called D3D11CreateDeviceAndSwapChain.
   // it is actually called (sometimes) by D3D11CreateDevice, where ppSwapChain is null.
   if (ppSwapChain && *ppSwapChain) {
-    install_present_hook(*ppSwapChain);
+    InstallPresentHook(*ppSwapChain);
   }
 
   return res;
 }
 
-///////////////////////////////////////////////
-// IDXGIFactory::CreateSwapChainForHwnd
-// Example users: Unity 5.x
-///////////////////////////////////////////////
-
-typedef HRESULT (LAB_STDCALL *CreateSwapChainForHwnd_t)(
-        IDXGIFactory2                   *factory,
-        IUnknown                        *pDevice,
-        HWND                            hWnd,
-  const DXGI_SWAP_CHAIN_DESC1           *pDesc,
-  const DXGI_SWAP_CHAIN_FULLSCREEN_DESC *pFullscreenDesc,
-        IDXGIOutput                     *pRestrictToOutput,
-        IDXGISwapChain1                 **ppSwapChain
-);
-static CreateSwapChainForHwnd_t CreateSwapChainForHwnd_real;
-static SIZE_T CreateSwapChainForHwnd_hookId = 0;
-
-HRESULT LAB_STDCALL CreateSwapChainForHwnd_hook (
-        IDXGIFactory2                   *factory,
-        IUnknown                        *pDevice,
-        HWND                            hWnd,
-  const DXGI_SWAP_CHAIN_DESC1           *pDesc,
-  const DXGI_SWAP_CHAIN_FULLSCREEN_DESC *pFullscreenDesc,
-        IDXGIOutput                     *pRestrictToOutput,
-        IDXGISwapChain1                 **ppSwapChain
-  ) {
-  CapsuleLog("Before CreateSwapChainForHwnd!");
-
-  // this part is just a mix of curiosity of hubris, aka
-  // "we have an hWnd! we can do wonderful things with it!"
-  const size_t title_buffer_size = 1024;
-  wchar_t title_buffer[title_buffer_size];
-  title_buffer[0] = '\0';
-  GetWindowText(hWnd, title_buffer, title_buffer_size);
-  CapsuleLog("Creating swapchain for window \"%S\"", title_buffer);
-
-  HRESULT res = CreateSwapChainForHwnd_real(factory, pDevice, hWnd, pDesc, pFullscreenDesc, pRestrictToOutput, ppSwapChain);
-  CapsuleLog("After CreateSwapChainForHwnd!");
-
-  if (FAILED(res)) {
-    CapsuleLog("Swap chain creation failed, bailing out");
-    return res;
-  }
-
-  if (!Present_hookId) {
-    // just a little fluff for fun
-    wchar_t new_title_buffer[title_buffer_size];
-    new_title_buffer[0] = '\0';
-    swprintf_s(new_title_buffer, title_buffer_size, L"[capsule] %s", title_buffer);
-    SetWindowText(hWnd, new_title_buffer);
-  }
-
-  install_present_hook(*ppSwapChain);
-
-  return res;
-}
-
-///////////////////////////////////////////////
-// IDXGIFactory::CreateSwapChain (Deprecated)
-// Example users: MonoGame
-///////////////////////////////////////////////
-
-typedef HRESULT (LAB_STDCALL *CreateSwapChain_t)(
-        IDXGIFactory2                   *factory,
-        IUnknown                        *pDevice,
-        DXGI_SWAP_CHAIN_DESC            *pDesc,
-        IDXGISwapChain                  **ppSwapChain
-);
-static CreateSwapChain_t CreateSwapChain_real;
-static SIZE_T CreateSwapChain_hookId = 0;
-
-HRESULT LAB_STDCALL CreateSwapChain_hook (
-        IDXGIFactory2                   *factory,
-        IUnknown                        *pDevice,
-        DXGI_SWAP_CHAIN_DESC            *pDesc,
-        IDXGISwapChain                  **ppSwapChain
-  ) {
-  CapsuleLog("Before CreateSwapChain!");
-
-  HRESULT res = CreateSwapChain_real(factory, pDevice, pDesc, ppSwapChain);
-  CapsuleLog("After CreateSwapChain!");
-
-  if (FAILED(res)) {
-    CapsuleLog("Swap chain creation failed, bailing out");
-    return res;
-  }
-
-  install_present_hook(*ppSwapChain);
-
-  return res;
-}
-
-static void install_swapchain_hooks (IDXGIFactory *factory) {
-  DWORD err;
-
-  // CreateSwapChainForHwnd
-  if (!CreateSwapChainForHwnd_hookId) {
-    LPVOID CreateSwapChainForHwnd_addr = capsule_get_IDXGIFactory_CreateSwapChainForHwnd_address((void *) factory);
-
-    err = cHookMgr.Hook(
-      &CreateSwapChainForHwnd_hookId,
-      (LPVOID *) &CreateSwapChainForHwnd_real,
-      CreateSwapChainForHwnd_addr,
-      CreateSwapChainForHwnd_hook,
-      0
-    );
-    if (err != ERROR_SUCCESS) {
-      CapsuleLog("Hooking CreateSwapChainForHwnd derped with error %d (%x)", err, err);
-    }
-  }
-
-  // CreateSwapChain
-  if (!CreateSwapChain_hookId) {
-    LPVOID CreateSwapChain_addr = capsule_get_IDXGIFactory_CreateSwapChain_address((void *) factory);
-
-    err = cHookMgr.Hook(
-      &CreateSwapChain_hookId,
-      (LPVOID *) &CreateSwapChain_real,
-      CreateSwapChain_addr,
-      CreateSwapChain_hook,
-      0
-    );
-    if (err != ERROR_SUCCESS) {
-      CapsuleLog("Hooking CreateSwapChain derped with error %d (%x)", err, err);
-    }
-  }
-}
-
-
-
-///////////////////////////////////////////////
-// CreateDXGIFactory (DXGI 1.0)
-///////////////////////////////////////////////
-
-typedef HRESULT (LAB_STDCALL *CreateDXGIFactory_t)(REFIID, void**);
-static CreateDXGIFactory_t CreateDXGIFactory_real;
-static SIZE_T CreateDXGIFactory_hookId = 0;
-
-HRESULT LAB_STDCALL CreateDXGIFactory_hook (REFIID riid, void** ppFactory) {
-  CapsuleLog("CreateDXGIFactory called with riid: %s", NameFromIid(riid).c_str());
-  HRESULT res = CreateDXGIFactory_real(riid, ppFactory);
-
-  if (SUCCEEDED(res)) {
-    install_swapchain_hooks((IDXGIFactory *) *ppFactory);
-  } else {
-    CapsuleLog("CreateDXGIFactory failed!");
-  }
-
-  return res;
-}
-
-///////////////////////////////////////////////
-// CreateDXGIFactory1 (DXGI 1.1)
-///////////////////////////////////////////////
-
-typedef HRESULT (LAB_STDCALL *CreateDXGIFactory1_t)(REFIID, void**);
-static CreateDXGIFactory1_t CreateDXGIFactory1_real;
-static SIZE_T CreateDXGIFactory1_hookId;
-
-HRESULT LAB_STDCALL CreateDXGIFactory1_hook (REFIID riid, void** ppFactory) {
-  CapsuleLog("Hooked_CreateDXGIFactory1 called with riid: %s", NameFromIid(riid).c_str());
-  HRESULT res = CreateDXGIFactory1_real(riid, ppFactory);
-
-  if (SUCCEEDED(res)) {
-    install_swapchain_hooks((IDXGIFactory *) *ppFactory);
-  } else {
-    CapsuleLog("CreateDXGIFactory failed!");
-  }
-
-  return res;
-}
-
-static void capsule_install_d3d11_hooks () {
+void InstallD3d11Hooks () {
   DWORD err;
 
   // d3d11
 
   HMODULE d3d11 = LoadLibrary(L"d3d11.dll");
   if (!d3d11) {
-    CapsuleLog("Could not load d3d11.dll, disabling D3D10/11 capture");
+    Log("Could not load d3d11.dll, disabling D3D10/11 capture");
     return;
   }
 
@@ -379,7 +402,7 @@ static void capsule_install_d3d11_hooks () {
   {
     LPVOID D3D11CreateDeviceAndSwapChain_addr = NktHookLibHelpers::GetProcedureAddress(d3d11, "D3D11CreateDeviceAndSwapChain");
     if (!D3D11CreateDeviceAndSwapChain_addr) {
-      CapsuleLog("Could not find D3D11CreateDeviceAndSwapChain");
+      Log("Could not find D3D11CreateDeviceAndSwapChain");
       return;
     }
 
@@ -391,21 +414,22 @@ static void capsule_install_d3d11_hooks () {
       0
     );
     if (err != ERROR_SUCCESS) {
-      CapsuleLog("Hooking D3D11CreateDeviceAndSwapChain derped with error %d (%x)", err, err);
+      Log("Hooking D3D11CreateDeviceAndSwapChain derped with error %d (%x)", err, err);
       return;
     }
-    CapsuleLog("Installed D3D11CreateDeviceAndSwapChain hook");
+    Log("Installed D3D11CreateDeviceAndSwapChain hook");
   }
 }
 
-void CapsuleInstallDxgiHooks () {
+
+void InstallHooks () {
   DWORD err;
 
   // dxgi
 
   HMODULE dxgi = LoadLibrary(L"dxgi.dll");
   if (!dxgi) {
-    CapsuleLog("Could not load dxgi.dll, disabling D3D10/11 capture");
+    Log("Could not load dxgi.dll, disabling D3D10/11 capture");
     return;
   }
 
@@ -413,7 +437,7 @@ void CapsuleInstallDxgiHooks () {
   {
     LPVOID CreateDXGIFactory_addr = NktHookLibHelpers::GetProcedureAddress(dxgi, "CreateDXGIFactory");
     if (!CreateDXGIFactory_addr) {
-      CapsuleLog("Could not find CreateDXGIFactory");
+      Log("Could not find CreateDXGIFactory");
       return;
     }
 
@@ -425,17 +449,17 @@ void CapsuleInstallDxgiHooks () {
       0
     );
     if (err != ERROR_SUCCESS) {
-      CapsuleLog("Hooking CreateDXGIFactory derped with error %d (%x)", err, err);
+      Log("Hooking CreateDXGIFactory derped with error %d (%x)", err, err);
       return;
     }
-    CapsuleLog("Installed CreateDXGIFactory hook");
+    Log("Installed CreateDXGIFactory hook");
   }
 
   {
     // CreateDXGIFactory1
     LPVOID CreateDXGIFactory1_addr = NktHookLibHelpers::GetProcedureAddress(dxgi, "CreateDXGIFactory1");
     if (!CreateDXGIFactory1_addr) {
-      CapsuleLog("Could not find CreateDXGIFactory1");
+      Log("Could not find CreateDXGIFactory1");
       return;
     }
 
@@ -447,11 +471,15 @@ void CapsuleInstallDxgiHooks () {
       0
     );
     if (err != ERROR_SUCCESS) {
-      CapsuleLog("Hooking CreateDXGIFactory1 derped with error %d (%x)", err, err);
+      Log("Hooking CreateDXGIFactory1 derped with error %d (%x)", err, err);
       return;
     }
-    CapsuleLog("Installed CreateDXGIFactory1 hook");
+    Log("Installed CreateDXGIFactory1 hook");
   }
 
-  capsule_install_d3d11_hooks();
+  InstallD3d11Hooks();
 }
+
+} // namespace dxgi
+
+} // namespace capsule

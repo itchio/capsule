@@ -1,4 +1,24 @@
 
+/*
+ *  lab - a general-purpose C++ toolkit
+ *  Copyright (C) 2017, Amos Wenger
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation; either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details:
+ * https://github.com/itchio/lab/blob/master/LICENSE
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ */
+
 #include "packet.h"
 
 namespace lab {
@@ -6,19 +26,22 @@ namespace packet {
 
 char *Fread(FILE *file) {
     uint32_t pkt_size = 0;
-    int read_bytes = fread(&pkt_size, sizeof(pkt_size), 1, file);
+    auto read_bytes = fread(&pkt_size, sizeof(pkt_size), 1, file);
     if (read_bytes == 0) {
         // closed pipe
         return nullptr;
     }
 
     char *buffer = new char[pkt_size];
-    fread(buffer, pkt_size, 1, file);
+    read_bytes = fread(buffer, pkt_size, 1, file);
+    if (read_bytes == 0) {
+        // closed pipe
+        return nullptr;
+    }
     return buffer;
 }
 
 void Fwrite(const flatbuffers::FlatBufferBuilder &builder, FILE *file) {
-    // CapsuleLog("writing packet, size: %d bytes", builder.GetSize());
     uint32_t pkt_size = builder.GetSize();
     fwrite(&pkt_size, sizeof(pkt_size), 1, file);
     fwrite(builder.GetBufferPointer(), builder.GetSize(), 1, file);
