@@ -59,6 +59,14 @@ typedef ssize_t (*snd_pcm_frames_to_bytes_t)(
 );
 static snd_pcm_frames_to_bytes_t snd_pcm_frames_to_bytes = nullptr;
 
+typedef int (*snd_async_add_pcm_handler_t)(
+  snd_async_handler_t **handler,
+  snd_pcm_t *pcm,
+  snd_async_callback_t callback,
+  void *private_data
+);
+static snd_async_add_pcm_handler_t snd_async_add_pcm_handler = nullptr;
+
 void EnsureSymbol(void **ptr, const char *name) {
   static void* handle = nullptr;
 
@@ -130,6 +138,20 @@ snd_pcm_sframes_t snd_pcm_writei(
 
   fwrite(buffer, static_cast<size_t>(bytes), 1, raw);
 
+  return ret;
+}
+
+// interposed ALSA function
+int snd_async_add_pcm_handler(
+  snd_async_handler_t **handler,
+  snd_pcm_t *pcm,
+  snd_async_callback_t callback,
+  void *private_data
+) {
+  capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_async_add_pcm_handler, "snd_async_add_pcm_handler");
+
+  auto ret = capsule::alsa::snd_async_add_pcm_handler(handler, pcm, callback, private_data);
+  capsule::Log("snd_async_add_pcm_handler: ret %d, handler address = %p", ret, *handler);
   return ret;
 }
 
