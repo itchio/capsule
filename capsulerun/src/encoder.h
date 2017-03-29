@@ -40,6 +40,7 @@ struct VideoFormat {
 struct AudioFormat {
   int channels;
   int samplerate;
+  // FIXME: assumes F32LE, bad
   int samplewidth;
 };
 

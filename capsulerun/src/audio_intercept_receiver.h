@@ -26,6 +26,7 @@
 #include "audio_receiver.h"
 #include "connection.h"
 #include "encoder.h"
+#include <shoom.h>
 
 namespace capsule {
 namespace audio {
@@ -42,6 +43,10 @@ class AudioInterceptReceiver : public AudioReceiver {
 
   private:
     Connection *conn_ = nullptr;
+    encoder::AudioFormat afmt_;
+    shoom::Shm *shm_;
+
+    bool initialized_ = false;
 };
 
 }

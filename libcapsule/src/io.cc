@@ -135,8 +135,8 @@ void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pit
         Ensure("audio intercept format is F32LE", state->audio_intercept_format == messages::SampleFmt_F32LE);
         int64_t sample_size = 4;
 
-        audio_frame_size = sample_size * (int64_t) state->audio_intercept_rate * (int64_t) state->audio_intercept_channels;
-        int64_t audio_shmem_size = seconds * audio_frame_size;
+        audio_frame_size = sample_size * (int64_t) state->audio_intercept_channels;
+        int64_t audio_shmem_size = seconds * audio_frame_size * (int64_t) state->audio_intercept_rate;
         std::string audio_shmem_path = "capsule_audio.shm";
         audio_shm = new shoom::Shm(audio_shmem_path, static_cast<size_t>(audio_shmem_size));
         audio_shm_committed_offset = 0;
@@ -259,12 +259,7 @@ void WriteAudioFrames(char *data, size_t frames) {
         return;
     }
  
-    // assuming F32LE   
-    size_t sample_size = 4;
-    // assuming stereo
-    size_t channels = 2;
-
-    size_t needed_size = sample_size * channels * frames;
+    size_t needed_size = audio_frame_size * frames;
     size_t avail_size = audio_shm->Size() - audio_shm_committed_offset;
 
     if (avail_size < needed_size) {

@@ -21,33 +21,61 @@
 
 #include "audio_intercept_receiver.h"
 
+#include <capsule/messages_generated.h>
+
 #include "logging.h"
+
+#include <string.h> // memset, memcpy
 
 namespace capsule {
 namespace audio {
 
 AudioInterceptReceiver::AudioInterceptReceiver(Connection *conn, const messages::AudioSetup &as) {
+  memset(&afmt_, 0, sizeof(afmt_));
+
   conn_ = conn;
 
-  Log("Got audio intercept! %d channels, %d rate, sample format %d",
+  Log("AudioInterceptReceiver: initializing with %d channels, %d rate, sample format %d",
     as.channels(),
     as.rate(),
     as.sample_fmt()
   );
-  Log("shm area is %d bytes at %s",
-    as.shmem()->size(),
-    as.shmem()->path()->c_str()
-  );
+
+  if (as.sample_fmt() != messages::SampleFmt_F32LE) {
+    Log("AudioInterceptReceiver: unsupported sample format, bailing out");
+  }
+
+  afmt_.channels = as.channels();
+  afmt_.samplerate = as.rate();
+  afmt_.samplewidth = 32; // assuming F32LE
+
+  auto shm_path = as.shmem()->path()->str();  
+  auto shm = new shoom::Shm(shm_path, static_cast<size_t>(as.shmem()->size()));
+  int ret = shm->Open();
+  if (ret != shoom::kOK) {
+    Log("AudioInterceptReceiver: Could not open shared memory area: code %d", ret);
+    return;
+  }
+
+  shm_ = shm;
+
+  initialized_ = true;
 }
 
 AudioInterceptReceiver::~AudioInterceptReceiver() {
-  // stub
+  if (shm_) {
+    delete shm_;
+  }
 }
 
 int AudioInterceptReceiver::ReceiveFormat(encoder::AudioFormat *afmt) {
   // stub
-  afmt->channels = 0;
-  return -1;
+  if (!initialized_) {
+    return -1;
+  }
+
+  memcpy(afmt, &afmt_, sizeof(afmt_));
+  return 0;
 }
 
 void *AudioInterceptReceiver::ReceiveFrames(int *frames_received) {
