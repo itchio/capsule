@@ -108,12 +108,12 @@ void Run(MainArgs *args, Params *params) {
   if (params->has_audio) {
     ret = params->receive_audio_format(params->private_data, &afmt_in);
     if (ret != 0) {
-      Log("could not receive audio format");
-      exit(1);
+      Log("could not receive audio format, disabling audio");
+      params->has_audio = false;
+    } else {
+      Log("audio format: %d channels, %d samplerate, %d samplewidth",
+        afmt_in.channels, afmt_in.samplerate, afmt_in.samplewidth);
     }
-
-    Log("audio format: %d channels, %d samplerate, %d samplewidth",
-      afmt_in.channels, afmt_in.samplerate, afmt_in.samplewidth);
   }
 
   AVFormatContext *oc = nullptr;

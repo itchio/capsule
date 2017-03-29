@@ -90,6 +90,8 @@ PulseReceiver::PulseReceiver() {
 
   // start reading
   pa_thread_ = new std::thread(&PulseReceiver::ReadLoop, this);
+
+  initialized_ = true;
 }
 
 void PulseReceiver::ReadLoop() {
@@ -145,6 +147,10 @@ bool PulseReceiver::ReadFromPa() {
 }
 
 int PulseReceiver::ReceiveFormat(encoder::AudioFormat *afmt) {
+  if (!initialized_) {
+    return -1;
+  }
+
   memcpy(afmt, &afmt_, sizeof(*afmt));
   return 0;
 }
@@ -183,7 +189,9 @@ void PulseReceiver::Stop() {
     ctx_ = nullptr;
   }
 
-  pa_thread_->join();
+  if (pa_thread_) {
+    pa_thread_->join();
+  }
 }
 
 PulseReceiver::~PulseReceiver() {

@@ -56,21 +56,22 @@ class PulseReceiver : public AudioReceiver {
     bool ReadFromPa();
 
     encoder::AudioFormat afmt_;
-    pa_simple *ctx_;
+    pa_simple *ctx_ = nullptr;
 
-    uint8_t *in_buffer_;
+    uint8_t *in_buffer_ = nullptr;
 
-    uint8_t *buffers_;
+    uint8_t *buffers_ = nullptr;
     size_t buffer_size_;
     int buffer_state_[kAudioNbBuffers];
     int commit_index_ = 0;
     int process_index_ = 0;
 
-    std::thread *pa_thread_;
+    std::thread *pa_thread_ = nullptr;
     std::mutex buffer_mutex_;
     std::mutex pa_mutex_;
 
     bool overrun_ = false;
+    bool initialized_ = false;
 };
 
 } // namespace audio
