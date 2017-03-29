@@ -37,6 +37,8 @@ struct State {
   bool saw_d3d9;
   bool saw_dxgi;
 
+  bool has_audio_intercept;
+
   bool active;
   Settings settings;
 };
@@ -56,6 +58,7 @@ void Stop();
 int64_t FrameTimestamp();
 
 void SawBackend(Backend backend);
+void HasAudioIntercept();
 State *GetState();
 
 } // namespace capture

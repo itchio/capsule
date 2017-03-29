@@ -48,6 +48,7 @@ std::mutex frame_locked_mutex;
 int next_frame_index = 0;
 
 shoom::Shm *shm;
+shoom::Shm *audio_shm;
 
 static bool IsFrameLocked(int i) {
     std::lock_guard<std::mutex> lock(frame_locked_mutex);
@@ -87,6 +88,14 @@ static void PollInfile() {
             case messages::Message_CaptureStop: {
                 Log("poll_infile: received CaptureStop");
                 capture::Stop();
+                if (shm) {
+                    delete shm;
+                    shm = nullptr;
+                }
+                if (audio_shm) {
+                    delete audio_shm;
+                    audio_shm = nullptr;
+                }
                 break;
             }
             case messages::Message_VideoFrameProcessed: {
@@ -103,31 +112,59 @@ static void PollInfile() {
 }
 
 void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch) {
+    flatbuffers::FlatBufferBuilder builder(1024);
+
     Log("writing video format");
+    auto state = capture::GetState();
+
+    flatbuffers::Offset<messages::AudioSetup> audio_setup;
+    if (state->has_audio_intercept) {
+        Log("has audio intercept!");
+
+        int64_t audio_shmem_size = 4096;
+        std::string audio_shmem_path = "capsule_audio.shm";
+        audio_shm = new shoom::Shm(audio_shmem_path, static_cast<size_t>(audio_shmem_size));
+        int ret = audio_shm->Create();
+        if (ret != shoom::kOK) {
+            Log("Could not create audio shared memory area: code %d", ret);
+        }
+
+        auto audio_shmem = messages::CreateShmem(
+            builder,
+            builder.CreateString(audio_shmem_path),
+            audio_shmem_size
+        );
+
+        audio_setup = messages::CreateAudioSetup(
+            builder,
+            2,
+            messages::SampleFmt_F32LE,
+            44100,
+            audio_shmem
+        );
+    }
+
     for (int i = 0; i < kNumBuffers; i++) {
         frame_locked[i] = false;
     }
-
-    flatbuffers::FlatBufferBuilder builder(1024);
 
     int64_t frame_size = height * pitch;
     Log("Frame size: %" PRId64 " bytes", frame_size);
     int64_t shmem_size = frame_size * kNumBuffers;
     Log("Should allocate %" PRId64 " bytes of shmem area", shmem_size);
 
-    std::string shmem_path = "capsule.shm";
+    std::string shmem_path = "capsule_video.shm";
     shm = new shoom::Shm(shmem_path, static_cast<size_t>(shmem_size));
     int ret = shm->Create();
     if (ret != shoom::kOK) {
-        Log("Could not create shared memory area: code %d", ret);
+        Log("Could not create video shared memory area: code %d", ret);
     }
 
-    auto shmem_path_fbs = builder.CreateString(shmem_path);
-
-    messages::ShmemBuilder shmem_builder(builder);
-    shmem_builder.add_path(shmem_path_fbs);
-    shmem_builder.add_size(shmem_size);
-    auto shmem = shmem_builder.Finish();
+    auto shmem = messages::CreateShmem(
+        builder,
+        builder.CreateString(shmem_path),
+        shmem_size
+    );
 
     // TODO: support multiple linesizes (for planar formats)
     int64_t linesize[1];
@@ -149,6 +186,8 @@ void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pit
     vs_builder.add_linesize(linesize_vec);
 
     vs_builder.add_shmem(shmem);
+
+    vs_builder.add_audio(audio_setup);
     auto vs = vs_builder.Finish();
 
     messages::PacketBuilder pkt_builder(builder);

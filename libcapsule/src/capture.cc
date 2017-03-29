@@ -153,6 +153,13 @@ void SawBackend(Backend backend) {
   }
 }
 
+void HasAudioIntercept() {
+  if (!state.has_audio_intercept) {
+    Log("Has audio intercept!");
+    state.has_audio_intercept = true;
+  }
+}
+
 State *GetState() {
   return &state;
 }

@@ -168,9 +168,28 @@ void MainLoop::StartSession (const messages::VideoSetup *vs) {
   }
 
   auto video = new video::VideoReceiver(conn_, vfmt, shm, num_buffered_frames);
+
   audio::AudioReceiver *audio = nullptr;
-  if (audio_receiver_factory_ && !args_->no_audio) {
-    audio = audio_receiver_factory_();
+  if (args_->no_audio) {
+    Log("Audio capture disabled by command-line flag");
+  } else {
+    auto as = vs->audio();
+    if (as->channels() > 0) {
+      Log("Got audio intercept! %d channels, %d rate, sample format %d",
+        as->channels(),
+        as->rate(),
+        as->sample_fmt()
+      );
+      Log("shm area is %d bytes at %s",
+        as->shmem()->size(),
+        as->shmem()->path()->c_str()
+      );
+    } else if (audio_receiver_factory_) {
+      Log("No audio intercept, trying factory");
+      audio = audio_receiver_factory_();
+    } else {
+      Log("No audio intercept or factory = no audio");
+    }
   }
 
   session_ = new Session(args_, video, audio);

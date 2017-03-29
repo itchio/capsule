@@ -29,6 +29,11 @@ enum PixFmt:int {
     YUV444P     = 60021, // planar Y4 U4 B4
 }
 
+enum SampleFmt:int {
+    UNKNOWN     = 0,
+    F32LE       = 80042, // 32-bit float, little-endian
+}
+
 union Message {
     HotkeyPressed,
     CaptureStart,
@@ -59,11 +64,29 @@ table VideoSetup {
     offset: [long];
     linesize: [long];
     shmem: Shmem;
+    audio: AudioSetup;
+}
+
+table AudioSetup {
+    channels: uint;
+    sample_fmt: SampleFmt;
+    rate: uint;
+    shmem: Shmem;
 }
 
 table Shmem {
     path: string;
     size: ulong;
+}
+
+table AudioFramesCommitted {
+    offset: uint;
+    frames: uint;
+}
+
+table AudioFramesProcessed {
+    offset: uint;
+    frames: uint;
 }
 
 table VideoFrameCommitted {

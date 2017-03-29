@@ -26,6 +26,7 @@
 
 #include "../logging.h"
 #include "../ensure.h"
+#include "../capture.h"
 #include "dlopen_hooks.h"
 
 // #define DebugLog(...) capsule::Log(__VA_ARGS__)
@@ -103,6 +104,7 @@ void SawMethod(AlsaMethod method) {
       if (!state.seen_write) {
         capsule::Log("ALSA: saw write method");
         state.seen_write = true;
+        capsule::capture::HasAudioIntercept();
       }
       break;
     }
@@ -110,6 +112,7 @@ void SawMethod(AlsaMethod method) {
       if (!state.seen_callback) {
         capsule::Log("ALSA: saw callback method");
         state.seen_callback = true;
+        capsule::capture::HasAudioIntercept();
       }
       break;
     }
@@ -117,6 +120,7 @@ void SawMethod(AlsaMethod method) {
       if (!state.seen_mmap) {
         capsule::Log("ALSA: saw mmap method");
         state.seen_mmap = true;
+        capsule::capture::HasAudioIntercept();
       }
       break;
     }

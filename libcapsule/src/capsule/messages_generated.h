@@ -19,7 +19,13 @@ struct CaptureStop;
 
 struct VideoSetup;
 
+struct AudioSetup;
+
 struct Shmem;
+
+struct AudioFramesCommitted;
+
+struct AudioFramesProcessed;
 
 struct VideoFrameCommitted;
 
@@ -33,6 +39,13 @@ enum PixFmt {
   PixFmt_YUV444P = 60021,
   PixFmt_MIN = PixFmt_UNKNOWN,
   PixFmt_MAX = PixFmt_YUV444P
+};
+
+enum SampleFmt {
+  SampleFmt_UNKNOWN = 0,
+  SampleFmt_F32LE = 80042,
+  SampleFmt_MIN = SampleFmt_UNKNOWN,
+  SampleFmt_MAX = SampleFmt_F32LE
 };
 
 enum Message {
@@ -315,7 +328,8 @@ struct VideoSetup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_VFLIP = 10,
     VT_OFFSET = 12,
     VT_LINESIZE = 14,
-    VT_SHMEM = 16
+    VT_SHMEM = 16,
+    VT_AUDIO = 18
   };
   uint32_t width() const {
     return GetField<uint32_t>(VT_WIDTH, 0);
@@ -338,6 +352,9 @@ struct VideoSetup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   const Shmem *shmem() const {
     return GetPointer<const Shmem *>(VT_SHMEM);
   }
+  const AudioSetup *audio() const {
+    return GetPointer<const AudioSetup *>(VT_AUDIO);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint32_t>(verifier, VT_WIDTH) &&
@@ -350,6 +367,8 @@ struct VideoSetup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.Verify(linesize()) &&
            VerifyField<flatbuffers::uoffset_t>(verifier, VT_SHMEM) &&
            verifier.VerifyTable(shmem()) &&
+           VerifyField<flatbuffers::uoffset_t>(verifier, VT_AUDIO) &&
+           verifier.VerifyTable(audio()) &&
            verifier.EndTable();
   }
 };
@@ -378,13 +397,16 @@ struct VideoSetupBuilder {
   void add_shmem(flatbuffers::Offset<Shmem> shmem) {
     fbb_.AddOffset(VideoSetup::VT_SHMEM, shmem);
   }
+  void add_audio(flatbuffers::Offset<AudioSetup> audio) {
+    fbb_.AddOffset(VideoSetup::VT_AUDIO, audio);
+  }
   VideoSetupBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
   }
   VideoSetupBuilder &operator=(const VideoSetupBuilder &);
   flatbuffers::Offset<VideoSetup> Finish() {
-    const auto end = fbb_.EndTable(start_, 7);
+    const auto end = fbb_.EndTable(start_, 8);
     auto o = flatbuffers::Offset<VideoSetup>(end);
     return o;
   }
@@ -398,8 +420,10 @@ inline flatbuffers::Offset<VideoSetup> CreateVideoSetup(
     bool vflip = false,
     flatbuffers::Offset<flatbuffers::Vector<int64_t>> offset = 0,
     flatbuffers::Offset<flatbuffers::Vector<int64_t>> linesize = 0,
-    flatbuffers::Offset<Shmem> shmem = 0) {
+    flatbuffers::Offset<Shmem> shmem = 0,
+    flatbuffers::Offset<AudioSetup> audio = 0) {
   VideoSetupBuilder builder_(_fbb);
+  builder_.add_audio(audio);
   builder_.add_shmem(shmem);
   builder_.add_linesize(linesize);
   builder_.add_offset(offset);
@@ -418,7 +442,8 @@ inline flatbuffers::Offset<VideoSetup> CreateVideoSetupDirect(
     bool vflip = false,
     const std::vector<int64_t> *offset = nullptr,
     const std::vector<int64_t> *linesize = nullptr,
-    flatbuffers::Offset<Shmem> shmem = 0) {
+    flatbuffers::Offset<Shmem> shmem = 0,
+    flatbuffers::Offset<AudioSetup> audio = 0) {
   return capsule::messages::CreateVideoSetup(
       _fbb,
       width,
@@ -427,7 +452,79 @@ inline flatbuffers::Offset<VideoSetup> CreateVideoSetupDirect(
       vflip,
       offset ? _fbb.CreateVector<int64_t>(*offset) : 0,
       linesize ? _fbb.CreateVector<int64_t>(*linesize) : 0,
-      shmem);
+      shmem,
+      audio);
+}
+
+struct AudioSetup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  enum {
+    VT_CHANNELS = 4,
+    VT_SAMPLE_FMT = 6,
+    VT_RATE = 8,
+    VT_SHMEM = 10
+  };
+  uint32_t channels() const {
+    return GetField<uint32_t>(VT_CHANNELS, 0);
+  }
+  SampleFmt sample_fmt() const {
+    return static_cast<SampleFmt>(GetField<int32_t>(VT_SAMPLE_FMT, 0));
+  }
+  uint32_t rate() const {
+    return GetField<uint32_t>(VT_RATE, 0);
+  }
+  const Shmem *shmem() const {
+    return GetPointer<const Shmem *>(VT_SHMEM);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_CHANNELS) &&
+           VerifyField<int32_t>(verifier, VT_SAMPLE_FMT) &&
+           VerifyField<uint32_t>(verifier, VT_RATE) &&
+           VerifyField<flatbuffers::uoffset_t>(verifier, VT_SHMEM) &&
+           verifier.VerifyTable(shmem()) &&
+           verifier.EndTable();
+  }
+};
+
+struct AudioSetupBuilder {
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_channels(uint32_t channels) {
+    fbb_.AddElement<uint32_t>(AudioSetup::VT_CHANNELS, channels, 0);
+  }
+  void add_sample_fmt(SampleFmt sample_fmt) {
+    fbb_.AddElement<int32_t>(AudioSetup::VT_SAMPLE_FMT, static_cast<int32_t>(sample_fmt), 0);
+  }
+  void add_rate(uint32_t rate) {
+    fbb_.AddElement<uint32_t>(AudioSetup::VT_RATE, rate, 0);
+  }
+  void add_shmem(flatbuffers::Offset<Shmem> shmem) {
+    fbb_.AddOffset(AudioSetup::VT_SHMEM, shmem);
+  }
+  AudioSetupBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  AudioSetupBuilder &operator=(const AudioSetupBuilder &);
+  flatbuffers::Offset<AudioSetup> Finish() {
+    const auto end = fbb_.EndTable(start_, 4);
+    auto o = flatbuffers::Offset<AudioSetup>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<AudioSetup> CreateAudioSetup(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t channels = 0,
+    SampleFmt sample_fmt = SampleFmt_UNKNOWN,
+    uint32_t rate = 0,
+    flatbuffers::Offset<Shmem> shmem = 0) {
+  AudioSetupBuilder builder_(_fbb);
+  builder_.add_shmem(shmem);
+  builder_.add_rate(rate);
+  builder_.add_sample_fmt(sample_fmt);
+  builder_.add_channels(channels);
+  return builder_.Finish();
 }
 
 struct Shmem FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -489,6 +586,106 @@ inline flatbuffers::Offset<Shmem> CreateShmemDirect(
       _fbb,
       path ? _fbb.CreateString(path) : 0,
       size);
+}
+
+struct AudioFramesCommitted FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  enum {
+    VT_OFFSET = 4,
+    VT_FRAMES = 6
+  };
+  uint32_t offset() const {
+    return GetField<uint32_t>(VT_OFFSET, 0);
+  }
+  uint32_t frames() const {
+    return GetField<uint32_t>(VT_FRAMES, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_OFFSET) &&
+           VerifyField<uint32_t>(verifier, VT_FRAMES) &&
+           verifier.EndTable();
+  }
+};
+
+struct AudioFramesCommittedBuilder {
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_offset(uint32_t offset) {
+    fbb_.AddElement<uint32_t>(AudioFramesCommitted::VT_OFFSET, offset, 0);
+  }
+  void add_frames(uint32_t frames) {
+    fbb_.AddElement<uint32_t>(AudioFramesCommitted::VT_FRAMES, frames, 0);
+  }
+  AudioFramesCommittedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  AudioFramesCommittedBuilder &operator=(const AudioFramesCommittedBuilder &);
+  flatbuffers::Offset<AudioFramesCommitted> Finish() {
+    const auto end = fbb_.EndTable(start_, 2);
+    auto o = flatbuffers::Offset<AudioFramesCommitted>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<AudioFramesCommitted> CreateAudioFramesCommitted(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t offset = 0,
+    uint32_t frames = 0) {
+  AudioFramesCommittedBuilder builder_(_fbb);
+  builder_.add_frames(frames);
+  builder_.add_offset(offset);
+  return builder_.Finish();
+}
+
+struct AudioFramesProcessed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  enum {
+    VT_OFFSET = 4,
+    VT_FRAMES = 6
+  };
+  uint32_t offset() const {
+    return GetField<uint32_t>(VT_OFFSET, 0);
+  }
+  uint32_t frames() const {
+    return GetField<uint32_t>(VT_FRAMES, 0);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<uint32_t>(verifier, VT_OFFSET) &&
+           VerifyField<uint32_t>(verifier, VT_FRAMES) &&
+           verifier.EndTable();
+  }
+};
+
+struct AudioFramesProcessedBuilder {
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_offset(uint32_t offset) {
+    fbb_.AddElement<uint32_t>(AudioFramesProcessed::VT_OFFSET, offset, 0);
+  }
+  void add_frames(uint32_t frames) {
+    fbb_.AddElement<uint32_t>(AudioFramesProcessed::VT_FRAMES, frames, 0);
+  }
+  AudioFramesProcessedBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  AudioFramesProcessedBuilder &operator=(const AudioFramesProcessedBuilder &);
+  flatbuffers::Offset<AudioFramesProcessed> Finish() {
+    const auto end = fbb_.EndTable(start_, 2);
+    auto o = flatbuffers::Offset<AudioFramesProcessed>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<AudioFramesProcessed> CreateAudioFramesProcessed(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    uint32_t offset = 0,
+    uint32_t frames = 0) {
+  AudioFramesProcessedBuilder builder_(_fbb);
+  builder_.add_frames(frames);
+  builder_.add_offset(offset);
+  return builder_.Finish();
 }
 
 struct VideoFrameCommitted FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
