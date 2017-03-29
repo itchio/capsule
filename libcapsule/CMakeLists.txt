@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
 
+project(libcapsule)
+
 if(APPLE)
   # MACOSX_RPATH is now enabled by default
   cmake_policy(SET CMP0042 NEW)
