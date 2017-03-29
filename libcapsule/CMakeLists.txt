@@ -33,7 +33,9 @@ set(libcapsule_SRC
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   list(APPEND libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/linux/hooks.cc
+    ${libcapsule_SOURCE_DIR}/linux/dlopen_hooks.cc
     ${libcapsule_SOURCE_DIR}/linux/gl_hooks.cc
+    ${libcapsule_SOURCE_DIR}/linux/alsa_hooks.cc
   )
 endif()
 
