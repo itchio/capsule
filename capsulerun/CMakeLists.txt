@@ -117,7 +117,7 @@ install(TARGETS capsulerun
 )
 
 set(CAPSULERUN_BINARY_PATH "${CMAKE_BINARY_DIR}/dist/capsulerun${CMAKE_EXECUTABLE_SUFFIX}")
-set(CAPSULERUN_LIBRARY_DIRS "${FFMPEG_LIBRARY_DIR}" "$ENV{HOME}/Dev/ffmpeg-prefix/lib")
+set(CAPSULERUN_LIBRARY_DIRS "${CAPSULE_DEPS_PREFIX}/lib" "$ENV{HOME}/Dev/ffmpeg-prefix/lib")
 if(WIN32)
 # on windows, system libraries include stuff like `api-ms-` etc. which are private and
 # we definitely don't want
