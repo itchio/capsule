@@ -49,9 +49,11 @@ int next_frame_index = 0;
 
 shoom::Shm *shm;
 shoom::Shm *audio_shm;
-size_t audio_frame_size;
-size_t audio_shm_committed_offset;
-size_t audio_shm_processed_offset;
+int64_t audio_frame_size;
+int64_t audio_shm_committed_offset;
+int64_t audio_shm_processed_offset;
+
+std::mutex out_mutex;
 
 static bool IsFrameLocked(int i) {
     std::lock_guard<std::mutex> lock(frame_locked_mutex);
@@ -214,7 +216,10 @@ void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pit
     auto pkt = pkt_builder.Finish();
 
     builder.Finish(pkt);
-    lab::packet::Fwrite(builder, out_file);
+    {
+        std::lock_guard<std::mutex> lock(out_mutex);
+        lab::packet::Fwrite(builder, out_file);
+    }
 }
 
 int is_skipping;
@@ -248,7 +253,10 @@ void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size
     builder.Finish(pkt);
 
     LockFrame(next_frame_index);
-    lab::packet::Fwrite(builder, out_file);
+    {
+        std::lock_guard<std::mutex> lock(out_mutex);
+        lab::packet::Fwrite(builder, out_file);
+    }
 
     next_frame_index = (next_frame_index + 1) % kNumBuffers;
 }
@@ -259,51 +267,72 @@ void WriteAudioFrames(char *data, size_t frames) {
         return;
     }
  
-    size_t needed_size = audio_frame_size * frames;
-    size_t avail_size = audio_shm->Size() - audio_shm_committed_offset;
+    int64_t remain_frames = frames;
+    int64_t offset = 0;
+    while (remain_frames > 0) {
+        if (audio_shm_committed_offset == (int64_t) audio_shm->Size()) {
+            Log("io: Wrapping!");
+            // wrap around!
+            audio_shm_committed_offset = 0;
+        }
 
-    if (avail_size < needed_size) {
-        // stubby
-        Log("not enough size available in audio_shm, skipping");
-    } else {
-        Log("putting %" PRIdS " frames", frames);
-        char *dst = (char*) audio_shm->Data() + audio_shm_committed_offset;
-        memcpy(dst, data, needed_size);
+        int64_t write_frames = remain_frames;
+        int64_t avail_frames = (audio_shm->Size() - audio_shm_committed_offset) / audio_frame_size;
 
-        flatbuffers::FlatBufferBuilder builder(64);
-        auto afc = messages::CreateAudioFramesCommitted(
-            builder,
-            audio_shm_committed_offset / audio_frame_size,
-            frames
-        );
+        if (write_frames > avail_frames) {
+            write_frames = avail_frames;
+        }
 
-        auto pkt = messages::CreatePacket(
-            builder,
-            messages::Message_AudioFramesCommitted,
-            afc.Union()
-        );
+        {
+            // Log("putting %" PRIdS " frames at %d", frames, audio_shm_committed_offset);
+            char *src = data + (offset * audio_frame_size);
+            char *dst = (char*) audio_shm->Data() + audio_shm_committed_offset;
+            int64_t copy_size = write_frames * audio_frame_size;
+            memcpy(dst, src, copy_size);
 
-        builder.Finish(pkt);
-        lab::packet::Fwrite(builder, out_file);
+            flatbuffers::FlatBufferBuilder builder(64);
+            auto afc = messages::CreateAudioFramesCommitted(
+                builder,
+                audio_shm_committed_offset / audio_frame_size,
+                write_frames
+            );
 
-        audio_shm_committed_offset += needed_size;
+            auto pkt = messages::CreatePacket(
+                builder,
+                messages::Message_AudioFramesCommitted,
+                afc.Union()
+            );
+
+            builder.Finish(pkt);
+            {
+                std::lock_guard<std::mutex> lock(out_mutex);
+                lab::packet::Fwrite(builder, out_file);
+            }
+
+            audio_shm_committed_offset += copy_size;
+        }
+
+        remain_frames -= write_frames;
+        offset += write_frames;
     }
 }
 
 void WriteHotkeyPressed() {
-    flatbuffers::FlatBufferBuilder builder(1024);
+    flatbuffers::FlatBufferBuilder builder(32);
 
-    messages::HotkeyPressedBuilder hkp_builder(builder);
-    auto hkp = hkp_builder.Finish();
-
-    messages::PacketBuilder pkt_builder(builder);
-    pkt_builder.add_message_type(messages::Message_HotkeyPressed);
-    pkt_builder.add_message(hkp.Union());
-    auto pkt = pkt_builder.Finish();
+    auto hkp = messages::CreateHotkeyPressed(builder);
+    auto pkt = messages::CreatePacket(
+        builder,
+        messages::Message_HotkeyPressed,
+        hkp.Union()
+    );
 
     builder.Finish(pkt);
 
-    lab::packet::Fwrite(builder, out_file);
+    {
+        std::lock_guard<std::mutex> lock(out_mutex);
+        lab::packet::Fwrite(builder, out_file);
+    }
 }
 
 void Init() {

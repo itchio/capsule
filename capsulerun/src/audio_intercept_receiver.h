@@ -23,6 +23,8 @@
 
 #include <capsule/messages_generated.h>
 
+#include <mutex>
+
 #include "audio_receiver.h"
 #include "connection.h"
 #include "encoder.h"
@@ -47,11 +49,13 @@ class AudioInterceptReceiver : public AudioReceiver {
     shoom::Shm *shm_ = nullptr;
 
     int num_frames_ = 0;
-    size_t frame_size_ = 0;
-    int commit_index_ = 0;
-    int sent_index_ = 0;
-    int processed_index_ = 0;
+    int64_t frame_size_ = 0;
+    int64_t commit_index_ = 0;
+    int64_t sent_index_ = 0;
+    int64_t processed_index_ = 0;
     char *buffer_ = nullptr;
+
+    std::mutex buffer_mutex_;
 
     bool initialized_ = false;
 };

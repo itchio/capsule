@@ -114,8 +114,8 @@ int VideoReceiver::ReceiveFrame(uint8_t *buffer_out, size_t buffer_size_out, int
           committed_frames++;
         }
       }
-      fprintf(stderr, "buffer fill: %d/%d, skipped %d\n", committed_frames, num_frames_, overrun_);
-      fflush(stderr);
+      // fprintf(stderr, "buffer fill: %d/%d, skipped %d\n", committed_frames, num_frames_, overrun_);
+      // fflush(stderr);
     }
     /////////////////////////////////
     // </poor man's profiling>

@@ -522,8 +522,8 @@ void Run(MainArgs *args, Params *params) {
     auto delta = timestamp - last_timestamp;
     last_timestamp = timestamp;
     if (fps_counter.TickDelta(delta)) {
-      fprintf(stderr, "FPS: %.2f\n", fps_counter.Fps());
-      fflush(stderr);
+      // fprintf(stderr, "FPS: %.2f\n", fps_counter.Fps());
+      // fflush(stderr);
     }
 
     if (read < buffer_size) {
