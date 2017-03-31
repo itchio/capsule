@@ -39,7 +39,7 @@ elseif(MSVC)
 endif()
 
 if(WIN32)
-add_definitions(-DUNICODE -D_UNICODE -D_CRT_SECURE_NO_WARNINGS)
+add_definitions(-DUNICODE -D_UNICODE -D_CRT_SECURE_NO_WARNINGS -DNOMINMAX)
 endif() # WIN32
 
 if(WIN32)
