@@ -27,8 +27,8 @@ namespace capsule {
 namespace bundle {
 
 std::string ExecPath(std::string bundle_path) {
-  NSString *bundlePath = [NSString stringWithUTF8String:bundle_path.c_str()];
-  NSBundle *bundle = [NSBundle bundleWithPath:bundlePath];
+  NSString *bundle_path_ns = [NSString stringWithUTF8String:bundle_path.c_str()];
+  NSBundle *bundle = [NSBundle bundleWithPath:bundle_path_ns];
   if (!bundle) {
     // not a bundle or not accessible
     return "";
