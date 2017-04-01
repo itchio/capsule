@@ -376,18 +376,6 @@ snd_pcm_sframes_t snd_pcm_mmap_commit(
   capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_mmap_commit, "snd_pcm_mmap_commit");
 
   if (_last_areas) {
-    // if (!_raw) {
-    //   _raw = fopen("capsule.rawaudio", "wb");
-    //   capsule::Ensure("opened raw", !!_raw);
-    // }
-    // capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_frames_to_bytes, "snd_pcm_frames_to_bytes");
-    // auto bytes = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(frames));
-    // auto byte_offset = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(offset));
-    // DebugLog("snd_pcm_mmap_commit: ...that's %" PRIdS " bytes", bytes);
-    // auto area = _last_areas[0];
-    // auto buffer = reinterpret_cast<uint8_t*>(area.addr) + (area.first / 8) + byte_offset;
-    // fwrite(reinterpret_cast<void*>(buffer), static_cast<size_t>(bytes), 1, _raw);
-
     if (capsule::capture::Active()) {
       capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_frames_to_bytes, "snd_pcm_frames_to_bytes");
       auto byte_offset = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(offset));

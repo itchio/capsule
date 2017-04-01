@@ -26,31 +26,47 @@
 #include "interpose.h"
 #include "../logging.h"
 #include "../ensure.h"
+#include "../capture.h"
+#include "../io.h"
 
 namespace capsule {
 namespace coreaudio {
 
+struct CoreAudioState {
+  bool seen;
+} state = {0};
+
+void Saw() {
+  if (!state.seen) {
+    capsule::Log("CoreAudio: saw!");
+    state.seen = true;
+
+    auto channels = 2;
+    auto rate = 44100;
+
+    // FIXME: query instead of blindly assuming format
+    capture::HasAudioIntercept(messages::SampleFmt_F32LE, rate, channels);
+  }
+}
+
 static OSStatus RenderCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp,
                             UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData) {
-  static FILE *raw = nullptr;
-  static int64_t count = 0;
+  Saw();
 
   auto proxy_data = reinterpret_cast<CallbackProxyData*>(inRefCon);
 
-  capsule::Log("CoreAudio: rendering a buffer with %d bytes", ioData->mBuffers[0].mDataByteSize);
+  // capsule::Log("CoreAudio: rendering a buffer with %d bytes", ioData->mBuffers[0].mDataByteSize);
   auto ret = proxy_data->actual_callback(
     proxy_data->actual_userdata, ioActionFlags, inTimeStamp, inBusNumber, inNumberFrames, ioData
   );
 
-  {
-    if (!raw) {
-      raw = fopen("capsule.rawaudio", "wb");
-      capsule::Ensure("opened raw output", !!raw);
-    }
-    fwrite(ioData->mBuffers[0].mData, 1, ioData->mBuffers[0].mDataByteSize, raw);
-    if (count++ > 15) {
-      fflush(raw);
-    }
+  if (capsule::capture::Active()) {
+    const int64_t channels = 2;
+    const int64_t sample_size = 32 / 8;
+    const int64_t frame_size = sample_size * channels;
+    auto buf = ioData->mBuffers[0];
+    const int64_t num_frames = buf.mDataByteSize / frame_size;
+    capsule::io::WriteAudioFrames((char*) buf.mData, num_frames);
   }
 
   return ret;
