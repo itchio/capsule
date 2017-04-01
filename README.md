@@ -184,9 +184,6 @@ homebrew-installed ffmpeg & x264 are fine.
 
 Note: capsule only supports 64-bit macOS for minimal headaches.
 
-capsulerun doesn't grok app bundles, so launch the exec directly: macOS is smart
-enough to do the right thing.
-
 ### Building on Windows
 
 Important notes:
