@@ -19,6 +19,7 @@ gp_resolve_item(
 )
 get_filename_component(DEPENDENCY_NAME "${DEPENDENCY_RESOLVED}" NAME)
 get_filename_component(DEPENDENCY_REALPATH "${DEPENDENCY_RESOLVED}" REALPATH)
+message("dependency realpath: ${DEPENDENCY_REALPATH}")
 file(INSTALL
   FILES "${DEPENDENCY_REALPATH}"
   DESTINATION "${CMAKE_BINARY_DIR}/dist"

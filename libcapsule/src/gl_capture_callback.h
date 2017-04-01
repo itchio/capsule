@@ -19,39 +19,11 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include <Cocoa/Cocoa.h>
-#include <OpenGL/OpenGL.h>
+namespace capsule {
+namespace gl {
 
-#include "interpose.h"
-#include "../capture.h"
+void Capture (int width, int height);
 
-#define CAPSULE_NOGLDEFS
-#include "../gl_capture_callback.h"
-#undef cAPSULE_NOGLDEFS
-
-CGLError CapsuleCglFlushDrawable (CGLContextObj ctx) {
-  capsule::capture::SawBackend(capsule::capture::kBackendGL);
-
-  CGLError ret = CGLFlushDrawable(ctx);
-
-  int width = 0;
-  int height = 0;
-
-  NSOpenGLContext *nsCtx = [NSOpenGLContext currentContext];
-  if (nsCtx) {
-    NSView *view = [nsCtx view];
-    NSSize size = [view convertSizeToBacking: [view bounds].size];
-
-    if (size.width > 0 && size.height > 0) {
-      width = size.width;
-      height = size.height;
-    }
-  }
-
-  capsule::gl::Capture(width, height);
-
-  return ret;
-}
-
-DYLD_INTERPOSE(CapsuleCglFlushDrawable, CGLFlushDrawable)
+} // namespace gl
+} // namespace capsule
 

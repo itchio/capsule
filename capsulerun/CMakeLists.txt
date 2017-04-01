@@ -82,11 +82,9 @@ if(WIN32)
 endif()
 
 if(APPLE)
-  include(FindPkgConfig)
-  foreach(NEEDED_LIB libavutil libavcodec libavformat libswscale libswresample x264)
-    PKG_CHECK_MODULES(${NEEDED_LIB}_PKG ${NEEDED_LIB})
-    include_directories(${${NEEDED_LIB}_PKG_INCLUDE_DIRS})
-    target_link_libraries(capsulerun ${${NEEDED_LIB}_PKG_LDFLAGS} ${${NEEDED_LIB}_PKG_LIBRARIES})
+  add_dependencies(capsulerun capsule_deps)
+  foreach(NEEDED_LIB avutil avcodec avformat swscale swresample x264)
+    target_link_libraries(capsulerun ${FFMPEG_LIBRARY_DIR}/lib${NEEDED_LIB}.dylib)
   endforeach(NEEDED_LIB)
 
   find_library(COCOA_LIBRARY Cocoa)
@@ -97,7 +95,7 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   include(FindPkgConfig)
-  set(ENV{PKG_CONFIG_PATH} "$ENV{HOME}/Dev/ffmpeg-prefix/lib/pkgconfig:${CAPSULE_DEPS_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+  set(ENV{PKG_CONFIG_PATH} "${CAPSULE_DEPS_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 
   foreach(NEEDED_LIB libavutil libavcodec libavformat libswscale libswresample x264 libpulse-simple)
     PKG_CHECK_MODULES(${NEEDED_LIB}_PKG ${NEEDED_LIB})
@@ -121,8 +119,9 @@ install(TARGETS capsulerun
 )
 
 set(CAPSULERUN_BINARY_PATH "${CMAKE_BINARY_DIR}/dist/capsulerun${CMAKE_EXECUTABLE_SUFFIX}")
-set(CAPSULERUN_LIBRARY_DIRS "${CAPSULE_DEPS_PREFIX}/lib" "${FFMPEG_LIBRARY_DIR}" "$ENV{HOME}/Dev/ffmpeg-prefix/lib")
+set(CAPSULERUN_LIBRARY_DIRS "${CAPSULE_DEPS_PREFIX}/lib" "${FFMPEG_LIBRARY_DIR}")
 
+message("ffmpeg library dir: ${FFMPEG_LIBRARY_DIR}")
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/dependencies.cmake.in"
   "${CMAKE_CURRENT_BINARY_DIR}/dependencies.cmake"

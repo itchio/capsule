@@ -1,14 +1,19 @@
 cmake_minimum_required(VERSION 2.8)
 
-add_subdirectory(microprofile)
-add_subdirectory(argparse)
-
 set(SHOOM_BUILD_TESTS OFF CACHE BOOL "Build shoom tests")
-add_subdirectory(vendor/shoom)
 set(LAB_BUILD_TESTS OFF CACHE BOOL "Build lab tests")
-add_subdirectory(vendor/lab)
+
+# Build universal binaries for osx
+if(APPLE)
+set(CMAKE_OSX_ARCHITECTURES "i386;x86_64")
+endif() # APPLE
 
 project(capsule)
+
+add_subdirectory(vendor/shoom)
+add_subdirectory(vendor/lab)
+add_subdirectory(microprofile)
+add_subdirectory(argparse)
 
 set(shoom_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/shoom/include)
 set(lab_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vendor/lab/src)
@@ -42,11 +47,11 @@ if(WIN32)
 add_definitions(-DUNICODE -D_UNICODE -D_CRT_SECURE_NO_WARNINGS -DNOMINMAX)
 endif() # WIN32
 
+set(DEPS_PREFIX https://dl.itch.ovh/capsule-deps)
+set(DEPS_DIR ${PROJECT_BINARY_DIR}/deps)
+
 if(WIN32)
   if(MSVC)
-    set(DEPS_PREFIX https://dl.itch.ovh/capsule-deps)
-    set(DEPS_DIR ${PROJECT_BINARY_DIR}/deps)
-
     if(${CMAKE_GENERATOR} MATCHES "Win64$")
       message(STATUS "Using 64-bit windows dependencies")
       set(DEPS_URL ${DEPS_PREFIX}/capsule-deps-windows-amd64.tar.gz)
@@ -78,6 +83,20 @@ if(WIN32)
   elseif()
     message(FATAL_ERROR "Only MSVC is supported on Windows. Sorry!")
   endif()
+elseif(APPLE)
+  set(DEPS_URL ${DEPS_PREFIX}/capsule-deps-darwin-universal.tar.gz)
+  get_filename_component(FFMPEG_LIBRARY_DIR ${DEPS_DIR}/lib REALPATH)
+
+  include(ExternalProject)
+  ExternalProject_Add(
+    capsule_deps
+    URL ${DEPS_URL}
+    SOURCE_DIR ${PROJECT_BINARY_DIR}/deps
+    CONFIGURE_COMMAND ""
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+  )
+  include_directories(${DEPS_DIR}/include)
 endif()
 
 set(microprofile_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/microprofile)

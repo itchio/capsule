@@ -27,6 +27,8 @@
 #include "logging.h"
 #include "dynlib.h"
 
+#include "gl_capture_callback.h"
+
 typedef unsigned int GLenum;
 typedef unsigned int GLbitfield;
 typedef unsigned int GLuint;
@@ -202,7 +204,6 @@ extern const char *kDefaultOpengl;
 extern LibHandle handle;
 
 bool EnsureOpengl();
-void Capture (int width, int height);
 
 // Must have platform-specific implementation
 bool LoadOpengl (const char *path);

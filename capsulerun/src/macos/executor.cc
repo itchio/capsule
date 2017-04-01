@@ -68,13 +68,13 @@ Executor::Executor() {
 }
 
 ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
-  std::string libcapsule64_path = lab::paths::Join(std::string(args->libpath), "libcapsule64.dylib");
+  std::string libcapsule_path = lab::paths::Join(std::string(args->libpath), "libcapsule.dylib");
 
   std::string dyld_insert = lab::env::Get("DYLD_INSERT_LIBRARIES");
   if (dyld_insert != "") {
     dyld_insert += ":";
   }
-  dyld_insert += libcapsule64_path;
+  dyld_insert += libcapsule_path;
   std::string dyld_insert_var = "DYLD_INSERT_LIBRARIES=" + dyld_insert;
 
   std::string pipe_var = "CAPSULE_PIPE_PATH=" + std::string(args->pipe);

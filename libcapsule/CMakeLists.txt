@@ -118,6 +118,11 @@ else()
 set(LIBCAPSULE_ARCH_SUFFIX "32")
 endif() # 32/64-bit test
 
+# the macOS version is universal, no suffix needed
+if(APPLE)
+set(LIBCAPSULE_ARCH_SUFFIX "")
+endif()
+
 install(
   FILES $<TARGET_FILE:capsule>
   RENAME "${CMAKE_SHARED_LIBRARY_PREFIX}capsule${LIBCAPSULE_ARCH_SUFFIX}${CMAKE_SHARED_LIBRARY_SUFFIX}"
