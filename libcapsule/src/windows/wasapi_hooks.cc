@@ -21,7 +21,10 @@
 
 #include "win_capture.h"
 
+#include "../capsule/messages_generated.h"
 #include "../logging.h"
+#include "../capture.h"
+#include "../io.h"
 #include "wasapi_vtable_helpers.h"
 
 // IMMDeviceEnumerator, IMMDevice
@@ -29,8 +32,55 @@
 // IAudioClient, IAudioCaptureClient
 #include <audioclient.h>
 
+#define DebugLog(...) Log(__VA_ARGS__)
+// #define DebugLog(...)
+
 namespace capsule {
 namespace wasapi {
+
+static struct WasapiState {
+  bool seen;
+  IAudioClient *client;
+  BYTE *data;
+} state = {0};
+
+void Saw(IAudioClient *client) {
+  if (!state.seen) {
+    Log("Wasapi: saw!");
+    state.seen = true;
+    state.client = client;
+    
+    WAVEFORMATEX *pwfx;
+
+    HRESULT hr;
+    hr = client->GetMixFormat(&pwfx);
+    if (FAILED(hr)) {
+      Log("Wasapi: couldn't get mix format, disabling capture");
+      return;
+    }
+
+    auto channels = pwfx->nChannels;
+    auto rate = pwfx->nSamplesPerSec;
+
+    if (pwfx->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
+      auto pwfxe = reinterpret_cast<WAVEFORMATEXTENSIBLE *>(pwfx);
+      if (pwfxe->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT) {
+        if (pwfx->wBitsPerSample == 32) {
+          // yay it's f32le!
+          capture::HasAudioIntercept(messages::SampleFmt_F32LE, rate, channels);
+        } else {
+          Log("Wasapi: format is float but not 32, bailing out");
+        }
+      } else {
+        Log("Wasapi: format extensible but not float, bailing out");
+      }
+    } else {
+      Log("Wasapi: format isn't F32LE, bailing out");
+    }
+
+    CoTaskMemFree(pwfx);
+  }
+}
 
 /**
  * Release a COM resource, if it's non-null
@@ -39,6 +89,26 @@ static inline void SafeRelease(IUnknown *p) {
   if (p) {
     p->Release();
   }
+}
+
+///////////////////////////////////////////////
+// IAudioClient::GetCurrentPadding
+///////////////////////////////////////////////
+typedef HRESULT (LAB_STDCALL *GetCurrentPadding_t) (
+  IAudioClient *client,
+  UINT32 **pNumPaddingFrames
+);
+static GetCurrentPadding_t GetCurrentPadding_real;
+static SIZE_T GetCurrentPadding_hookId = 0;
+
+HRESULT LAB_STDCALL GetCurrentPadding_hook (
+  IAudioClient *client,
+  UINT32 **pNumPaddingFrames
+) {
+  Saw(client);
+  DebugLog("Wasapi: hooked GetCurrentPadding called");
+  auto ret = GetCurrentPadding_real(client, pNumPaddingFrames);
+  return ret;
 }
 
 ///////////////////////////////////////////////
@@ -57,12 +127,19 @@ HRESULT LAB_STDCALL GetBuffer_hook (
   UINT32 NumFramesRequested,
   BYTE   **ppData
 ) {
-  Log("Wasapi: hooked GetBuffer called, %d frames requested", (int) NumFramesRequested);
+  DebugLog("Wasapi: hooked GetBuffer called, %d frames requested", (int) NumFramesRequested);
   auto ret = GetBuffer_real(
     client,
     NumFramesRequested,
     ppData
   );
+
+  if (SUCCEEDED(ret)) {
+    state.data = *ppData;
+  } else {
+    state.data = nullptr;
+  }
+
   return ret;
 }
 
@@ -72,7 +149,7 @@ HRESULT LAB_STDCALL GetBuffer_hook (
 typedef HRESULT (LAB_STDCALL *ReleaseBuffer_t) (
   IAudioRenderClient *client,
   UINT32 NumFramesWritten,
-  BYTE   **ppData
+  DWORD dwFlags
 );
 static ReleaseBuffer_t ReleaseBuffer_real;
 static SIZE_T ReleaseBuffer_hookId = 0;
@@ -80,13 +157,20 @@ static SIZE_T ReleaseBuffer_hookId = 0;
 HRESULT LAB_STDCALL ReleaseBuffer_hook (
   IAudioRenderClient *client,
   UINT32 NumFramesWritten,
-  BYTE   **ppData
+  DWORD dwFlags
 ) {
-  Log("Wasapi: hooked ReleaseBuffer called, %d frames written", (int) NumFramesWritten);
+  DebugLog("Wasapi: hooked ReleaseBuffer called, %d frames written", (int) NumFramesWritten);
+
+  if (state.data) {
+    if (capture::Active()) {
+      io::WriteAudioFrames((char*) state.data, (size_t) NumFramesWritten);
+    }
+  }
+
   auto ret = ReleaseBuffer_real(
     client,
     NumFramesWritten,
-    ppData
+    dwFlags
   );
   return ret;
 }
@@ -188,13 +272,26 @@ HRESULT LAB_STDCALL CoCreateInstance_hook (
       }
 
       Log("Wasapi: hey we got a render client! Poking vtable...");
+      void *GetCurrentPadding_addr = capsule_get_IAudioClient_GetCurrentPadding(pAudioClient);
       void *GetBuffer_addr = capsule_get_IAudioRenderClient_GetBuffer(pRenderClient);
       void *ReleaseBuffer_addr = capsule_get_IAudioRenderClient_ReleaseBuffer(pRenderClient);
 
+      Log("Wasapi: GetCurrentPadding address: %p", GetCurrentPadding_addr);
       Log("Wasapi: GetBuffer address: %p", GetBuffer_addr);
       Log("Wasapi: ReleaseBuffer address: %p", ReleaseBuffer_addr);
 
       DWORD err;
+      err = cHookMgr.Hook(
+        &GetCurrentPadding_hookId,
+        (LPVOID *) &GetCurrentPadding_real,
+        GetCurrentPadding_addr,
+        GetCurrentPadding_hook
+      );
+      if (err != ERROR_SUCCESS) {
+        Log("Hooking GetCurrentPadding derped with error %d (%x)", err, err);
+        break;
+      }
+
       err = cHookMgr.Hook(
         &GetBuffer_hookId,
         (LPVOID *) &GetBuffer_real,
