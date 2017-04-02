@@ -41,6 +41,59 @@ static inline void SafeRelease(IUnknown *p) {
   }
 }
 
+///////////////////////////////////////////////
+// IAudioRenderClient::GetBuffer
+///////////////////////////////////////////////
+typedef HRESULT (LAB_STDCALL *GetBuffer_t) (
+  IAudioRenderClient *client,
+  UINT32 NumFramesRequested,
+  BYTE   **ppData
+);
+static GetBuffer_t GetBuffer_real;
+static SIZE_T GetBuffer_hookId = 0;
+
+HRESULT LAB_STDCALL GetBuffer_hook (
+  IAudioRenderClient *client,
+  UINT32 NumFramesRequested,
+  BYTE   **ppData
+) {
+  Log("Wasapi: hooked GetBuffer called, %d frames requested", (int) NumFramesRequested);
+  auto ret = GetBuffer_real(
+    client,
+    NumFramesRequested,
+    ppData
+  );
+  return ret;
+}
+
+///////////////////////////////////////////////
+// IAudioRenderClient::ReleaseBuffer
+///////////////////////////////////////////////
+typedef HRESULT (LAB_STDCALL *ReleaseBuffer_t) (
+  IAudioRenderClient *client,
+  UINT32 NumFramesWritten,
+  BYTE   **ppData
+);
+static ReleaseBuffer_t ReleaseBuffer_real;
+static SIZE_T ReleaseBuffer_hookId = 0;
+
+HRESULT LAB_STDCALL ReleaseBuffer_hook (
+  IAudioRenderClient *client,
+  UINT32 NumFramesWritten,
+  BYTE   **ppData
+) {
+  Log("Wasapi: hooked ReleaseBuffer called, %d frames written", (int) NumFramesWritten);
+  auto ret = ReleaseBuffer_real(
+    client,
+    NumFramesWritten,
+    ppData
+  );
+  return ret;
+}
+
+///////////////////////////////////////////////
+// CoCreateInstance (ole32)
+///////////////////////////////////////////////
 typedef HRESULT (LAB_STDCALL *CoCreateInstance_t) (
   REFCLSID  rclsid,
   LPUNKNOWN pUnkOuter,
@@ -135,11 +188,34 @@ HRESULT LAB_STDCALL CoCreateInstance_hook (
       }
 
       Log("Wasapi: hey we got a render client! Poking vtable...");
-      void *GetBuffer_addr = capsule_get_IAudioRenderClient_GetBuffer(pAudioClient);
-      void *ReleaseBuffer_addr = capsule_get_IAudioRenderClient_ReleaseBuffer(pAudioClient);
+      void *GetBuffer_addr = capsule_get_IAudioRenderClient_GetBuffer(pRenderClient);
+      void *ReleaseBuffer_addr = capsule_get_IAudioRenderClient_ReleaseBuffer(pRenderClient);
 
       Log("Wasapi: GetBuffer address: %p", GetBuffer_addr);
       Log("Wasapi: ReleaseBuffer address: %p", ReleaseBuffer_addr);
+
+      DWORD err;
+      err = cHookMgr.Hook(
+        &GetBuffer_hookId,
+        (LPVOID *) &GetBuffer_real,
+        GetBuffer_addr,
+        GetBuffer_hook
+      );
+      if (err != ERROR_SUCCESS) {
+        Log("Hooking GetBuffer derped with error %d (%x)", err, err);
+        break;
+      }
+
+      err = cHookMgr.Hook(
+        &ReleaseBuffer_hookId,
+        (LPVOID *) &ReleaseBuffer_real,
+        ReleaseBuffer_addr,
+        ReleaseBuffer_hook
+      );
+      if (err != ERROR_SUCCESS) {
+        Log("Hooking ReleaseBuffer derped with error %d (%x)", err, err);
+        break;
+      }
     } while(false);
 
     SafeRelease(pRenderClient);
