@@ -76,7 +76,8 @@ Things that are *out of scope* (ie. that capsule will not officially support):
     * [ ] Direct3D 12 capture
     * [ ] Vulkan capture
   * Audio
-    * [x] Wasapi: captures default loopback device
+    * [x] Wasapi: Intercepts API calls, only F32LE supported so far
+    * [x] Wasapi fallback: captures default loopback device
 
 ## Build instructions
 
