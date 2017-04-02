@@ -2,10 +2,6 @@
 stages:
   - build
 
-cache:
-  key: "$CI_BUILD_NAME"
-  untracked: true
-
 compile-windows:
   stage: build
   tags:
