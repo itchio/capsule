@@ -71,6 +71,7 @@ if(WIN32)
     ${libcapsule_SOURCE_DIR}/windows/gl_capture.cc
     ${libcapsule_SOURCE_DIR}/windows/dc_capture.cc
     ${libcapsule_SOURCE_DIR}/windows/wasapi_hooks.cc
+    ${libcapsule_SOURCE_DIR}/windows/wasapi_vtable_helpers.cc
   )
 endif()
 

@@ -19,33 +19,18 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include "d3d9_vtable_helpers.h"
+#include "wasapi_vtable_helpers.h"
 
 #define CINTERFACE
-#include <d3d9.h>
+#include <audioclient.h>
 #undef CINTERFACE
 
-void *capsule_get_IDirect3D9_CreateDevice_address (void *pObj) {
-  IDirect3D9 *obj = (IDirect3D9 *) pObj;
-  return obj->lpVtbl->CreateDevice;
+void* capsule_get_IAudioRenderClient_GetBuffer(void *pObj) {
+  auto obj = reinterpret_cast<IAudioRenderClient *>(pObj);
+  return obj->lpVtbl->GetBuffer;
 }
 
-void *capsule_get_IDirect3D9Ex_CreateDeviceEx_address (void *pObj) {
-  IDirect3D9Ex *obj = (IDirect3D9Ex *) pObj;
-  return obj->lpVtbl->CreateDeviceEx;
-}
-
-void* capsule_get_IDirect3DDevice9_Present_address(void *pDevice) {
-  IDirect3DDevice9 *device = (IDirect3DDevice9 *) pDevice;
-  return device->lpVtbl->Present;
-}
-
-void* capsule_get_IDirect3DDevice9Ex_PresentEx_address(void *pDevice) {
-  IDirect3DDevice9Ex *device = (IDirect3DDevice9Ex *) pDevice;
-  return device->lpVtbl->PresentEx;
-}
-
-void* capsule_get_IDirect3DSwapChain9_Present_address(void *pSwap) {
-  IDirect3DSwapChain9 *swap = (IDirect3DSwapChain9 *) pSwap;
-  return swap->lpVtbl->Present;
+void* capsule_get_IAudioRenderClient_ReleaseBuffer(void *pObj) {
+  auto obj = reinterpret_cast<IAudioRenderClient *>(pObj);
+  return obj->lpVtbl->ReleaseBuffer;
 }

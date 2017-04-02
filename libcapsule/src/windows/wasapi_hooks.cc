@@ -1,6 +1,5 @@
 
 /*
- *
  *  capsule - the game recording and overlay toolkit
  *  Copyright (C) 2017, Amos Wenger
  *
@@ -23,14 +22,24 @@
 #include "win_capture.h"
 
 #include "../logging.h"
+#include "wasapi_vtable_helpers.h"
 
 // IMMDeviceEnumerator, IMMDevice
 #include <mmDeviceapi.h>
+// IAudioClient, IAudioCaptureClient
+#include <audioclient.h>
 
 namespace capsule {
 namespace wasapi {
 
-const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
+/**
+ * Release a COM resource, if it's non-null
+ */
+static inline void SafeRelease(IUnknown *p) {
+  if (p) {
+    p->Release();
+  }
+}
 
 typedef HRESULT (LAB_STDCALL *CoCreateInstance_t) (
   REFCLSID  rclsid,
@@ -49,23 +58,102 @@ HRESULT LAB_STDCALL CoCreateInstance_hook (
   REFIID    riid,
   LPVOID    *ppv
 ) {
+  static bool hooking = false;
+
   auto guid = riid;
   Log("Wasapi: CoCreate instance called with riid {%08lX-%04hX-%04hX-%02hhX%02hhX-%02hhX%02hhX%02hhX%02hhX%02hhX%02hhX}", 
     guid.Data1, guid.Data2, guid.Data3, 
     guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
     guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
 
-  if (riid == IID_IMMDeviceEnumerator) {
-    Log("Found the IMMDeviceEnumerator!");
-  }
-
-  return CoCreateInstance_real(
+  HRESULT ret = CoCreateInstance_real(
     rclsid,
     pUnkOuter,
     dwClsContext,
     riid,
     ppv
   );
+
+  if (hooking) {
+    return ret;
+  }
+
+  if (riid == __uuidof(IMMDeviceEnumerator) && !GetBuffer_hookId) {
+    hooking = true;
+
+    Log("Found the IMMDeviceEnumerator!");
+
+    IMMDevice *pDevice = nullptr;
+    IAudioClient *pAudioClient = nullptr;
+    IAudioRenderClient *pRenderClient = nullptr;
+    WAVEFORMATEX *pwfx = nullptr;
+
+    do {
+      HRESULT hr;
+      auto pEnumerator = reinterpret_cast<IMMDeviceEnumerator *>(*ppv);
+      hr = pEnumerator->GetDefaultAudioEndpoint(
+        eRender, eConsole, &pDevice
+      );
+      if (FAILED(hr)) {
+        Log("Wasapi: GetDefaultAudioEndpoint failed");
+        break;
+      }
+
+      hr = pDevice->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, (void**) &pAudioClient);
+      if (FAILED(hr)) {
+        Log("Wasapi: Activate failed");
+        break;
+      }
+
+      hr = pAudioClient->GetMixFormat(&pwfx);
+      if (FAILED(hr)) {
+        Log("Wasapi: GetMixFormat failed");
+        break;
+      }
+
+      int hnsRequestedDuration = 10000000;
+      hr = pAudioClient->Initialize(
+        AUDCLNT_SHAREMODE_SHARED,
+        0,
+        hnsRequestedDuration,
+        0,
+        pwfx,
+        nullptr
+      );
+      if (FAILED(hr)) {
+        Log("Wasapi: Initialize failed");
+        break;
+      }
+
+      pAudioClient->GetService(
+        __uuidof(IAudioRenderClient),
+        (void**) &pRenderClient
+      );
+      if (FAILED(hr)) {
+        Log("Wasapi: GetService failed");
+        break;
+      }
+
+      Log("Wasapi: hey we got a render client! Poking vtable...");
+      void *GetBuffer_addr = capsule_get_IAudioRenderClient_GetBuffer(pAudioClient);
+      void *ReleaseBuffer_addr = capsule_get_IAudioRenderClient_ReleaseBuffer(pAudioClient);
+
+      Log("Wasapi: GetBuffer address: %p", GetBuffer_addr);
+      Log("Wasapi: ReleaseBuffer address: %p", ReleaseBuffer_addr);
+    } while(false);
+
+    SafeRelease(pRenderClient);
+    SafeRelease(pAudioClient);
+    SafeRelease(pDevice);
+    if (pwfx) {
+      CoTaskMemFree(pwfx);
+    }
+
+    Log("Wasapi: done doing the stuff");
+    hooking = false;
+  }
+
+  return ret;
 }
 
 void InstallHooks() {
