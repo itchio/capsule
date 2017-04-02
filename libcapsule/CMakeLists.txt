@@ -49,10 +49,9 @@ endif()
 if(APPLE)
   list(APPEND libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/macos/hooks.cc
-    ${libcapsule_SOURCE_DIR}/macos/gl_hooks.cc
     ${libcapsule_SOURCE_DIR}/macos/swizzle.mm
     ${libcapsule_SOURCE_DIR}/macos/ns_application.mm
-    ${libcapsule_SOURCE_DIR}/macos/cgl.mm
+    ${libcapsule_SOURCE_DIR}/macos/gl_hooks.mm
     ${libcapsule_SOURCE_DIR}/macos/coreaudio_hooks.mm
   )
 endif()

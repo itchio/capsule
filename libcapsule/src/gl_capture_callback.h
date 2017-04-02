@@ -19,10 +19,20 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
+#include "dynlib.h"
+
 namespace capsule {
 namespace gl {
 
+extern LibHandle handle;
+
 void Capture (int width, int height);
+
+// Must have platform-specific implementation
+bool LoadOpengl (const char *path);
+
+// Must have platform-specific implementation
+void *GetProcAddress(const char *symbol);
 
 } // namespace gl
 } // namespace capsule

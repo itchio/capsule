@@ -25,7 +25,6 @@
 
 #include <lab/platform.h>
 #include "logging.h"
-#include "dynlib.h"
 
 #include "gl_capture_callback.h"
 
@@ -201,15 +200,7 @@ namespace gl {
 
 extern const char *kDefaultOpengl;
 
-extern LibHandle handle;
-
 bool EnsureOpengl();
-
-// Must have platform-specific implementation
-bool LoadOpengl (const char *path);
-
-// Must have platform-specific implementation
-void *GetProcAddress(const char *symbol);
 
 }
 }
