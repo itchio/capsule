@@ -48,6 +48,7 @@ void InstallHooks () {
   gl::InstallHooks();
   dxgi::InstallHooks();
   d3d9::InstallHooks();
+  wasapi::InstallHooks();
 }
 
 } // namespace capsule

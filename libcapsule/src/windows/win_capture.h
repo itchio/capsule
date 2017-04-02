@@ -70,5 +70,9 @@ void Capture(void *swap_ptr, void *backbuffer_ptr);
 void Free();
 } // namespace d3d11
 
+namespace wasapi {
+void InstallHooks();
+}
+
 } // namespace capsule
 
