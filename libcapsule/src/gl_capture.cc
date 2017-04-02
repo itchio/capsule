@@ -28,7 +28,6 @@
 #include "dynlib.h"
 #include "io.h"
 #include "capture.h"
-#include "capsule/constants.h"
 
 namespace capsule {
 namespace gl {
@@ -49,11 +48,11 @@ struct State {
 
   int                     cur_tex;
   int                     copy_wait;
-  GLuint                  pbos[kNumBuffers];
-  GLuint                  textures[kNumBuffers];
-  bool                    texture_ready[kNumBuffers];
-  bool                    texture_mapped[kNumBuffers];
-  int64_t                 timestamps[kNumBuffers];
+  GLuint                  pbos[capture::kNumBuffers];
+  GLuint                  textures[capture::kNumBuffers];
+  bool                    texture_ready[capture::kNumBuffers];
+  bool                    texture_mapped[capture::kNumBuffers];
+  int64_t                 timestamps[capture::kNumBuffers];
 };
 
 static State state = {};
@@ -115,7 +114,7 @@ bool InitFunctions() {
 }
 
 static void Free() {
-  for (size_t i = 0; i < kNumBuffers; i++) {
+  for (size_t i = 0; i < capture::kNumBuffers; i++) {
     if (state.pbos[i]) {
       if (state.texture_mapped[i]) {
         _glBindBuffer(GL_PIXEL_PACK_BUFFER, state.pbos[i]);
@@ -176,12 +175,12 @@ static inline bool ShmemInitBuffers(void) {
 	GLint last_pbo;
 	GLint last_tex;
 
-	_glGenBuffers(kNumBuffers, state.pbos);
+	_glGenBuffers(capture::kNumBuffers, state.pbos);
 	if (Error("ShmemInitBuffers", "failed to generate buffers")) {
 		return false;
 	}
 
-	_glGenTextures(kNumBuffers, state.textures);
+	_glGenTextures(capture::kNumBuffers, state.textures);
 	if (Error("ShmemInitBuffers", "failed to generate textures")) {
 		return false;
 	}
@@ -197,7 +196,7 @@ static inline bool ShmemInitBuffers(void) {
 		return false;
 	}
 
-	for (size_t i = 0; i < kNumBuffers; i++) {
+	for (size_t i = 0; i < capture::kNumBuffers; i++) {
 		if (!ShmemInitData(i, size)) {
 			return false;
 		}
@@ -292,7 +291,7 @@ static void CopyBackbuffer(GLuint dst) {
 }
 
 static inline void ShmemCaptureQueueCopy(void) {
-	for (int i = 0; i < kNumBuffers; i++) {
+	for (int i = 0; i < capture::kNumBuffers; i++) {
 		if (state.texture_ready[i]) {
 			GLvoid *buffer;
       auto timestamp = state.timestamps[i];
@@ -354,12 +353,12 @@ void ShmemCapture () {
   // try to map & send all the textures that are ready
   ShmemCaptureQueueCopy();
 
-  next_tex = (state.cur_tex + 1) % kNumBuffers;
+  next_tex = (state.cur_tex + 1) % capture::kNumBuffers;
 
   state.timestamps[next_tex] = timestamp;
   CopyBackbuffer(state.textures[next_tex]);
 
-  if (state.copy_wait < kNumBuffers - 1) {
+  if (state.copy_wait < capture::kNumBuffers - 1) {
     state.copy_wait++;
   } else {
     GLuint src = state.textures[next_tex];
@@ -420,7 +419,7 @@ void Capture(int width, int height) {
       io::WriteVideoFormat(
         state.cx,
         state.cy,
-        kPixFmtBgra,
+        messages::PixFmt_BGRA,
         true /* vflip */,
         state.pitch
       );

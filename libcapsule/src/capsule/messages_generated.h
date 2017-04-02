@@ -33,20 +33,51 @@ struct VideoFrameProcessed;
 
 enum PixFmt {
   PixFmt_UNKNOWN = 0,
-  PixFmt_RGBA = 40069,
-  PixFmt_BGRA = 40070,
-  PixFmt_RGB10_A2 = 40071,
-  PixFmt_YUV444P = 60021,
+  PixFmt_RGBA = 1,
+  PixFmt_BGRA = 2,
+  PixFmt_RGB10_A2 = 3,
+  PixFmt_YUV444P = 4,
   PixFmt_MIN = PixFmt_UNKNOWN,
   PixFmt_MAX = PixFmt_YUV444P
 };
 
+inline const char **EnumNamesPixFmt() {
+  static const char *names[] = {
+    "UNKNOWN",
+    "RGBA",
+    "BGRA",
+    "RGB10_A2",
+    "YUV444P",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNamePixFmt(PixFmt e) {
+  const size_t index = static_cast<int>(e);
+  return EnumNamesPixFmt()[index];
+}
+
 enum SampleFmt {
   SampleFmt_UNKNOWN = 0,
-  SampleFmt_F32LE = 80042,
+  SampleFmt_F32LE = 1,
   SampleFmt_MIN = SampleFmt_UNKNOWN,
   SampleFmt_MAX = SampleFmt_F32LE
 };
+
+inline const char **EnumNamesSampleFmt() {
+  static const char *names[] = {
+    "UNKNOWN",
+    "F32LE",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameSampleFmt(SampleFmt e) {
+  const size_t index = static_cast<int>(e);
+  return EnumNamesSampleFmt()[index];
+}
 
 enum Message {
   Message_NONE = 0,

@@ -201,7 +201,7 @@ void Run(MainArgs *args, Params *params) {
   }
 
   bool do_swscale = true;
-  if (vfmt_in.format == capsule::kPixFmtYuv444P) {
+  if (vfmt_in.format == messages::PixFmt_YUV444P) {
     Log("GPU color conversion enabled, ignoring user output settings and picking yuv444p");
     vc->pix_fmt = AV_PIX_FMT_YUV444P;
     do_swscale = false;
@@ -353,21 +353,18 @@ void Run(MainArgs *args, Params *params) {
 
   AVPixelFormat vpix_fmt;
   switch (vfmt_in.format) {
-    case capsule::kPixFmtRgba:
+    case messages::PixFmt_RGBA:
       vpix_fmt = AV_PIX_FMT_RGBA;
       break;
-    case capsule::kPixFmtBgra:
+    case messages::PixFmt_BGRA:
       vpix_fmt = AV_PIX_FMT_BGRA;
       break;
-    case capsule::kPixFmtRgb10A2:
-      vpix_fmt = AV_PIX_FMT_RGBA;
-      break;
-    case capsule::kPixFmtYuv444P:
+    case messages::PixFmt_YUV444P:
       // no conversion actually required
       vpix_fmt = AV_PIX_FMT_YUV444P;
       break;
     default:
-      printf("Unknown video format %d, bailing out\n", vfmt_in.format);
+      printf("Unknown/unsupported video format %d, bailing out\n", vfmt_in.format);
   }
 
   // audio frame

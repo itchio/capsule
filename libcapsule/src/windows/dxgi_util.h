@@ -33,7 +33,7 @@
 #include <d3d9.h>
 #include <DirectXMath.h>
 
-#include "../capsule/constants.h"
+#include "../capsule/messages_generated.h"
 #include "../logging.h"
 
 namespace capsule {
@@ -300,19 +300,19 @@ static inline DXGI_FORMAT FixFormat(DXGI_FORMAT format) {
 	return format;
 }
 
-static inline PixFmt FormatToPixFmt(DXGI_FORMAT format) {
+static inline messages::PixFmt FormatToPixFmt(DXGI_FORMAT format) {
   switch (FixFormat(format)) {
     case DXGI_FORMAT_B8G8R8A8_UNORM:
-      return kPixFmtBgra;
+      return messages::PixFmt_BGRA;
     case DXGI_FORMAT_B8G8R8X8_UNORM:
-      return kPixFmtBgra;
+      return messages::PixFmt_BGRA;
     case DXGI_FORMAT_R8G8B8A8_UNORM:
-      return kPixFmtRgba;
+      return messages::PixFmt_RGBA;
     case DXGI_FORMAT_R10G10B10A2_UNORM:
-      return kPixFmtRgb10A2;
+      return messages::PixFmt_RGB10_A2;
     default:
       Log("Unsupported DXGI format %s", NameFromFormat(format).c_str());
-      return kPixFmtUnknown;
+      return messages::PixFmt_UNKNOWN;
   }
 }
 

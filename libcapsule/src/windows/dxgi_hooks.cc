@@ -19,7 +19,6 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include "../capsule.h"
 #include "../capture.h"
 #include "win_capture.h"
 #include "dxgi_vtable_helpers.h"

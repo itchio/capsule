@@ -21,8 +21,8 @@
 
 #include <d3d9.h>
 
-#include "../capsule.h"
 #include "../capture.h"
+#include "../logging.h"
 #include "win_capture.h"
 #include "d3d9_vtable_helpers.h"
 

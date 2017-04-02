@@ -31,6 +31,8 @@
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
 
+#include "../capture.h"
+
 namespace capsule {
 
 extern CNktHookLib cHookMgr;

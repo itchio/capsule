@@ -32,7 +32,6 @@
 #include <lab/io.h>
 
 #include "capsule/messages_generated.h"
-#include "capsule/constants.h"
 #include "capture.h"
 #include "logging.h"
 #include "ensure.h"
@@ -43,7 +42,7 @@ namespace io {
 static FILE *out_file = 0;
 static FILE *in_file = 0;
 
-bool frame_locked[kNumBuffers];
+bool frame_locked[capture::kNumBuffers];
 std::mutex frame_locked_mutex;
 int next_frame_index = 0;
 
@@ -164,13 +163,13 @@ void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pit
         );
     }
 
-    for (int i = 0; i < kNumBuffers; i++) {
+    for (int i = 0; i < capture::kNumBuffers; i++) {
         frame_locked[i] = false;
     }
 
     int64_t frame_size = height * pitch;
     Log("Frame size: %" PRId64 " bytes", frame_size);
-    int64_t shmem_size = frame_size * kNumBuffers;
+    int64_t shmem_size = frame_size * capture::kNumBuffers;
     Log("Should allocate %" PRId64 " bytes of shmem area", shmem_size);
 
     std::string shmem_path = "capsule_video.shm";
@@ -258,7 +257,7 @@ void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size
         lab::packet::Fwrite(builder, out_file);
     }
 
-    next_frame_index = (next_frame_index + 1) % kNumBuffers;
+    next_frame_index = (next_frame_index + 1) % capture::kNumBuffers;
 }
 
 void WriteAudioFrames(char *data, size_t frames) {

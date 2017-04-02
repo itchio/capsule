@@ -23,7 +23,6 @@
 #include <dxgi.h>
 #include "dxgi_util.h"
 
-#include "../capsule.h"
 #include "../io.h"
 #include "../logging.h"
 #include "../capture.h"
@@ -42,18 +41,18 @@ struct State {
 
   IDirect3DSurface9       *d3d9_copytex;
 
-  IDirect3DSurface9       *copy_surfaces[kNumBuffers];
-  IDirect3DSurface9       *render_targets[kNumBuffers];
-  IDirect3DQuery9         *queries[kNumBuffers];
- 	bool                    texture_mapped[kNumBuffers];
-	volatile bool           issued_queries[kNumBuffers];
+  IDirect3DSurface9       *copy_surfaces[capture::kNumBuffers];
+  IDirect3DSurface9       *render_targets[capture::kNumBuffers];
+  IDirect3DQuery9         *queries[capture::kNumBuffers];
+ 	bool                    texture_mapped[capture::kNumBuffers];
+	volatile bool           issued_queries[capture::kNumBuffers];
   intptr_t                pitch;
 };
 
 static struct State state = {};
 
 void Free() {
-  for (size_t i = 0; i < kNumBuffers; i++) {
+  for (size_t i = 0; i < capture::kNumBuffers; i++) {
     if (state.copy_surfaces[i]) {
       if (state.texture_mapped[i]) {
         state.copy_surfaces[i]->UnlockRect();
@@ -201,7 +200,7 @@ static bool ShmemInitBuffers(size_t buffer) {
 }
 
 static bool ShmemInit() {
-  for (size_t i = 0; i < kNumBuffers; i++) {
+  for (size_t i = 0; i < capture::kNumBuffers; i++) {
     if (!ShmemInitBuffers(i)) {
       return false;
     }

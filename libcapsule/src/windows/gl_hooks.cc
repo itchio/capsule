@@ -28,16 +28,20 @@
 namespace capsule {
 namespace gl {
 
-typedef void* (*wglGetProcAddress_t)(const char*);
+typedef void* (WINAPI *wglGetProcAddress_t)(const char*);
 static wglGetProcAddress_t _wglGetProcAddress = nullptr;
 
 bool LoadOpengl (const char *path) {
-  handle = dlopen(path, (RTLD_NOW|RTLD_LOCAL));
+  Log("capsule::gl::LoadOpengl called with %s", path);
+  handle = dlopen(path, 0);
   if (!handle) {
+    Log("capsule::gl::LoadOpengl null handle");
     return false;
   }
 
+  Log("capsule::gl::LoadOpengl grabbing wglGetProcAddress");
   GLSYM(wglGetProcAddress)
+  Log("capsule::gl::LoadOpengl got wglGetProcAddress ? %d", !!_wglGetProcAddress);
 
   return true;
 }
@@ -45,10 +49,14 @@ bool LoadOpengl (const char *path) {
 void *GetProcAddress (const char *symbol) {
   void *addr = nullptr;
 
+  Log("capsule::gl::GetProcAddress: looking up %s", symbol);
+
   if (_wglGetProcAddress) {
+    Log("capsule::gl::GetProcAddress: looking up %s with wgl", symbol);
     addr = _wglGetProcAddress(symbol);
   }
   if (!addr) {
+    Log("capsule::gl::GetProcAddress: looking up %s with regular", symbol);
     addr = ::GetProcAddress(handle, symbol);
   }
 

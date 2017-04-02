@@ -25,8 +25,8 @@
 
 #include <psapi.h>
 
-#include "../capsule.h"
 #include "../io.h"
+#include "../logging.h"
 #include "win_capture.h"
 
 static int capsule_inited = 0;

@@ -19,8 +19,9 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include "../capsule.h"
 #include "win_capture.h"
+
+#include "../logging.h"
 
 namespace capsule {
 namespace d3d10 {

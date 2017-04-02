@@ -22,16 +22,16 @@
 namespace capsule.messages;
 
 enum PixFmt:int {
-    UNKNOWN     = 0,
-    RGBA        = 40069, // R8,  G8,  B8,  A8
-    BGRA        = 40070, // B8,  G8,  R8,  A8
-    RGB10_A2    = 40071, // R10, G10, B10, A2
-    YUV444P     = 60021, // planar Y4 U4 B4
+    UNKNOWN,
+    RGBA,     // R8,  G8,  B8,  A8
+    BGRA,     // B8,  G8,  R8,  A8
+    RGB10_A2, // R10, G10, B10, A2
+    YUV444P,  // planar Y4 U4 B4
 }
 
 enum SampleFmt:int {
-    UNKNOWN     = 0,
-    F32LE       = 80042, // 32-bit float, little-endian
+    UNKNOWN,
+    F32LE,   // 32-bit float, little-endian
 }
 
 union Message {

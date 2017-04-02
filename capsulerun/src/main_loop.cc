@@ -155,7 +155,7 @@ void MainLoop::StartSession (const messages::VideoSetup *vs) {
   encoder::VideoFormat vfmt;
   vfmt.width = vs->width();
   vfmt.height = vs->height();
-  vfmt.format = (capsule::PixFmt) vs->pix_fmt();
+  vfmt.format = vs->pix_fmt();
   vfmt.vflip = vs->vflip();
   
   // TODO: support offset (for planar formats)

@@ -27,6 +27,9 @@
 namespace capsule {
 namespace capture {
 
+// numbers of buffers used for async GPU download
+static const int kNumBuffers = 3;
+
 struct Settings {
   int fps;
   int size_divider;

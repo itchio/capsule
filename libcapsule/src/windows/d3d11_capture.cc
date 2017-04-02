@@ -25,6 +25,7 @@
 
 #include <string>
 
+#include "../capsule/messages_generated.h"
 #include "../capture.h"
 #include "../logging.h"
 #include "../io.h"
@@ -62,12 +63,12 @@ struct State {
   ID3D11Buffer                   *vertex_buffer;
   ID3D11Buffer                   *constants;
 
-  ID3D11Texture2D                *copy_surfaces[kNumBuffers]; // staging, CPU_READ_ACCESS
-  ID3D11Texture2D                *textures[kNumBuffers]; // default (in-GPU), useful to resolve multisampled backbuffers
-  ID3D11RenderTargetView         *render_targets[kNumBuffers];
-  bool                           texture_ready[kNumBuffers];
-  bool                           texture_mapped[kNumBuffers];
-  int64_t                        timestamps[kNumBuffers];
+  ID3D11Texture2D                *copy_surfaces[capture::kNumBuffers]; // staging, CPU_READ_ACCESS
+  ID3D11Texture2D                *textures[capture::kNumBuffers]; // default (in-GPU), useful to resolve multisampled backbuffers
+  ID3D11RenderTargetView         *render_targets[capture::kNumBuffers];
+  bool                           texture_ready[capture::kNumBuffers];
+  bool                           texture_mapped[capture::kNumBuffers];
+  int64_t                        timestamps[capture::kNumBuffers];
   int                            cur_tex;
   int                            copy_wait;
 
@@ -245,7 +246,7 @@ static bool ShmemInitBuffers(size_t idx) {
 }
 
 static bool ShmemInit(HWND window) {
-  for (size_t i = 0; i < kNumBuffers; i++) {
+  for (size_t i = 0; i < capture::kNumBuffers; i++) {
     if (!ShmemInitBuffers(i)) {
       return false;
     }
@@ -934,7 +935,7 @@ static inline void DrawOverlayInternal() {
 }
 
 static inline void ShmemQueueCopy() {
-	for (size_t i = 0; i < kNumBuffers; i++) {
+	for (size_t i = 0; i < capture::kNumBuffers; i++) {
 		D3D11_MAPPED_SUBRESOURCE map;
 		HRESULT hr;
 
@@ -958,7 +959,7 @@ static inline void ShmemCapture (ID3D11Resource* backbuffer) {
 
   ShmemQueueCopy();
 
-  next_tex = (state.cur_tex + 1) % kNumBuffers;
+  next_tex = (state.cur_tex + 1) % capture::kNumBuffers;
 
   state.timestamps[state.cur_tex] = capture::FrameTimestamp();
 
@@ -966,7 +967,7 @@ static inline void ShmemCapture (ID3D11Resource* backbuffer) {
   CopyTexture(state.scale_tex, backbuffer);
   ScaleTexture(state.render_targets[state.cur_tex], state.scale_resource);
 
-  if (state.copy_wait < kNumBuffers - 1) {
+  if (state.copy_wait < capture::kNumBuffers - 1) {
     state.copy_wait++;
   } else {
     ID3D11Texture2D *src = state.textures[next_tex];
@@ -1013,9 +1014,9 @@ void Capture(void *swap_ptr, void *backbuffer_ptr) {
   }
 
   if (first_frame) {
-    PixFmt pix_fmt;
+    messages::PixFmt pix_fmt;
     if (state.gpu_color_conv) {
-      pix_fmt = kPixFmtYuv444P;
+      pix_fmt = messages::PixFmt_YUV444P;
     } else {
       pix_fmt = dxgi::FormatToPixFmt(state.format);
     }
@@ -1054,7 +1055,7 @@ void Free() {
   SafeRelease(state.vertex_buffer);
   SafeRelease(state.constants);
 
-  for (size_t i = 0; i < kNumBuffers; i++) {
+  for (size_t i = 0; i < capture::kNumBuffers; i++) {
     if (state.copy_surfaces[i]) {
       if (state.texture_mapped[i]) {
         state.context->Unmap(state.copy_surfaces[i], 0);

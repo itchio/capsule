@@ -25,7 +25,6 @@
 #include <windows.h>
 #undef WIN32_LEAN_AND_MEAN
 
-#include "../capsule/constants.h"
 #include "../capture.h"
 #include "../logging.h"
 #include "../io.h"
@@ -79,7 +78,7 @@ static void CaptureHwnd(HWND hwnd) {
   auto timestamp = capture::FrameTimestamp();
 
   if (first_frame) {
-    io::WriteVideoFormat(state.cx, state.cy, kPixFmtBgra, true /* vflip */,
+    io::WriteVideoFormat(state.cx, state.cy, messages::PixFmt_BGRA, true /* vflip */,
                          state.cx * components);
     first_frame = false;
   }

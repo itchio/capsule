@@ -21,6 +21,8 @@
 
 #pragma once
 
+#include <lab/types.h>
+
 namespace capsule {
 namespace io {
 

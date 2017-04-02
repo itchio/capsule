@@ -22,7 +22,7 @@
 #pragma once
 
 #include <lab/types.h>
-#include <capsule/constants.h>
+#include <capsule/messages_generated.h>
 
 #include "args.h"
 
@@ -32,7 +32,7 @@ namespace encoder {
 struct VideoFormat {
   int width;
   int height;
-  capsule::PixFmt format;
+  messages::PixFmt format;
   bool vflip;
   int64_t pitch;
 };

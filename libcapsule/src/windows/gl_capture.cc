@@ -20,7 +20,6 @@
  */
 
 #include "win_capture.h"
-#include "../capsule.h"
 #include "../capture.h"
 #include "../gl_capture.h"
 
