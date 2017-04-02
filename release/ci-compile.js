@@ -65,7 +65,7 @@ function ci_compile_windows () {
     $.cmd(['mkdir', spec.dir])
     $.cd(spec.dir, function () {
       $($.cmd(['cmake', '-G', spec.generator, '..']))
-      $($.cmd(['msbuild', 'INSTALL.vcxproj', '/p:Configuration=Release']))
+      $($.cmd(['msbuild', 'INSTALL.vcxproj', '/p:Configuration=Release', '/maxcpucount:2']))
     })
 
     $($.cmd(['xcopy', '/y', '/i', spec.dir + '\\dist\\*', 'compile-artifacts\\' + spec.osarch]))
@@ -79,8 +79,8 @@ function ci_compile_darwin () {
   $.sh('rm -rf build')
   $.sh('mkdir -p build')
   $.cd('build', function () {
-    $($.sh('cmake .. -DOSX_UNIVERSAL=OFF'))
-    $($.sh('make install'))
+    $($.sh('cmake ..'))
+    $($.sh('make install -j2'))
   })
 
   $.sh(`mkdir -p compile-artifacts/${osarch}/`)
@@ -120,7 +120,7 @@ function ci_compile_linux (arch) {
     $.sh(`mkdir -p ${spec.dir}`)
     $.cd(spec.dir, function () {
       $($.sh(`cmake -DCAPSULE_DEPS_PREFIX=/usr/capsule ..`))
-      $($.sh(`make install`))
+      $($.sh(`make install -j2`))
     })
     $.sh(`mkdir -p compile-artifacts/${osarch}`)
 
