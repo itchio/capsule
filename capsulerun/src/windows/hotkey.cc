@@ -38,7 +38,7 @@ static void Poll (MainLoop *ml) {
 
   MSG msg = {0};
   while (GetMessage(&msg, NULL, 0, 0) != 0) {
-    if (msg.message = WM_HOTKEY) {
+    if (msg.message == WM_HOTKEY) {
       ml->CaptureFlip();
     }
   }
