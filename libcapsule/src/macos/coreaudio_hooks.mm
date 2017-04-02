@@ -36,24 +36,36 @@ struct CoreAudioState {
   bool seen;
 } state = {0};
 
-void Saw() {
+void Saw(AudioUnit unit) {
   if (!state.seen) {
     capsule::Log("CoreAudio: saw!");
     state.seen = true;
 
-    auto channels = 2;
-    auto rate = 44100;
+    AudioStreamBasicDescription ca_format;
 
-    // FIXME: query instead of blindly assuming format
-    capture::HasAudioIntercept(messages::SampleFmt_F32LE, rate, channels);
+    UInt32 size = sizeof(AudioStreamBasicDescription);
+    auto err = AudioUnitGetProperty(unit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input, 0, &ca_format, &size);
+    if(err != noErr || size != sizeof(AudioStreamBasicDescription)) {
+      capsule::Log("CoreAudio: AudioUnitGetProperty failed, disabling audio capture");
+      return;
+    }
+
+    auto rate = ca_format.mSampleRate;
+    auto channels = ca_format.mChannelsPerFrame;
+
+    if ((ca_format.mFormatFlags & kLinearPCMFormatFlagIsFloat) && (ca_format.mBitsPerChannel == 32)) {
+      capture::HasAudioIntercept(messages::SampleFmt_F32LE, rate, channels);
+    } else {
+      capsule::Log("CoreAudio: format isn't f32le, not supported yet, disabling audio capture");
+      return;
+    }
   }
 }
 
 static OSStatus RenderCallback(void *inRefCon, AudioUnitRenderActionFlags *ioActionFlags, const AudioTimeStamp *inTimeStamp,
                             UInt32 inBusNumber, UInt32 inNumberFrames, AudioBufferList *ioData) {
-  Saw();
-
   auto proxy_data = reinterpret_cast<CallbackProxyData*>(inRefCon);
+  Saw(proxy_data->unit);
 
   // capsule::Log("CoreAudio: rendering a buffer with %d bytes", ioData->mBuffers[0].mDataByteSize);
   auto ret = proxy_data->actual_callback(
@@ -79,6 +91,7 @@ OSStatus AudioUnitSetProperty(AudioUnit inUnit, AudioUnitPropertyID inID, AudioU
     capsule::Log("CoreAudio: subverting callback");
     auto proxy_data = reinterpret_cast<CallbackProxyData *>(calloc(sizeof(CallbackProxyData), 1));
     auto passed_cb = reinterpret_cast<const AURenderCallbackStruct *>(inData);
+    proxy_data->unit = inUnit;
     proxy_data->actual_callback = passed_cb->inputProc;
     proxy_data->actual_userdata = passed_cb->inputProcRefCon;
 

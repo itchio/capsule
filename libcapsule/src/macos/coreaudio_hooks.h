@@ -29,6 +29,7 @@ namespace capsule {
 namespace coreaudio {
 
 struct CallbackProxyData {
+  AudioUnit unit;
   AURenderCallback actual_callback; 
   void *actual_userdata;
 };
