@@ -92,8 +92,8 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
     lab::strings::ArgvQuote(arg_w, command_line_w, false);
   }
 
-  Log("Launching '%S' with args '%S'", executable_path_w, command_line_w.c_str());
-  Log("Injecting '%S'", libcapsule_path_w);
+  Log("Launching '%S' with args '%S'", executable_path_w.c_str(), command_line_w.c_str());
+  Log("Injecting '%S'", libcapsule_path_w.c_str());
   const char* libcapsule_init_function_name = "CapsuleWindowsInit";
 
   DWORD err = NktHookLibHelpers::CreateProcessWithDllW(
