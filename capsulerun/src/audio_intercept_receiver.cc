@@ -28,6 +28,9 @@
 
 #include <string.h> // memset, memcpy
 
+// #define DebugLog(...) Log(__VA_ARGS__)
+#define DebugLog(...)
+
 namespace capsule {
 namespace audio {
 
@@ -84,7 +87,7 @@ int AudioInterceptReceiver::ReceiveFormat(encoder::AudioFormat *afmt) {
 }
 
 void AudioInterceptReceiver::FramesCommitted(int64_t offset, int64_t frames) {
-  // Log("AudioInterceptReceiver: frames committed: %d offset, %d frames", offset, frames);
+  DebugLog("AudioInterceptReceiver: frames committed: %d offset, %d frames", offset, frames);
   std::lock_guard<std::mutex> lock(buffer_mutex_);
 
   size_t remain_frames = frames;
@@ -94,7 +97,7 @@ void AudioInterceptReceiver::FramesCommitted(int64_t offset, int64_t frames) {
 
     if (avail_frames == 0) {
       // wrap around!
-      Log("AudioInterceptReceiver: commit wrap!");
+      DebugLog("AudioInterceptReceiver: commit wrap!");
       commit_index_ = 0;
       avail_frames = num_frames_ - commit_index_;
     }
@@ -103,7 +106,7 @@ void AudioInterceptReceiver::FramesCommitted(int64_t offset, int64_t frames) {
       write_frames = avail_frames;
     }
 
-    Log("AudioInterceptReceiver: storing %d frames at %d", write_frames, commit_index_);
+    DebugLog("AudioInterceptReceiver: storing %d frames at %d", write_frames, commit_index_);
     char *src = (char*) shm_->Data() + (offset * frame_size_);
     char *dst = buffer_ + (commit_index_ * frame_size_);
     memcpy(dst, src, write_frames * frame_size_);
@@ -121,7 +124,7 @@ void *AudioInterceptReceiver::ReceiveFrames(int64_t *frames_received) {
 
   if (sent_index_ == num_frames_) {
     // wrap!
-    Log("AudioInterceptReceiver: sent wrap!");
+    DebugLog("AudioInterceptReceiver: sent wrap!");
     sent_index_ = 0;
   }
 
@@ -129,14 +132,14 @@ void *AudioInterceptReceiver::ReceiveFrames(int64_t *frames_received) {
     int64_t avail_frames;
     if (commit_index_ < sent_index_) {
       // commit_index_ has wrapped around, send everything till the end of the buffer
-      Log("AudioInterceptReceiver: sent clear!");
+      DebugLog("AudioInterceptReceiver: sent clear!");
       avail_frames = num_frames_ - sent_index_;
     } else {
       avail_frames = commit_index_ - sent_index_;
     }
 
     *frames_received = avail_frames;
-    Log("AudioInterceptReceiver: received %" PRId64 " frames", avail_frames);
+    DebugLog("AudioInterceptReceiver: received %" PRId64 " frames", avail_frames);
 
     char *ret = buffer_ + (sent_index_ * frame_size_);
     sent_index_ += avail_frames;

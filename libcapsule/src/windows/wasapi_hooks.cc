@@ -34,8 +34,8 @@
 // IAudioClient, IAudioCaptureClient
 #include <audioclient.h>
 
-#define DebugLog(...) Log(__VA_ARGS__)
-// #define DebugLog(...)
+// #define DebugLog(...) Log(__VA_ARGS__)
+#define DebugLog(...)
 
 namespace capsule {
 namespace wasapi {
