@@ -57,7 +57,8 @@ WasapiReceiver::WasapiReceiver() {
 
   hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
   if (FAILED(hr)) {
-    throw std::runtime_error("CoInitializeEx failed");
+    Log("WasapiReceiver: CoInitializeEx failed");
+    return;
   }
 
   hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void**)&enumerator_);
