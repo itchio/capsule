@@ -106,7 +106,7 @@ ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
 
   pid_t child_pid;
 
-  int child_err = posix_spawn(
+  int child_err = posix_spawnp(
     &child_pid,
     args->exec,
     NULL, // file_actions
