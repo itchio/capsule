@@ -37,6 +37,9 @@
 #include "logging.h"
 #include "ensure.h"
 
+// #define DebugLog(...) Log(__VA_ARGS__)
+#define DebugLog(...)
+
 namespace capsule {
 namespace io {
 
@@ -50,6 +53,7 @@ int next_frame_index = 0;
 shoom::Shm *shm = nullptr;
 shoom::Shm *audio_shm = nullptr;
 int64_t audio_frame_size = 0;
+int64_t audio_shm_num_frames = 0;
 int64_t audio_shm_committed_offset = 0;
 int64_t audio_shm_processed_offset = 0;
 
@@ -124,24 +128,29 @@ static void PollInfile() {
 void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch) {
     flatbuffers::FlatBufferBuilder builder(1024);
 
-    Log("writing video format");
+    Log("Writing video format");
     auto state = capture::GetState();
 
     flatbuffers::Offset<messages::AudioSetup> audio_setup;
     if (state->has_audio_intercept) {
-        Log("has audio intercept! format = %s", messages::EnumNameSampleFmt(state->audio_intercept_format));
+        Log("Sending audio intercept info: %d channels, %d rate, %s format",
+            state->audio_intercept_channels,
+            state->audio_intercept_rate,
+            messages::EnumNameSampleFmt(state->audio_intercept_format)
+        );
 
-        // let's say we want a 4 second buffer
         int64_t seconds = 4;
         int64_t sample_size = audio::SampleWidth(state->audio_intercept_format) / 8;
         Ensure("audio intercept format is valid", sample_size != 0);
 
         audio_frame_size = sample_size * (int64_t) state->audio_intercept_channels;
-        int64_t audio_shmem_size = seconds * audio_frame_size * (int64_t) state->audio_intercept_rate;
+        audio_shm_num_frames = seconds * (int64_t) state->audio_intercept_rate;
+        audio_shm_committed_offset = 0;
+        audio_shm_processed_offset = audio_shm_num_frames;
+
+        int64_t audio_shmem_size = audio_shm_num_frames * audio_frame_size;
         std::string audio_shmem_path = "capsule_audio.shm";
         audio_shm = new shoom::Shm(audio_shmem_path, static_cast<size_t>(audio_shmem_size));
-        audio_shm_committed_offset = 0;
-        audio_shm_processed_offset = (size_t) audio_shmem_size;
 
         int ret = audio_shm->Create();
         if (ret != shoom::kOK) {
@@ -236,22 +245,16 @@ void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size
         is_skipping = false;
     }
 
-    flatbuffers::FlatBufferBuilder builder(1024);
+    flatbuffers::FlatBufferBuilder builder(64);
 
     int64_t offset = (frame_data_size * next_frame_index);
     char *target = reinterpret_cast<char*>(shm->Data() + offset);
     memcpy(target, frame_data, frame_data_size);
 
-    messages::VideoFrameCommittedBuilder vfc_builder(builder);
-    vfc_builder.add_timestamp(timestamp);
-    vfc_builder.add_index(next_frame_index);
-    auto vfc = vfc_builder.Finish();
-
-    messages::PacketBuilder pkt_builder(builder);
-    pkt_builder.add_message_type(messages::Message_VideoFrameCommitted);
-    pkt_builder.add_message(vfc.Union());
-    auto pkt = pkt_builder.Finish();
-
+    auto vfc = messages::CreateVideoFrameCommitted(builder, timestamp,
+                                                   next_frame_index);
+    auto pkt = messages::CreatePacket(
+        builder, messages::Message_VideoFrameCommitted, vfc.Union());
     builder.Finish(pkt);
 
     LockFrame(next_frame_index);
@@ -263,59 +266,53 @@ void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size
     next_frame_index = (next_frame_index + 1) % capture::kNumBuffers;
 }
 
-void WriteAudioFrames(char *data, size_t frames) {
+void WriteAudioFrames(char *src_data, int64_t src_frames) {
     if (!audio_shm) {
         Log("WriteAudioFrames called but no audio_shm, ignoring");
         return;
     }
+
+    auto dst_data = (char*) audio_shm->Data();
  
-    int64_t remain_frames = frames;
-    int64_t offset = 0;
-    while (remain_frames > 0) {
-        if (audio_shm_committed_offset == (int64_t) audio_shm->Size()) {
-            Log("io: Wrapping!");
-            // wrap around!
-            audio_shm_committed_offset = 0;
-        }
+    int64_t src_offset = 0;
+    while (src_offset < src_frames) {
+      if (audio_shm_committed_offset == audio_shm_num_frames) {
+        DebugLog("io: Wrapping!");
+        // wrap around!
+        audio_shm_committed_offset = 0;
+      }
 
-        int64_t write_frames = remain_frames;
-        int64_t avail_frames = (audio_shm->Size() - audio_shm_committed_offset) / audio_frame_size;
+      int64_t write_frames = src_frames - src_offset;
+      int64_t avail_frames = audio_shm_num_frames - audio_shm_committed_offset;
 
-        if (write_frames > avail_frames) {
-            write_frames = avail_frames;
-        }
+      if (write_frames > avail_frames) {
+        write_frames = avail_frames;
+      }
+
+      {
+        DebugLog("io: putting %" PRIdS " frames at %d", write_frames,
+            audio_shm_committed_offset);
+        char *src = src_data + (src_offset * audio_frame_size);
+        char *dst = dst_data + (audio_shm_committed_offset * audio_frame_size);
+        int64_t copy_size = write_frames * audio_frame_size;
+        memcpy(dst, src, copy_size);
+
+        flatbuffers::FlatBufferBuilder builder(64);
+        auto afc = messages::CreateAudioFramesCommitted(
+            builder, audio_shm_committed_offset,
+            write_frames);
+        auto pkt = messages::CreatePacket(
+            builder, messages::Message_AudioFramesCommitted, afc.Union());
+        builder.Finish(pkt);
 
         {
-            // Log("putting %" PRIdS " frames at %d", frames, audio_shm_committed_offset);
-            char *src = data + (offset * audio_frame_size);
-            char *dst = (char*) audio_shm->Data() + audio_shm_committed_offset;
-            int64_t copy_size = write_frames * audio_frame_size;
-            memcpy(dst, src, copy_size);
-
-            flatbuffers::FlatBufferBuilder builder(64);
-            auto afc = messages::CreateAudioFramesCommitted(
-                builder,
-                audio_shm_committed_offset / audio_frame_size,
-                write_frames
-            );
-
-            auto pkt = messages::CreatePacket(
-                builder,
-                messages::Message_AudioFramesCommitted,
-                afc.Union()
-            );
-
-            builder.Finish(pkt);
-            {
-                std::lock_guard<std::mutex> lock(out_mutex);
-                lab::packet::Fwrite(builder, out_file);
-            }
-
-            audio_shm_committed_offset += copy_size;
+          std::lock_guard<std::mutex> lock(out_mutex);
+          lab::packet::Fwrite(builder, out_file);
         }
 
-        remain_frames -= write_frames;
-        offset += write_frames;
+        audio_shm_committed_offset += write_frames;
+        src_offset += write_frames;
+      }
     }
 }
 

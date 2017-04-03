@@ -49,9 +49,9 @@ extern "C" {
 #include <lab/env.h>
 
 #include <chrono>
+#include <thread>
 
 #include "fps_counter.h"
-#include "logging.h"
 #include "logging.h"
 
 MICROPROFILE_DEFINE(EncoderMain, "Encoder", "Main", MP_WHITE);
@@ -118,7 +118,7 @@ void Run(MainArgs *args, Params *params) {
     width, height, (int) vfmt_in.format, (int) vfmt_in.vflip,
     (int) linesize, (int) (width * components));
 
-  const size_t buffer_size = height * linesize;
+  const int64_t buffer_size = height * linesize;
   uint8_t *buffer = (uint8_t*) malloc(buffer_size);
   if (!buffer) {
     Log("could not allocate buffer");
@@ -546,26 +546,33 @@ void Run(MainArgs *args, Params *params) {
   while (true) {
     MICROPROFILE_SCOPE(EncoderCycle);
 
-    size_t read;
+    int64_t read;
 
     {
       MICROPROFILE_SCOPE(EncoderReceiveVideoFrame);
       read = params->receive_video_frame(params->private_data, buffer, buffer_size, &timestamp);
     }
-    if (first_timestamp < 0) {
-      first_timestamp = timestamp;
-    }
-    timestamp -= first_timestamp;
-
-    auto delta = timestamp - last_timestamp;
-    last_timestamp = timestamp;
-    if (fps_counter.TickDelta(delta)) {
-      Log("FPS: %.2f", fps_counter.Fps());
-    }
 
     if (read < buffer_size) {
-      last_frame = true;
+      if (read < 0) {
+        // all read out
+        last_frame = true;
+      } else {
+        // got no frame
+        std::this_thread::sleep_for(std::chrono::microseconds(1000000 / 60));
+      }
     } else {
+      if (first_timestamp < 0) {
+        first_timestamp = timestamp;
+      }
+      timestamp -= first_timestamp;
+
+      auto delta = timestamp - last_timestamp;
+      last_timestamp = timestamp;
+      if (fps_counter.TickDelta(delta)) {
+        Log("FPS: %.2f", fps_counter.Fps());
+      }
+
       {
         MICROPROFILE_SCOPE(EncoderScale);
         if (do_swscale) {
@@ -587,43 +594,42 @@ void Run(MainArgs *args, Params *params) {
           Log("Error encoding video frame");
           exit(1);
       }
-    }
 
-    while (ret >= 0) {
-      AVPacket vpkt;
-      av_init_packet(&vpkt);
+      while (ret >= 0) {
+        AVPacket vpkt;
+        av_init_packet(&vpkt);
 
-      {
-        MICROPROFILE_SCOPE(EncoderRecvVideoPkt);
-        ret = avcodec_receive_packet(vc, &vpkt);
-      }
-      if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-          Log("Error encoding a video frame");
-          exit(1);
-      } else if (ret >= 0) {
-          // printf(">> vpkt timestamp before rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
-          av_packet_rescale_ts(&vpkt, vc->time_base, video_st->time_base);
-          // printf(">>                after  rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
-          vpkt.stream_index = video_st->index;
+        {
+          MICROPROFILE_SCOPE(EncoderRecvVideoPkt);
+          ret = avcodec_receive_packet(vc, &vpkt);
+        }
+        if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
+            Log("Error encoding a video frame");
+            exit(1);
+        } else if (ret >= 0) {
+            // printf(">> vpkt timestamp before rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
+            av_packet_rescale_ts(&vpkt, vc->time_base, video_st->time_base);
+            // printf(">>                after  rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
+            vpkt.stream_index = video_st->index;
 
-          /* Write the compressed frame to the media file. */
-          {
-            MICROPROFILE_SCOPE(EncoderWriteVideoPkt);
-            ret = av_interleaved_write_frame(oc, &vpkt);
-          }
-          if (ret < 0) {
-              Log("Error while writing video frame");
-              exit(1);
-          }
+            /* Write the compressed frame to the media file. */
+            {
+              MICROPROFILE_SCOPE(EncoderWriteVideoPkt);
+              ret = av_interleaved_write_frame(oc, &vpkt);
+            }
+            if (ret < 0) {
+                Log("Error while writing video frame");
+                exit(1);
+            }
+        }
       }
     }
 
     if (params->has_audio) {
-      // while video frame is ahead of audio
-      while (av_compare_ts(vframe->pts, video_st->time_base, aframe->pts, audio_st->time_base) >= 0) {
+      while (true) {
         char *in_samples;
         int64_t samples_needed = aframe->nb_samples;
-        int underrun = 0;
+        bool underrun = false;
 
         while (samples_filled < samples_needed) {
           if (samples_used >= samples_received) {

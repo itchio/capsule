@@ -32,7 +32,7 @@ static int ReceiveVideoFormat(Session *s, encoder::VideoFormat *vfmt) {
   return s->video_->ReceiveFormat(vfmt);
 }
 
-static int ReceiveVideoFrame(Session *s, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
+static int64_t ReceiveVideoFrame(Session *s, uint8_t *buffer, size_t buffer_size, int64_t *timestamp) {
   return s->video_->ReceiveFrame(buffer, buffer_size, timestamp);
 }
 

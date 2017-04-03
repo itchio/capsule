@@ -338,8 +338,6 @@ snd_pcm_sframes_t snd_pcm_writen(
   return ret;
 }
 
-static FILE *_raw;
-
 // interposed ALSA function
 snd_pcm_sframes_t snd_pcm_writei(
   snd_pcm_t *pcm,
@@ -352,15 +350,8 @@ snd_pcm_sframes_t snd_pcm_writei(
   auto ret = capsule::alsa::snd_pcm_writei(pcm, buffer, size);
   DebugLog("snd_pcm_writei: %d frames written", (int) ret);
 
-  {
-    if (!_raw) {
-      _raw = fopen("capsule.rawaudio", "wb");
-      capsule::Ensure("opened raw", !!_raw);
-    }
-    capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_frames_to_bytes, "snd_pcm_frames_to_bytes");
-    auto bytes = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(ret));
-    DebugLog("snd_pcm_writei: ...that's %" PRIdS " bytes", bytes);
-    fwrite(buffer, static_cast<size_t>(bytes), 1, _raw);
+  if (capsule::capture::Active()) {
+    capsule::io::WriteAudioFrames((char*) buffer, (size_t) ret);
   }
 
   return ret;

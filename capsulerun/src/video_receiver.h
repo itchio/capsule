@@ -49,7 +49,7 @@ class VideoReceiver {
     ~VideoReceiver();
     void FrameCommitted(int index, int64_t timestamp);
     int ReceiveFormat(encoder::VideoFormat *vfmt);
-    int ReceiveFrame(uint8_t *buffer, size_t buffer_size, int64_t *timestamp);
+    int64_t ReceiveFrame(uint8_t *buffer, size_t buffer_size, int64_t *timestamp);
     void Stop();
 
   private:

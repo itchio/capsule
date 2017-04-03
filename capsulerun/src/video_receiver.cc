@@ -57,32 +57,27 @@ int VideoReceiver::ReceiveFormat(encoder::VideoFormat *vfmt) {
   return 0;
 }
 
-int VideoReceiver::ReceiveFrame(uint8_t *buffer_out, size_t buffer_size_out, int64_t *timestamp_out) {
-  FrameInfo info {};
-
-  while (true) {
-    {
-      MICROPROFILE_SCOPE(VideoReceiverWait);
-      if (queue_.TryWaitAndPop(info, 200)) {
-        // got a frame!
-        break;
-      }
-    }
-
-    // didn't get a frame, are we stopped?
-    {
-      std::lock_guard<std::mutex> lock(stopped_mutex_);
-      if (stopped_) {
-        return 0;
-      }
-    }
-  }
-
+int64_t VideoReceiver::ReceiveFrame(uint8_t *buffer_out, size_t buffer_size_out, int64_t *timestamp_out) {
   if (frame_size_ != buffer_size_out) {
     Log("internal error: expected frame_size (%" PRIdS ") and buffer_size_out (%" PRIdS ") to match, but they didn't\n", frame_size_, buffer_size_out);
     {
       std::lock_guard<std::mutex> lock(stopped_mutex_);
       stopped_ = true;
+    }
+    return -1;
+  }
+
+  FrameInfo info {};
+
+  if (!queue_.TryPop(info)) {
+    // no frame waiting, oh well
+
+    // are we stopped though?
+    {
+      std::lock_guard<std::mutex> lock(stopped_mutex_);
+      if (stopped_) {
+        return -1;
+      }
     }
     return 0;
   }
@@ -115,7 +110,7 @@ int VideoReceiver::ReceiveFrame(uint8_t *buffer_out, size_t buffer_size_out, int
           committed_frames++;
         }
       }
-      Log("buffer fill: %d/%d, skipped %d\n", committed_frames, num_frames_, overrun_);
+      Log("buffer fill: %d/%d, skipped %d", committed_frames, num_frames_, overrun_);
     }
     /////////////////////////////////
     // </poor man's profiling>
