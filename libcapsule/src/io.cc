@@ -32,6 +32,7 @@
 #include <lab/io.h>
 
 #include "capsule/messages_generated.h"
+#include "capsule/audio_math.h"
 #include "capture.h"
 #include "logging.h"
 #include "ensure.h"
@@ -128,13 +129,12 @@ void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pit
 
     flatbuffers::Offset<messages::AudioSetup> audio_setup;
     if (state->has_audio_intercept) {
-        Log("has audio intercept!");
+        Log("has audio intercept! format = %s", messages::EnumNameSampleFmt(state->audio_intercept_format));
 
         // let's say we want a 4 second buffer
         int64_t seconds = 4;
-        // assuming F32LE
-        Ensure("audio intercept format is F32LE", state->audio_intercept_format == messages::SampleFmt_F32LE);
-        int64_t sample_size = 4;
+        int64_t sample_size = audio::SampleWidth(state->audio_intercept_format) / 8;
+        Ensure("audio intercept format is valid", sample_size != 0);
 
         audio_frame_size = sample_size * (int64_t) state->audio_intercept_channels;
         int64_t audio_shmem_size = seconds * audio_frame_size * (int64_t) state->audio_intercept_rate;
@@ -231,7 +231,10 @@ void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size
         }
         return;
     }
-    is_skipping = false;
+    if (is_skipping) {
+        Log("not skipping anymore!");
+        is_skipping = false;
+    }
 
     flatbuffers::FlatBufferBuilder builder(1024);
 

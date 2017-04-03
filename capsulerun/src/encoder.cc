@@ -19,8 +19,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-// #define DebugLog(...) Log(__VA_ARGS__)
-#define DebugLog(...)
+#define DebugLog(...) Log(__VA_ARGS__)
+// #define DebugLog(...)
 
 #include "encoder.h"
 
@@ -73,17 +73,21 @@ namespace capsule {
 namespace encoder {
 
 AVSampleFormat SampleFormatToAv(messages::SampleFmt fmt) {
-  auto fmt_out = AV_SAMPLE_FMT_NONE;
-
   switch (fmt) {
-    case messages::SampleFmt_F32LE:
-      fmt_out = AV_SAMPLE_FMT_FLT;
-      break;
+    case messages::SampleFmt_U8:
+      return AV_SAMPLE_FMT_U8;
+    case messages::SampleFmt_S16:
+      return AV_SAMPLE_FMT_S16;
+    case messages::SampleFmt_S32:
+      return AV_SAMPLE_FMT_S32;
+    case messages::SampleFmt_F32:
+      return AV_SAMPLE_FMT_FLT;
+    case messages::SampleFmt_F64:
+      return AV_SAMPLE_FMT_DBL;
     default:
       Log("Unknown sample format %s", EnumNameSampleFmt(fmt));
+      return AV_SAMPLE_FMT_NONE;
   }
-
-  return fmt_out;
 }
 
 void Run(MainArgs *args, Params *params) {
@@ -677,6 +681,28 @@ void Run(MainArgs *args, Params *params) {
           Log("Failed to convert samples: code %d (%x)", ret, ret);
           exit(1);
         }
+
+        {
+          auto left_samples = (float*) aframe->data[0];
+          auto right_samples = (float*) aframe->data[1];
+          for (int i = 0; i < aframe->nb_samples; i++) {
+            if (left_samples[i] < -1.0f) {
+              Log("left sample %d -clips: %f", i, left_samples[i]);
+              left_samples[i] = -1.0f;
+            } else if (left_samples[i] > 1.0f) {
+              Log("left sample %d +clips: %f", i, left_samples[i]);
+              left_samples[i] = 1.0f;
+            }
+
+            if (right_samples[i] < -1.0f) {
+              Log("right sample %d -clips: %f", i, right_samples[i]);
+              right_samples[i] = -1.0f;
+            } else if (right_samples[i] > 1.0f) {
+              Log("right sample %d +clips: %f", i, right_samples[i]);
+              right_samples[i] = 1.0f;
+            }
+          }
+        }  
 
         aframe->pts = anext_pts;
         anext_pts += aframe->nb_samples;

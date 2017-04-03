@@ -21,6 +21,7 @@
 
 #pragma once
 
+void* capsule_get_IAudioClient_Initialize(void *);
 void* capsule_get_IAudioClient_GetCurrentPadding(void *);
 void* capsule_get_IAudioRenderClient_GetBuffer(void *);
 void* capsule_get_IAudioRenderClient_ReleaseBuffer(void *);

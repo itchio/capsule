@@ -33,18 +33,36 @@ static inline messages::SampleFmt ToCapsuleSampleFmt (WAVEFORMATEX *pwfx) {
     auto pwfxe = reinterpret_cast<WAVEFORMATEXTENSIBLE *>(pwfx);
     if (pwfxe->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT) {
       if (pwfx->wBitsPerSample == 32) {
-        return messages::SampleFmt_F32LE;
+        return messages::SampleFmt_F32;
+      } else if (pwfx->wBitsPerSample == 64) {
+        return messages::SampleFmt_F64;
       } else {
-        Log("Wasapi: format is float but not 32, bailing out");
-        return messages::SampleFmt_UNKNOWN;
+        Log("Wasapi: format is float but %d bits per sample, bailing out", pwfx->wBitsPerSample);
+      }
+    } else if (pwfxe->SubFormat == KSDATAFORMAT_SUBTYPE_PCM) {
+      if (pwfx->wBitsPerSample == 8) {
+        return messages::SampleFmt_U8;
+      } else if (pwfx->wBitsPerSample == 16) {
+        return messages::SampleFmt_S16;
+      } else if (pwfx->wBitsPerSample == 32) {
+        return messages::SampleFmt_S32;
+      } else {
+        Log("Wasapi: format is pcm but %d bits per sample, bailing out", pwfx->wBitsPerSample);
       }
     } else {
-      Log("Wasapi: format extensible but not float, bailing out");
-      return messages::SampleFmt_UNKNOWN;
+      Log("Wasapi: extensible but neither float nor pcm, bailing out");
+    }
+  } else if(pwfx->wFormatTag == WAVE_FORMAT_PCM) {
+    Log("Wasapi: format isn't extensible");
+    if (pwfx->wBitsPerSample == 8) {
+      return messages::SampleFmt_U8;
+    } else if (pwfx->wBitsPerSample == 16) {
+      return messages::SampleFmt_S16;
+    } else {
+      Log("Wasapi: non-extensible pcm format but %d bits per sample, bailing out", pwfx->wBitsPerSample);
     }
   } else {
-    Log("Wasapi: format isn't F32LE, bailing out");
-    return messages::SampleFmt_UNKNOWN;
+    Log("Wasapi: non-extensible, non-pcm format, bailing out");
   }
   return messages::SampleFmt_UNKNOWN;
 }

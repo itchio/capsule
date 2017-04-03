@@ -60,15 +60,23 @@ inline const char *EnumNamePixFmt(PixFmt e) {
 
 enum SampleFmt {
   SampleFmt_UNKNOWN = 0,
-  SampleFmt_F32LE = 1,
+  SampleFmt_U8 = 1,
+  SampleFmt_S16 = 2,
+  SampleFmt_S32 = 3,
+  SampleFmt_F32 = 4,
+  SampleFmt_F64 = 5,
   SampleFmt_MIN = SampleFmt_UNKNOWN,
-  SampleFmt_MAX = SampleFmt_F32LE
+  SampleFmt_MAX = SampleFmt_F64
 };
 
 inline const char **EnumNamesSampleFmt() {
   static const char *names[] = {
     "UNKNOWN",
-    "F32LE",
+    "U8",
+    "S16",
+    "S32",
+    "F32",
+    "F64",
     nullptr
   };
   return names;

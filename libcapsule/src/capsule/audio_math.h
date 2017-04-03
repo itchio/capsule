@@ -29,8 +29,16 @@ namespace audio {
 // Return the width of a single sample, given a format, or 0 on error
 static inline int64_t SampleWidth (messages::SampleFmt format) {
   switch (format) {
-    case messages::SampleFmt_F32LE:
+    case messages::SampleFmt_U8:
+      return 8;
+    case messages::SampleFmt_S16:
+      return 16;
+    case messages::SampleFmt_S32:
       return 32;
+    case messages::SampleFmt_F32:
+      return 32;
+    case messages::SampleFmt_F64:
+      return 64;
     default:
       return 0;
   }

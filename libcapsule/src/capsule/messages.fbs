@@ -31,7 +31,12 @@ enum PixFmt:int {
 
 enum SampleFmt:int {
     UNKNOWN,
-    F32LE,   // 32-bit float, little-endian
+    U8,    // 8-bit unsigned integer
+    S16,   // 16-bit signed integer
+    S32,   // 32-bit signed integer
+    F32,   // 32-bit float
+    F64,   // 64-bit float
+    // no planar formats supported yet
 }
 
 union Message {

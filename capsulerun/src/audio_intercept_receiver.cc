@@ -103,7 +103,7 @@ void AudioInterceptReceiver::FramesCommitted(int64_t offset, int64_t frames) {
       write_frames = avail_frames;
     }
 
-    // Log("AudioInterceptReceiver: storing %d frames at %d", write_frames, commit_index_);
+    Log("AudioInterceptReceiver: storing %d frames at %d", write_frames, commit_index_);
     char *src = (char*) shm_->Data() + (offset * frame_size_);
     char *dst = buffer_ + (commit_index_ * frame_size_);
     memcpy(dst, src, write_frames * frame_size_);

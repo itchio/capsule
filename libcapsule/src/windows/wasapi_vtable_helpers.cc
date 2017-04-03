@@ -25,6 +25,11 @@
 #include <audioclient.h>
 #undef CINTERFACE
 
+void* capsule_get_IAudioClient_Initialize(void *pObj) {
+  auto obj = reinterpret_cast<IAudioClient *>(pObj);
+  return obj->lpVtbl->Initialize;
+}
+
 void* capsule_get_IAudioClient_GetCurrentPadding(void *pObj) {
   auto obj = reinterpret_cast<IAudioClient *>(pObj);
   return obj->lpVtbl->GetCurrentPadding;
