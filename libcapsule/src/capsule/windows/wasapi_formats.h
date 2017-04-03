@@ -21,22 +21,35 @@
 
 #pragma once
 
-#include "encoder.h"
+#include <audioclient.h>
+
+#include "../messages_generated.h"
 
 namespace capsule {
-namespace audio {
+namespace wasapi {
 
-class AudioReceiver {
-  public:
-    virtual ~AudioReceiver() {};
+static inline messages::SampleFmt ToCapsuleSampleFmt (WAVEFORMATEX *pwfx) {
+  if (pwfx->wFormatTag == WAVE_FORMAT_EXTENSIBLE) {
+    auto pwfxe = reinterpret_cast<WAVEFORMATEXTENSIBLE *>(pwfx);
+    if (pwfxe->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT) {
+      if (pwfx->wBitsPerSample == 32) {
+        return messages::SampleFmt_F32LE;
+      } else {
+        Log("Wasapi: format is float but not 32, bailing out");
+        return messages::SampleFmt_UNKNOWN;
+      }
+    } else {
+      Log("Wasapi: format extensible but not float, bailing out");
+      return messages::SampleFmt_UNKNOWN;
+    }
+  } else {
+    Log("Wasapi: format isn't F32LE, bailing out");
+    return messages::SampleFmt_UNKNOWN;
+  }
+  return messages::SampleFmt_UNKNOWN;
+}
 
-    virtual int ReceiveFormat(encoder::AudioFormat *afmt) = 0;
-    virtual void *ReceiveFrames(int64_t *frames_received) = 0;
-    virtual void FramesCommitted(int64_t, int64_t) {
-      // muffin
-    };
-    virtual void Stop() = 0;
-};
 
-} // namespace audio
+} // namespace wasapi
 } // namespace capsule
+

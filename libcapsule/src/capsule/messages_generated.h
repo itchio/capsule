@@ -516,15 +516,15 @@ inline flatbuffers::Offset<VideoSetup> CreateVideoSetupDirect(
 struct AudioSetup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum {
     VT_CHANNELS = 4,
-    VT_SAMPLE_FMT = 6,
+    VT_FORMAT = 6,
     VT_RATE = 8,
     VT_SHMEM = 10
   };
   uint32_t channels() const {
     return GetField<uint32_t>(VT_CHANNELS, 0);
   }
-  SampleFmt sample_fmt() const {
-    return static_cast<SampleFmt>(GetField<int32_t>(VT_SAMPLE_FMT, 0));
+  SampleFmt format() const {
+    return static_cast<SampleFmt>(GetField<int32_t>(VT_FORMAT, 0));
   }
   uint32_t rate() const {
     return GetField<uint32_t>(VT_RATE, 0);
@@ -535,7 +535,7 @@ struct AudioSetup FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint32_t>(verifier, VT_CHANNELS) &&
-           VerifyField<int32_t>(verifier, VT_SAMPLE_FMT) &&
+           VerifyField<int32_t>(verifier, VT_FORMAT) &&
            VerifyField<uint32_t>(verifier, VT_RATE) &&
            VerifyField<flatbuffers::uoffset_t>(verifier, VT_SHMEM) &&
            verifier.VerifyTable(shmem()) &&
@@ -549,8 +549,8 @@ struct AudioSetupBuilder {
   void add_channels(uint32_t channels) {
     fbb_.AddElement<uint32_t>(AudioSetup::VT_CHANNELS, channels, 0);
   }
-  void add_sample_fmt(SampleFmt sample_fmt) {
-    fbb_.AddElement<int32_t>(AudioSetup::VT_SAMPLE_FMT, static_cast<int32_t>(sample_fmt), 0);
+  void add_format(SampleFmt format) {
+    fbb_.AddElement<int32_t>(AudioSetup::VT_FORMAT, static_cast<int32_t>(format), 0);
   }
   void add_rate(uint32_t rate) {
     fbb_.AddElement<uint32_t>(AudioSetup::VT_RATE, rate, 0);
@@ -573,13 +573,13 @@ struct AudioSetupBuilder {
 inline flatbuffers::Offset<AudioSetup> CreateAudioSetup(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint32_t channels = 0,
-    SampleFmt sample_fmt = SampleFmt_UNKNOWN,
+    SampleFmt format = SampleFmt_UNKNOWN,
     uint32_t rate = 0,
     flatbuffers::Offset<Shmem> shmem = 0) {
   AudioSetupBuilder builder_(_fbb);
   builder_.add_shmem(shmem);
   builder_.add_rate(rate);
-  builder_.add_sample_fmt(sample_fmt);
+  builder_.add_format(format);
   builder_.add_channels(channels);
   return builder_.Finish();
 }

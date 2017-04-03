@@ -40,7 +40,7 @@ static int ReceiveAudioFormat(Session *s, encoder::AudioFormat *afmt) {
   return s->audio_->ReceiveFormat(afmt);
 }
 
-static void *ReceiveAudioFrames(Session *s, int *frames_received) {
+static void *ReceiveAudioFrames(Session *s, int64_t *frames_received) {
   return s->audio_->ReceiveFrames(frames_received);
 }
 

@@ -48,11 +48,11 @@ class WasapiReceiver : public AudioReceiver {
     virtual ~WasapiReceiver() override;
 
     virtual int ReceiveFormat(encoder::AudioFormat *afmt) override;
-    virtual void *ReceiveFrames(int *frames_received) override;
+    virtual void *ReceiveFrames(int64_t *frames_received) override;
     virtual void Stop() override;
 
   private:
-    encoder::AudioFormat afmt_;
+    encoder::AudioFormat afmt_ = {0};
     IMMDeviceEnumerator *enumerator_ = nullptr;
     IMMDevice *device_ = nullptr;
     IAudioClient *audio_client_ = nullptr;
@@ -60,7 +60,7 @@ class WasapiReceiver : public AudioReceiver {
     WAVEFORMATEX *pwfx_ = nullptr;
     int num_frames_received_ = 0;
 
-    bool stopped_ = false;    
+    bool stopped_ = true;
     std::mutex stopped_mutex_;
 };
 

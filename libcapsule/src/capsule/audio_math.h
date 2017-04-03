@@ -21,44 +21,20 @@
 
 #pragma once
 
-#include <capsule/messages_generated.h>
-
-#include <mutex>
-
-#include "audio_receiver.h"
-#include "connection.h"
-#include "encoder.h"
-#include <shoom.h>
+#include "messages_generated.h"
 
 namespace capsule {
 namespace audio {
 
-class AudioInterceptReceiver : public AudioReceiver {
-  public:
-    AudioInterceptReceiver(Connection *conn, const messages::AudioSetup &as);
-    virtual ~AudioInterceptReceiver() override;
-
-    virtual void FramesCommitted(int64_t offset, int64_t frames) override;
-    virtual int ReceiveFormat(encoder::AudioFormat *afmt) override;
-    virtual void *ReceiveFrames(int64_t *frames_received) override;
-    virtual void Stop() override;
-
-  private:
-    Connection *conn_ = nullptr;
-    encoder::AudioFormat afmt_;
-    shoom::Shm *shm_ = nullptr;
-
-    int num_frames_ = 0;
-    int64_t frame_size_ = 0;
-    int64_t commit_index_ = 0;
-    int64_t sent_index_ = 0;
-    int64_t processed_index_ = 0;
-    char *buffer_ = nullptr;
-
-    std::mutex buffer_mutex_;
-
-    bool initialized_ = false;
-};
-
+// Return the width of a single sample, given a format, or 0 on error
+static inline int64_t SampleWidth (messages::SampleFmt format) {
+  switch (format) {
+    case messages::SampleFmt_F32LE:
+      return 32;
+    default:
+      return 0;
+  }
 }
-}
+
+} // namespace audio
+} // namespace capsule

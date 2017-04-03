@@ -19,7 +19,12 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
+// #define DebugLog(...) Log(__VA_ARGS__)
+#define DebugLog(...)
+
 #include "encoder.h"
+
+#include <capsule/audio_math.h>
 
 #if defined(WIN32)
 #pragma warning(push, 0)
@@ -67,6 +72,20 @@ MICROPROFILE_DEFINE(EncoderWriteAudioPkt, "Encoder", "AMux2", MP_BROWN4);
 namespace capsule {
 namespace encoder {
 
+AVSampleFormat SampleFormatToAv(messages::SampleFmt fmt) {
+  auto fmt_out = AV_SAMPLE_FMT_NONE;
+
+  switch (fmt) {
+    case messages::SampleFmt_F32LE:
+      fmt_out = AV_SAMPLE_FMT_FLT;
+      break;
+    default:
+      Log("Unknown sample format %s", EnumNameSampleFmt(fmt));
+  }
+
+  return fmt_out;
+}
+
 void Run(MainArgs *args, Params *params) {
   MicroProfileOnThreadCreate("encoder");
   MICROPROFILE_SCOPE(EncoderMain);
@@ -111,8 +130,8 @@ void Run(MainArgs *args, Params *params) {
       Log("could not receive audio format, disabling audio");
       params->has_audio = false;
     } else {
-      Log("audio format: %d channels, %d samplerate, %d samplewidth",
-        afmt_in.channels, afmt_in.samplerate, afmt_in.samplewidth);
+      Log("audio format: %d channels, %d rate, %s format",
+        afmt_in.channels, afmt_in.rate, messages::EnumNameSampleFmt(afmt_in.format));
     }
   }
 
@@ -321,7 +340,7 @@ void Run(MainArgs *args, Params *params) {
 
     ac->bit_rate = 128000;
     ac->sample_fmt = AV_SAMPLE_FMT_FLTP;
-    ac->sample_rate = afmt_in.samplerate;
+    ac->sample_rate = afmt_in.rate;
     ac->channels = afmt_in.channels;
     ac->channel_layout = AV_CH_LAYOUT_STEREO;
 
@@ -364,7 +383,8 @@ void Run(MainArgs *args, Params *params) {
       vpix_fmt = AV_PIX_FMT_YUV444P;
       break;
     default:
-      printf("Unknown/unsupported video format %d, bailing out\n", vfmt_in.format);
+      Log("Unknown/unsupported video format %d, bailing out", vfmt_in.format);
+      exit(1);
   }
 
   // audio frame
@@ -382,7 +402,7 @@ void Run(MainArgs *args, Params *params) {
 
     ret = av_frame_get_buffer(aframe, 0);
     if (ret < 0) {
-      fprintf(stderr, "could not allocate audio frame buffer\n");
+      Log("could not allocate audio frame buffer");
       exit(1);
     }
   }
@@ -437,7 +457,7 @@ void Run(MainArgs *args, Params *params) {
           32 /* alignment */
       );
       if (ret < 0) {
-        fprintf(stderr, "Could not allocate raw picture buffer\n");
+        Log("Could not allocate raw picture buffer");
         exit(1);
       }
     }
@@ -453,26 +473,39 @@ void Run(MainArgs *args, Params *params) {
   }
 
   // initialize swrescale context
-  // FIXME: we're actually never using that for now
   if (params->has_audio) {
     swr = swr_alloc();
     if (!swr) {
-      fprintf(stderr, "could not allocate resampling context\n");
+      Log("could not allocate resampling context");
+      exit(1);
+    }
+
+    // TODO: support different channel layouts
+    auto av_sample_fmt = SampleFormatToAv(afmt_in.format);
+    if (av_sample_fmt == AV_SAMPLE_FMT_NONE) {
+      Log("Unrecognized/unsupported sample format used, bailing out");
+      exit(1);
+    }
+
+    if  (afmt_in.channels != 2) {
+      Log("Unsupported number of channels: %d - bailing out", afmt_in.channels);
       exit(1);
     }
 
     av_opt_set_int(swr, "in_channel_layout",    AV_CH_LAYOUT_STEREO, 0);
     av_opt_set_int(swr, "in_sample_rate",       ac->sample_rate, 0);
-    av_opt_set_sample_fmt(swr, "in_sample_fmt", AV_SAMPLE_FMT_S32, 0);
+    av_opt_set_sample_fmt(swr, "in_sample_fmt", av_sample_fmt, 0);
     av_opt_set_int(swr, "out_channel_layout",    AV_CH_LAYOUT_STEREO, 0);
     av_opt_set_int(swr, "out_sample_rate",       ac->sample_rate, 0);
     av_opt_set_sample_fmt(swr, "out_sample_fmt", ac->sample_fmt, 0);
 
     ret = swr_init(swr);
     if (ret < 0) {
-      fprintf(stderr, "could not initialize resampling context\n");
+      Log("could not initialize resampling context");
       exit(1);
     }
+
+    Log("resampling context initialized");
   }
 
 
@@ -495,12 +528,12 @@ void Run(MainArgs *args, Params *params) {
   int64_t last_timestamp = 0;
   FPSCounter fps_counter;
 
-  int samples_received = 0;
-  int samples_used = 0;
-  float *in_samples;
+  int64_t samples_received = 0;
+  int64_t samples_used = 0;
+  int64_t sample_width = afmt_in.channels * audio::SampleWidth(afmt_in.format) / 8;
+  auto sample_buf = reinterpret_cast<uint8_t*>(malloc(aframe->nb_samples * sample_width));
 
-  int samples_filled = 0;
-  int frame_count = 0;
+  int64_t samples_filled = 0;
 
   while (true) {
     MICROPROFILE_SCOPE(EncoderCycle);
@@ -519,7 +552,7 @@ void Run(MainArgs *args, Params *params) {
     auto delta = timestamp - last_timestamp;
     last_timestamp = timestamp;
     if (fps_counter.TickDelta(delta)) {
-      // fprintf(stderr, "FPS: %.2f\n", fps_counter.Fps());
+      // Log("FPS: %.2f\n", fps_counter.Fps());
       // fflush(stderr);
     }
 
@@ -544,7 +577,7 @@ void Run(MainArgs *args, Params *params) {
         ret = avcodec_send_frame(vc, vframe);
       }
       if (ret < 0) {
-          fprintf(stderr, "Error encoding video frame\n");
+          Log("Error encoding video frame");
           exit(1);
       }
     }
@@ -558,7 +591,7 @@ void Run(MainArgs *args, Params *params) {
         ret = avcodec_receive_packet(vc, &vpkt);
       }
       if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-          fprintf(stderr, "Error encoding a video frame\n");
+          Log("Error encoding a video frame");
           exit(1);
       } else if (ret >= 0) {
           // printf(">> vpkt timestamp before rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
@@ -572,28 +605,18 @@ void Run(MainArgs *args, Params *params) {
             ret = av_interleaved_write_frame(oc, &vpkt);
           }
           if (ret < 0) {
-              fprintf(stderr, "Error while writing video frame\n");
+              Log("Error while writing video frame");
               exit(1);
           }
       }
     }
 
     if (params->has_audio) {
-      int audio_frames_copied = 0;
-
       // while video frame is ahead of audio
       while (av_compare_ts(vframe->pts, video_st->time_base, aframe->pts, audio_st->time_base) >= 0) {
-        int samples_needed = aframe->nb_samples;
+        char *in_samples;
+        int64_t samples_needed = aframe->nb_samples;
         int underrun = 0;
-
-        ret = av_frame_make_writable(aframe);
-        if (ret < 0) {
-          fprintf(stderr, "Could not make audio frame writable\n");
-          exit(1);
-        }
-
-        float *left_samples = (float *) aframe->data[0];
-        float *right_samples = (float *) aframe->data[1];
 
         while (samples_filled < samples_needed) {
           if (samples_used >= samples_received) {
@@ -601,7 +624,7 @@ void Run(MainArgs *args, Params *params) {
 
             {
               MICROPROFILE_SCOPE(EncoderReceiveAudioFrames);
-              in_samples = (float *) params->receive_audio_frames(params->private_data, &samples_received);
+              in_samples = (char *) params->receive_audio_frames(params->private_data, &samples_received);
             }
             if (samples_received == 0) {
               underrun = true;
@@ -611,12 +634,18 @@ void Run(MainArgs *args, Params *params) {
 
           {
             MICROPROFILE_SCOPE(EncoderResample);
-            while (samples_used < samples_received && samples_filled < samples_needed) {
-              left_samples[samples_filled]  = in_samples[samples_used * 2];
-              right_samples[samples_filled] = in_samples[samples_used * 2 + 1];
-              samples_filled++;
-              samples_used++;
+            int64_t samples_copied = samples_needed - samples_filled;
+            int64_t samples_avail = samples_received - samples_used;
+            if (samples_copied > samples_avail) {
+              samples_copied = samples_avail;
             }
+
+            DebugLog("Copying %" PRId64 " samples (%" PRId64 " needed, %" PRId64 " filled, %" PRId64 " received, %" PRId64 " used)", samples_copied,
+              samples_needed, samples_filled, samples_received, samples_used);
+            memcpy(sample_buf + (samples_filled * sample_width), in_samples + (samples_used * sample_width), samples_copied * sample_width);
+
+            samples_used += samples_copied;
+            samples_filled += samples_copied;
           }
         }
 
@@ -625,7 +654,26 @@ void Run(MainArgs *args, Params *params) {
           break;
         }
 
-        audio_frames_copied++;
+        ret = av_frame_make_writable(aframe);
+        if (ret < 0) {
+          Log("Could not make audio frame writable");
+          exit(1);
+        }
+
+        DebugLog("swr_delay: %d", swr_get_delay(swr, afmt_in.rate));
+
+        const uint8_t* src_data[] = { sample_buf };
+        ret = swr_convert(
+          swr,
+          aframe->data,
+          aframe->nb_samples,
+          src_data,
+          aframe->nb_samples
+        );
+        if (ret < 0) {
+          Log("Failed to convert samples: code %d (%x)", ret, ret);
+          exit(1);
+        }
 
         aframe->pts = anext_pts;
         anext_pts += aframe->nb_samples;
@@ -641,7 +689,7 @@ void Run(MainArgs *args, Params *params) {
           char err_string[err_string_size];
           err_string[0] = '\0';
           av_strerror(ret, err_string, err_string_size);
-          printf("Error encoding audio frame: error %d (%x) - %s\n", ret, ret, err_string);
+          Log("Error encoding audio frame: error %d (%x) - %s", ret, ret, err_string);
           exit(1);
         }
 
@@ -654,7 +702,7 @@ void Run(MainArgs *args, Params *params) {
           }
 
           if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-              fprintf(stderr, "Error encoding an audio frame\n");
+              Log("Error encoding an audio frame");
               exit(1);
           } else if (ret >= 0) {
               av_packet_rescale_ts(&apkt, ac->time_base, audio_st->time_base);
@@ -665,7 +713,7 @@ void Run(MainArgs *args, Params *params) {
                 ret = av_interleaved_write_frame(oc, &apkt);
               }
               if (ret < 0) {
-                  fprintf(stderr, "Error while writing audio frame\n");
+                  Log("Error while writing audio frame");
                   exit(1);
               }
           }
@@ -683,7 +731,7 @@ void Run(MainArgs *args, Params *params) {
         }
 
         if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-            fprintf(stderr, "Error encoding an audio frame\n");
+            Log("Error encoding an audio frame");
             exit(1);
         } else if (ret >= 0) {
             av_packet_rescale_ts(&apkt, ac->time_base, audio_st->time_base);
@@ -694,7 +742,7 @@ void Run(MainArgs *args, Params *params) {
               ret = av_interleaved_write_frame(oc, &apkt);
             }
             if (ret < 0) {
-                fprintf(stderr, "Error while writing audio frame\n");
+                Log("Error while writing audio frame\n");
                 exit(1);
             }
         }
@@ -704,14 +752,12 @@ void Run(MainArgs *args, Params *params) {
     if (last_frame) {
       break;
     }
-
-    frame_count++;
   }
 
   // delayed video frames
   ret = avcodec_send_frame(vc, NULL);
   if (ret < 0) {
-    fprintf(stderr, "couldn't flush video codec\n");
+    Log("couldn't flush video codec\n");
     exit(1);
   }
 
@@ -721,7 +767,7 @@ void Run(MainArgs *args, Params *params) {
     ret = avcodec_receive_packet(vc, &vpkt);
 
     if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-        fprintf(stderr, "Error encoding a video frame\n");
+        Log("Error encoding a video frame\n");
         exit(1);
     } else if (ret >= 0) {
         // printf(">> vpkt timestamp before rescaling = %d, %.4f secs\n", (int) vpkt.pts, ((double) vpkt.pts) / 1000000.0);
@@ -731,7 +777,7 @@ void Run(MainArgs *args, Params *params) {
         /* Write the compressed frame to the media file. */
         ret = av_interleaved_write_frame(oc, &vpkt);
         if (ret < 0) {
-            fprintf(stderr, "Error while writing video frame\n");
+            Log("Error while writing video frame\n");
             exit(1);
         }
     }
@@ -741,7 +787,7 @@ void Run(MainArgs *args, Params *params) {
   if (params->has_audio) {
     ret = avcodec_send_frame(ac, NULL);
     if (ret < 0) {
-      fprintf(stderr, "couldn't flush audio codec\n");
+      Log("couldn't flush audio codec\n");
       exit(1);
     }
 
@@ -751,7 +797,7 @@ void Run(MainArgs *args, Params *params) {
       ret = avcodec_receive_packet(ac, &apkt);
 
       if (ret < 0 && ret != AVERROR(EAGAIN) && ret != AVERROR_EOF) {
-          fprintf(stderr, "Error encoding a audio frame\n");
+          Log("Error encoding a audio frame\n");
           exit(1);
       } else if (ret >= 0) {
           av_packet_rescale_ts(&apkt, ac->time_base, audio_st->time_base);
@@ -759,7 +805,7 @@ void Run(MainArgs *args, Params *params) {
           /* Write the compressed frame to the media file. */
           ret = av_interleaved_write_frame(oc, &apkt);
           if (ret < 0) {
-              fprintf(stderr, "Error while writing audio frame\n");
+              Log("Error while writing audio frame\n");
               exit(1);
           }
       }

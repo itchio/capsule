@@ -31,6 +31,8 @@
 
 #include "../logging.h"
 
+#include <capsule/windows/wasapi_formats.h>
+
 MICROPROFILE_DEFINE(WasapiReceiveFrames, "Wasapi", "WasapiReceiveFrames", 0xff00ff00);
 
 namespace capsule {
@@ -51,8 +53,6 @@ static inline void SafeRelease(IUnknown *p) {
 }
 
 WasapiReceiver::WasapiReceiver() {
-  memset(&afmt_, 0, sizeof(afmt_));
-
   HRESULT hr;
 
   hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
@@ -62,18 +62,21 @@ WasapiReceiver::WasapiReceiver() {
 
   hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void**)&enumerator_);
   if (FAILED(hr)) {
-    throw std::runtime_error("Could not create device enumerator instance");
+    Log("WasapiReceiver: Could not create device enumerator instance");
+    return;
   }
 
   hr = enumerator_->GetDefaultAudioEndpoint(eRender, eConsole, &device_);
   if (FAILED(hr)) {
-    throw std::runtime_error("Could not get default audio endpoint");
+    Log("WasapiReceiver: Could not get default audio endpoint");
+    return;
   }
 
   IPropertyStore *props = nullptr;
   hr = device_->OpenPropertyStore(STGM_READ, &props);
   if (FAILED(hr)) {
-    throw std::runtime_error("Could not get open endpoint property store");
+    Log("WasapiReceiver: Could not get open endpoint property store");
+    return;
   }
 
   PROPVARIANT var_name;
@@ -83,28 +86,37 @@ WasapiReceiver::WasapiReceiver() {
   // Get the endpoint's friendly-name property.
   hr = props->GetValue(PKEY_Device_FriendlyName, &var_name);
   if (FAILED(hr)) {
-    throw std::runtime_error("Could not get device friendly name");
+    Log("WasapiReceiver: Could not get device friendly name");
+    PropVariantClear(&var_name);
+    return;
   }
 
   // Print endpoint friendly name and endpoint ID.
-  capsule::Log("WasapiReceiver: Capturing from: \"%S\"", var_name.pwszVal);
+  Log("WasapiReceiver: Capturing from: \"%S\"", var_name.pwszVal);
 
   PropVariantClear(&var_name);
   SafeRelease(props);
 
   hr = device_->Activate(IID_IAudioClient, CLSCTX_ALL, NULL, (void**) &audio_client_);
   if (FAILED(hr)) {
-    throw std::runtime_error("Could not activate audio device");
+    Log("WasapiReceiver: Could not activate audio device");
+    return;
   }
 
   hr = audio_client_->GetMixFormat(&pwfx_);
   if (FAILED(hr)) {
-    throw std::runtime_error("Could not get mix format");
+    Log("WasapiReceiver: Could not get mix format");
+    return;
   }
 
   afmt_.channels = pwfx_->nChannels;
-  afmt_.samplerate = pwfx_->nSamplesPerSec;
-  afmt_.samplewidth = pwfx_->wBitsPerSample;
+  afmt_.rate = pwfx_->nSamplesPerSec;
+  afmt_.format = wasapi::ToCapsuleSampleFmt(pwfx_);
+
+  if (afmt_.format == messages::SampleFmt_UNKNOWN) {
+    Log("WasapiReceiver: Could not determine sample format");
+    return;
+  }
 
   REFERENCE_TIME hns_requested_duration = kReftimesPerSec * 4;
   hr = audio_client_->Initialize(
@@ -115,7 +127,8 @@ WasapiReceiver::WasapiReceiver() {
       pwfx_,
       NULL);
   if (FAILED(hr)) {
-    throw std::runtime_error("Could not initialize audio client");
+    Log("WasapiReceiver: Could not initialize audio client");
+    return;
   }
 
   UINT32 buffer_frame_count;
@@ -123,31 +136,39 @@ WasapiReceiver::WasapiReceiver() {
   // Get the size of the allocated buffer.
   hr = audio_client_->GetBufferSize(&buffer_frame_count);
   if (hr != S_OK) {
-    throw std::runtime_error("Could not get buffer size");
+    Log("WasapiReceiver: Could not get buffer size");
+    return;
   }
 
-  capsule::Log("WasapiReceiver: Buffer frame count: %d", buffer_frame_count);
+  Log("WasapiReceiver: Buffer frame count: %d", buffer_frame_count);
 
   hr = audio_client_->GetService(
       IID_IAudioCaptureClient,
       (void **) &capture_client_);
   if (FAILED(hr)) {
-    throw std::runtime_error("Could not get capture client");
+    Log("WasapiReceiver: Could not get capture client");
+    return;
   }
 
   hr = audio_client_->Start();
   if (hr != S_OK) {
-    printf("Could not start capture");
-    exit(1);
+    Log("WasapiReceiver: Could not start capture");
+    return;
   }
+
+  stopped_ = false;
 }
 
 int WasapiReceiver::ReceiveFormat(encoder::AudioFormat *afmt) {
+  if (stopped_) {
+    return 1;
+  }
+
   memcpy(afmt, &afmt_, sizeof(*afmt));
   return 0;
 }
 
-void *WasapiReceiver::ReceiveFrames(int *frames_received) {
+void *WasapiReceiver::ReceiveFrames(int64_t *frames_received) {
   MICROPROFILE_SCOPE(WasapiReceiveFrames);
 
   std::lock_guard<std::mutex> lock(stopped_mutex_);

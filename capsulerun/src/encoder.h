@@ -39,16 +39,15 @@ struct VideoFormat {
 
 struct AudioFormat {
   int channels;
-  int samplerate;
-  // FIXME: assumes F32LE, bad
-  int samplewidth;
+  int rate;
+  messages::SampleFmt format;
 };
 
 typedef int (*VideoFormatReceiver)(void *private_data, VideoFormat *vfmt);
 typedef int (*VideoFrameReceiver)(void *private_data, uint8_t *buffer, size_t buffer_size, int64_t *timestamp);
 
 typedef int (*AudioFormatReceiver)(void *private_data, AudioFormat *afmt);
-typedef void* (*AudioFramesReceiver)(void *private_data, int *num_frames);
+typedef void* (*AudioFramesReceiver)(void *private_data, int64_t *num_frames);
 
 struct Params {
   void *private_data;

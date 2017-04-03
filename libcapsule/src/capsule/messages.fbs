@@ -71,7 +71,7 @@ table VideoSetup {
 
 table AudioSetup {
     channels: uint;
-    sample_fmt: SampleFmt;
+    format: SampleFmt;
     rate: uint;
     shmem: Shmem;
 }

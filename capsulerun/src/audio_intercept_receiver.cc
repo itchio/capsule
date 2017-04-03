@@ -22,6 +22,7 @@
 #include "audio_intercept_receiver.h"
 
 #include <capsule/messages_generated.h>
+#include <capsule/audio_math.h>
 
 #include "logging.h"
 
@@ -35,19 +36,15 @@ AudioInterceptReceiver::AudioInterceptReceiver(Connection *conn, const messages:
 
   conn_ = conn;
 
-  Log("AudioInterceptReceiver: initializing with %d channels, %d rate, sample format %d",
+  Log("AudioInterceptReceiver: initializing with %d channels, %d rate, sample format %s",
     as.channels(),
     as.rate(),
-    as.sample_fmt()
+    messages::EnumNameSampleFmt(as.format())
   );
 
-  if (as.sample_fmt() != messages::SampleFmt_F32LE) {
-    Log("AudioInterceptReceiver: unsupported sample format, bailing out");
-  }
-
   afmt_.channels = as.channels();
-  afmt_.samplerate = as.rate();
-  afmt_.samplewidth = 32; // assuming F32LE
+  afmt_.rate = as.rate();
+  afmt_.format = as.format();
 
   auto shm_path = as.shmem()->path()->str();  
   auto shm = new shoom::Shm(shm_path, static_cast<size_t>(as.shmem()->size()));
@@ -59,11 +56,11 @@ AudioInterceptReceiver::AudioInterceptReceiver(Connection *conn, const messages:
 
   shm_ = shm;
 
-  size_t sample_size = (afmt_.samplewidth / 8);
+  size_t sample_size = (SampleWidth(afmt_.format) / 8);
   frame_size_ = afmt_.channels * sample_size;
 
   int64_t buffered_seconds = 4;
-  num_frames_ = afmt_.samplerate * buffered_seconds;
+  num_frames_ = afmt_.rate * buffered_seconds;
 
   buffer_ = (char*) calloc(num_frames_, frame_size_);
 
@@ -117,7 +114,7 @@ void AudioInterceptReceiver::FramesCommitted(int64_t offset, int64_t frames) {
   }
 }
 
-void *AudioInterceptReceiver::ReceiveFrames(int *frames_received) {
+void *AudioInterceptReceiver::ReceiveFrames(int64_t *frames_received) {
   std::lock_guard<std::mutex> lock(buffer_mutex_);
 
   *frames_received = 0;
