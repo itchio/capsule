@@ -29,12 +29,39 @@
 #include "../capture.h"
 #include "../io.h"
 
+#include <capsule/messages_generated.h>
+#include <capsule/audio_math.h>
+
 namespace capsule {
 namespace coreaudio {
 
 struct CoreAudioState {
   bool seen;
+  int64_t frame_size;
 } state = {0};
+
+messages::SampleFmt ToCapsuleSampleFmt(AudioStreamBasicDescription *ca_format) {
+  if (ca_format->mFormatFlags & kLinearPCMFormatFlagIsSignedInteger) {
+    if (ca_format->mBitsPerChannel == 16) {
+      return messages::SampleFmt_S16;
+    } else if (ca_format->mBitsPerChannel == 32) {
+      return messages::SampleFmt_S32;
+    }
+  } else if (ca_format->mFormatFlags & kLinearPCMFormatFlagIsFloat) {
+    if (ca_format->mBitsPerChannel == 32) {
+      return messages::SampleFmt_F32;
+    } else if (ca_format->mBitsPerChannel == 64) {
+      return messages::SampleFmt_F64;
+    }
+  } else {
+    if (ca_format->mBitsPerChannel == 8) {
+      return messages::SampleFmt_U8;
+    } else {
+      Log("CoreAudio: unrecognized/unsupported format");
+    }
+  }
+  return messages::SampleFmt_UNKNOWN;
+}
 
 void Saw(AudioUnit unit) {
   if (!state.seen) {
@@ -52,13 +79,15 @@ void Saw(AudioUnit unit) {
 
     auto rate = ca_format.mSampleRate;
     auto channels = ca_format.mChannelsPerFrame;
+    auto fmt = ToCapsuleSampleFmt(&ca_format);
 
-    if ((ca_format.mFormatFlags & kLinearPCMFormatFlagIsFloat) && (ca_format.mBitsPerChannel == 32)) {
-      capture::HasAudioIntercept(messages::SampleFmt_F32LE, rate, channels);
-    } else {
-      capsule::Log("CoreAudio: format isn't f32le, not supported yet, disabling audio capture");
+    if (fmt == messages::SampleFmt_UNKNOWN) {
+      Log("CoreAudio: unsupported format, bailing out");
       return;
     }
+
+    state.frame_size = channels * audio::SampleWidth(fmt)/  8;
+    capture::HasAudioIntercept(fmt, rate, channels);
   }
 }
 
@@ -73,11 +102,8 @@ static OSStatus RenderCallback(void *inRefCon, AudioUnitRenderActionFlags *ioAct
   );
 
   if (capsule::capture::Active()) {
-    const int64_t channels = 2;
-    const int64_t sample_size = 32 / 8;
-    const int64_t frame_size = sample_size * channels;
     auto buf = ioData->mBuffers[0];
-    const int64_t num_frames = buf.mDataByteSize / frame_size;
+    const int64_t num_frames = buf.mDataByteSize / state.frame_size;
     capsule::io::WriteAudioFrames((char*) buf.mData, num_frames);
   }
 
