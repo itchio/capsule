@@ -85,7 +85,7 @@ ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
   };
   char **child_environ = lab::env::MergeBlocks(lab::env::GetBlock(), env_additions);
 
-  int child_err = posix_spawn(
+  int child_err = posix_spawnp(
     &child_pid,
     args->exec,
     nullptr, // file_actions
