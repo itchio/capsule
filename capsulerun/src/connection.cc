@@ -44,7 +44,9 @@
 
 #include <lab/paths.h>
 
-#include <stdexcept>
+#include "logging.h"
+
+namespace capsule {
 
 #if defined(LAB_WINDOWS)
 
@@ -63,27 +65,19 @@ static HANDLE CreatePipe(
     NULL // lpSecurityAttributes
   );
 
-  if (!handle) {
-    throw std::runtime_error("CreateNamedPipe failed");
-  }
-
   return handle;
 }
 
 #else // LAB_WINDOWS
 
-static void CreateFifo (
+static int CreateFifo (
     std::string fifo_path
 ) {
   // remove previous fifo if any  
   unlink(fifo_path.c_str());
 
   // create fifo
-  int fifo_ret = mkfifo(fifo_path.c_str(), 0644);
-  if (fifo_ret != 0) {
-    // CapsuleLog("could not create fifo at %s (code %d)", fifo_path.c_str(), fifo_ret);
-    throw std::runtime_error("mkfifo failed");
-  }
+  return mkfifo(fifo_path.c_str(), 0644);
 }
 
 static int OpenFifo (
@@ -102,14 +96,31 @@ Connection::Connection(std::string pipe_name) {
 
 #if defined(LAB_WINDOWS)
   pipe_r_ = CreatePipe(r_path_, PIPE_ACCESS_INBOUND);
+  if (!pipe_r_) {
+    Log("Could not create read pipe, bailing out...");
+    exit(1);
+  }
   pipe_w_ = CreatePipe(w_path_, PIPE_ACCESS_OUTBOUND);
+  if (!pipe_w_) {
+    Log("Could not create write pipe, bailing out...");
+    exit(1);
+  }
 #else // LAB_WINDOWS
   // ignore SIGPIPE - those will get disconnected when
   // the game shuts down, and that's okay.
   signal(SIGPIPE, SIG_IGN);
 
-  CreateFifo(r_path_);
-  CreateFifo(w_path_);
+  int ret;
+  ret = CreateFifo(r_path_);
+  if (ret != 0) {
+    Log("Could not create read fifo at %s (code %d)", r_path_.c_str(), ret);
+    exit(1);
+  }
+  ret = CreateFifo(w_path_);
+  if (ret != 0) {
+    Log("Could not create write fifo at %s (code %d)", w_path_.c_str(), ret);
+    exit(1);
+  }
 #endif // !LAB_WINDOWS
 }
 
@@ -156,3 +167,5 @@ char *Connection::Read() {
   return lab::packet::Read(fifo_r_);
 #endif // !LAB_WINDOWS
 }
+
+} // namespace capsule

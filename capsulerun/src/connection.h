@@ -23,6 +23,8 @@
 
 #include <lab/packet.h>
 
+namespace capsule {
+
 class Connection {
   public:
     Connection(std::string pipe_name);
@@ -46,3 +48,5 @@ class Connection {
 
     bool connected_ = false;
 };
+
+} // namespace capsule

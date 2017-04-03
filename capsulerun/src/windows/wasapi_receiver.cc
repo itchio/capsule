@@ -26,9 +26,6 @@
 // PKEY_Device_FriendlyName
 #include <Functiondiscoverykeys_devpkey.h>
 
-// TODO: signal errors without exceptions
-#include <stdexcept>
-
 #include "../logging.h"
 
 #include <capsule/windows/wasapi_formats.h>

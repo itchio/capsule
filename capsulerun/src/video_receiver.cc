@@ -19,8 +19,6 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#include <stdexcept>
-
 #include <lab/packet.h>
 #include <capsule/messages_generated.h>
 
@@ -81,9 +79,12 @@ int VideoReceiver::ReceiveFrame(uint8_t *buffer_out, size_t buffer_size_out, int
   }
 
   if (frame_size_ != buffer_size_out) {
-    fprintf(stderr, "capsule internal error: expected frame_size (%" PRIdS ") and buffer_size_out (%" PRIdS ") to match, but they didn't\n", frame_size_, buffer_size_out);
-    fflush(stderr);
-    throw std::runtime_error("frame_size !== buffer_size_out");
+    Log("internal error: expected frame_size (%" PRIdS ") and buffer_size_out (%" PRIdS ") to match, but they didn't\n", frame_size_, buffer_size_out);
+    {
+      std::lock_guard<std::mutex> lock(stopped_mutex_);
+      stopped_ = true;
+    }
+    return 0;
   }
 
   *timestamp_out = info.timestamp;
@@ -114,8 +115,7 @@ int VideoReceiver::ReceiveFrame(uint8_t *buffer_out, size_t buffer_size_out, int
           committed_frames++;
         }
       }
-      // fprintf(stderr, "buffer fill: %d/%d, skipped %d\n", committed_frames, num_frames_, overrun_);
-      // fflush(stderr);
+      Log("buffer fill: %d/%d, skipped %d\n", committed_frames, num_frames_, overrun_);
     }
     /////////////////////////////////
     // </poor man's profiling>
