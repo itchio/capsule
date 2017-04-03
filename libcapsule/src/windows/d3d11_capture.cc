@@ -238,7 +238,7 @@ static bool ShmemInitBuffers(size_t idx) {
 
   hr = state.device->CreateShaderResourceView(state.scale_tex, &res_desc, &state.scale_resource);
   if (FAILED(hr)) {
-    Log("d3d11_shmem_init_buffers: failed to create rendertarget view (%x)", hr);
+    Log("ShmemInitBuffers: failed to create rendertarget view (%x)", hr);
     return false;
   }
 
@@ -706,8 +706,8 @@ static void Init(IDXGISwapChain *swap) {
   }
 }
 
-static inline void CopyTexture (ID3D11Resource *dst, ID3D11Resource *src) {
-  if (state.multisampled) {
+static inline void CopyTexture(ID3D11Resource *dst, ID3D11Resource *src, bool multisampled) {
+  if (multisampled) {
     state.context->ResolveSubresource(dst, 0, src, 0, state.format);
   } else {
     state.context->CopyResource(dst, src);
@@ -954,7 +954,7 @@ static inline void ShmemQueueCopy() {
 	}
 }
 
-static inline void ShmemCapture (ID3D11Resource* backbuffer) {
+static inline void ShmemCapture(ID3D11Resource* backbuffer) {
   int next_tex;
 
   ShmemQueueCopy();
@@ -963,8 +963,7 @@ static inline void ShmemCapture (ID3D11Resource* backbuffer) {
 
   state.timestamps[state.cur_tex] = capture::FrameTimestamp();
 
-  // always using scale
-  CopyTexture(state.scale_tex, backbuffer);
+  CopyTexture(state.scale_tex, backbuffer, state.multisampled);
   ScaleTexture(state.render_targets[state.cur_tex], state.scale_resource);
 
   if (state.copy_wait < capture::kNumBuffers - 1) {
@@ -977,7 +976,7 @@ static inline void ShmemCapture (ID3D11Resource* backbuffer) {
     state.context->Unmap(dst, 0);
     state.texture_mapped[next_tex] = false;
 
-    CopyTexture(dst, src);
+    CopyTexture(dst, src, false);
     state.texture_ready[next_tex] = true;
   }
 
@@ -1034,7 +1033,7 @@ void Capture(void *swap_ptr, void *backbuffer_ptr) {
   backbuffer->Release();
 }
 
-void DrawOverlay () {
+void DrawOverlay() {
   if (!state.device) {
     return;
   }
