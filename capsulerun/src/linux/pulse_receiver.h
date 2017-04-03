@@ -46,7 +46,7 @@ class PulseReceiver : public AudioReceiver {
     virtual ~PulseReceiver() override;
 
     virtual int ReceiveFormat(encoder::AudioFormat *afmt) override;
-    virtual void *ReceiveFrames(int *frames_received) override;
+    virtual void *ReceiveFrames(int64_t *frames_received) override;
     virtual void Stop() override;
 
   private:

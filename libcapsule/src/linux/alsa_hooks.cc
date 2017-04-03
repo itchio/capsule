@@ -113,12 +113,30 @@ static snd_pcm_hw_params_get_access_t snd_pcm_hw_params_get_access;
 static struct AlsaState {
   bool seen_write;
   bool seen_mmap;
+  const snd_pcm_channel_area_t *_last_areas;
 } state = {0};
 
 enum AlsaMethod {
   kAlsaMethodWrite = 0,
   kAlsaMethodMmap,
 };
+
+messages::SampleFmt ToCapsuleSampleFmt(snd_pcm_format_t format) {
+  switch (format) {
+    case SND_PCM_FORMAT_U8:
+      return messages::SampleFmt_U8;
+    case SND_PCM_FORMAT_S16_LE:
+      return messages::SampleFmt_S16;
+    case SND_PCM_FORMAT_S32_LE:
+      return messages::SampleFmt_S32;
+    case SND_PCM_FORMAT_FLOAT_LE:
+      return messages::SampleFmt_F32;
+    case SND_PCM_FORMAT_FLOAT64_LE:
+      return messages::SampleFmt_F64;
+    default:
+      return messages::SampleFmt_UNKNOWN;
+  }
+}
 
 void EnsureSymbol(void **ptr, const char *name) {
   static void* handle = nullptr;
@@ -252,13 +270,18 @@ void NotifyIntercept(snd_pcm_t *pcm) {
     FormatName(format), channels, rate, AccessName(access)
   );
 
-  if (format != SND_PCM_FORMAT_FLOAT_LE) {
-    Log("ALSA: format isn't FLOAT_LE, we don't handle that yet");
+  if (!(access == SND_PCM_ACCESS_MMAP_INTERLEAVED || access == SND_PCM_ACCESS_RW_INTERLEAVED)) {
+    Log("ALSA: access isn't interleaved, bailing out");
     return;
   }
 
-  // TODO: ensure that interleaved (or handle planar)
-  capture::HasAudioIntercept(messages::SampleFmt_F32LE, rate, channels);
+  auto fmt = ToCapsuleSampleFmt(format);
+  if (fmt == messages::SampleFmt_UNKNOWN) {
+    Log("ALSA: format unsupported by capsule, bailing out");
+    return;
+  }
+
+  capture::HasAudioIntercept(fmt, rate, channels);
 }
 
 void SawMethod(snd_pcm_t *pcm, AlsaMethod method) {
@@ -343,8 +366,6 @@ snd_pcm_sframes_t snd_pcm_writei(
   return ret;
 }
 
-static const snd_pcm_channel_area_t *_last_areas = nullptr;
-
 // interposed ALSA function
 int snd_pcm_mmap_begin(
   snd_pcm_t *pcm,
@@ -362,7 +383,7 @@ int snd_pcm_mmap_begin(
     (int) *offset, (int) *frames);
   if (ret == 0) {
     DebugLog("snd_pcm_mmap_begin: area first: %u, step %u", areas[0]->first, areas[0]->step);
-    _last_areas = *areas;
+    capsule::alsa::state._last_areas = *areas;
   }
   return ret;
 }
@@ -375,11 +396,11 @@ snd_pcm_sframes_t snd_pcm_mmap_commit(
 ) {
   capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_mmap_commit, "snd_pcm_mmap_commit");
 
-  if (_last_areas) {
+  if (capsule::alsa::state._last_areas) {
     if (capsule::capture::Active()) {
       capsule::alsa::EnsureSymbol((void**) &capsule::alsa::snd_pcm_frames_to_bytes, "snd_pcm_frames_to_bytes");
       auto byte_offset = capsule::alsa::snd_pcm_frames_to_bytes(pcm, static_cast<snd_pcm_sframes_t>(offset));
-      auto area = _last_areas[0];
+      auto area = capsule::alsa::state._last_areas[0];
       auto buffer = reinterpret_cast<uint8_t*>(area.addr) + (area.first / 8) + byte_offset;
       capsule::io::WriteAudioFrames((char*) buffer, (size_t) frames);
     }

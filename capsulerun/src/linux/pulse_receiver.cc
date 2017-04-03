@@ -23,6 +23,7 @@
 #include "pulse_receiver.h"
 
 #include "../logging.h"
+#include <capsule/audio_math.h>
 
 #include <chrono>
 
@@ -75,9 +76,10 @@ PulseReceiver::PulseReceiver() {
   }
 
   afmt_.channels = ss.channels;
-  afmt_.samplerate = ss.rate;
-  afmt_.samplewidth = 32;
-  buffer_size_ = kAudioNbSamples * afmt_.channels * (afmt_.samplewidth / 8);
+  afmt_.rate = ss.rate;
+  afmt_.format = messages::SampleFmt_F32;
+  auto sample_size = audio::SampleWidth(afmt_.format) / 8;
+  buffer_size_ = kAudioNbSamples * afmt_.channels * sample_size;
   in_buffer_ = reinterpret_cast<uint8_t *>(calloc(1, buffer_size_));
   buffers_ = reinterpret_cast<uint8_t *>(calloc(kAudioNbBuffers, buffer_size_));
 
@@ -155,7 +157,7 @@ int PulseReceiver::ReceiveFormat(encoder::AudioFormat *afmt) {
   return 0;
 }
 
-void *PulseReceiver::ReceiveFrames(int *frames_received) {
+void *PulseReceiver::ReceiveFrames(int64_t *frames_received) {
   std::lock_guard<std::mutex> lock(buffer_mutex_);
 
   if (buffer_state_[process_index_] != kBufferStateCommitted) {
@@ -163,7 +165,7 @@ void *PulseReceiver::ReceiveFrames(int *frames_received) {
     *frames_received = 0;
     return NULL;
   } else {
-    // ooh there's a buffer ready
+    // there's a buffer ready!
 
     // if the previous one was processing, that means we've processed it.
     auto prev_process_index =
