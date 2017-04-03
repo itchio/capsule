@@ -46,11 +46,11 @@ bool frame_locked[capture::kNumBuffers];
 std::mutex frame_locked_mutex;
 int next_frame_index = 0;
 
-shoom::Shm *shm;
-shoom::Shm *audio_shm;
-int64_t audio_frame_size;
-int64_t audio_shm_committed_offset;
-int64_t audio_shm_processed_offset;
+shoom::Shm *shm = nullptr;
+shoom::Shm *audio_shm = nullptr;
+int64_t audio_frame_size = 0;
+int64_t audio_shm_committed_offset = 0;
+int64_t audio_shm_processed_offset = 0;
 
 std::mutex out_mutex;
 

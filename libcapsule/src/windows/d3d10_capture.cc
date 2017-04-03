@@ -33,7 +33,12 @@ struct State {
 static struct State state = {};
 
 void Capture (void *swap_ptr, void *backbuffer_ptr) {
-  Log("d3d10::Capture: stub!");
+  static bool said_stub = false;
+
+  if (!said_stub) {
+    said_stub = true;
+    Log("d3d10::Capture: stub!");
+  }
 }
 
 void Free () {

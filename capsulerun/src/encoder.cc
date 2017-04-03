@@ -530,8 +530,12 @@ void Run(MainArgs *args, Params *params) {
 
   int64_t samples_received = 0;
   int64_t samples_used = 0;
-  int64_t sample_width = afmt_in.channels * audio::SampleWidth(afmt_in.format) / 8;
-  auto sample_buf = reinterpret_cast<uint8_t*>(malloc(aframe->nb_samples * sample_width));
+  int64_t sample_width = 0;
+  uint8_t *sample_buf = nullptr;
+  if (params->has_audio) {
+    sample_width = afmt_in.channels * audio::SampleWidth(afmt_in.format) / 8;
+    sample_buf = reinterpret_cast<uint8_t*>(malloc(aframe->nb_samples * sample_width));
+  }
 
   int64_t samples_filled = 0;
 
@@ -552,8 +556,7 @@ void Run(MainArgs *args, Params *params) {
     auto delta = timestamp - last_timestamp;
     last_timestamp = timestamp;
     if (fps_counter.TickDelta(delta)) {
-      // Log("FPS: %.2f\n", fps_counter.Fps());
-      // fflush(stderr);
+      Log("FPS: %.2f\n", fps_counter.Fps());
     }
 
     if (read < buffer_size) {

@@ -182,30 +182,13 @@ HRESULT LAB_STDCALL CreateSwapChainForHwnd_hook (
         IDXGIOutput                     *pRestrictToOutput,
         IDXGISwapChain1                 **ppSwapChain
   ) {
-  Log("Before CreateSwapChainForHwnd!");
-
-  // this part is just a mix of curiosity of hubris, aka
-  // "we have an hWnd! we can do wonderful things with it!"
-  const size_t title_buffer_size = 1024;
-  wchar_t title_buffer[title_buffer_size];
-  title_buffer[0] = '\0';
-  GetWindowText(hWnd, title_buffer, title_buffer_size);
-  Log("Creating swapchain for window \"%S\"", title_buffer);
-
+  Log("Before CreateSwapChainForHwnd! (has hwnd? %d)", !!hWnd);
   HRESULT res = CreateSwapChainForHwnd_real(factory, pDevice, hWnd, pDesc, pFullscreenDesc, pRestrictToOutput, ppSwapChain);
   Log("After CreateSwapChainForHwnd!");
 
   if (FAILED(res)) {
     Log("Swap chain creation failed, bailing out");
     return res;
-  }
-
-  if (!Present_hookId) {
-    // just a little fluff for fun
-    wchar_t new_title_buffer[title_buffer_size];
-    new_title_buffer[0] = '\0';
-    swprintf_s(new_title_buffer, title_buffer_size, L"[capsule] %s", title_buffer);
-    SetWindowText(hWnd, new_title_buffer);
   }
 
   InstallPresentHook(*ppSwapChain);

@@ -69,8 +69,6 @@ void MainLoop::Run () {
           auto vfc = pkt->message_as_VideoFrameCommitted();
           if (session_ && session_->video_) {
             session_->video_->FrameCommitted(vfc->index(), vfc->timestamp());
-          } else {
-            Log("no session, ignoring VideoFrameCommitted");
           }
           break;
         }
@@ -78,8 +76,6 @@ void MainLoop::Run () {
           auto afc = pkt->message_as_AudioFramesCommitted();
           if (session_ && session_->audio_) {
             session_->audio_->FramesCommitted(afc->offset(), afc->frames());
-          } else {
-            Log("no session, ignoring AudioFramesCommitted");
           }
           break;
         }
@@ -187,7 +183,7 @@ void MainLoop::StartSession (const messages::VideoSetup *vs) {
     if (as) {
       audio = new audio::AudioInterceptReceiver(conn_, *as);
     } else if (audio_receiver_factory_) {
-      Log("No audio intercept, trying factory");
+      Log("No audio intercept (or disabled), trying factory");
       audio = audio_receiver_factory_();
     } else {
       Log("No audio intercept or factory = no audio");
