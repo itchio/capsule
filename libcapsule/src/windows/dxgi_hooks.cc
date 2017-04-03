@@ -159,6 +159,12 @@ void InstallPresentHook (IDXGISwapChain *swap) {
 ///////////////////////////////////////////////
 // IDXGIFactory::CreateSwapChainForHwnd
 // Example users: Unity 5.x
+// 
+// OTHER NOTABLE USER: nVidia its-a-me Optimus ...which,
+// uh, likes to create its own context when games are
+// rendered on the nVidia card, presumably to share a
+// texture with the intel card, which is hardwired to
+// your laptop screen / HDMI / VGA output
 ///////////////////////////////////////////////
 
 typedef HRESULT (LAB_STDCALL *CreateSwapChainForHwnd_t)(
