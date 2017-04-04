@@ -145,6 +145,8 @@ bool InitFunctions() {
   GLSYM(glBindFragDataLocation);
   GLSYM(glEnableVertexAttribArray)
   GLSYM(glVertexAttribPointer)
+  GLSYM(glGetUniformLocation)
+  GLSYM(glUniform1i)
 
   return true;
 }
@@ -377,6 +379,11 @@ static bool InitOverlayVbo(void) {
     GLCHECK("tex attrib: enable");
     _glVertexAttribPointer(tex_attrib, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
     GLCHECK("tex attrib: pointer");
+
+    GLint tex_loc = _glGetUniformLocation(state.overlay_shader_program, "diffuse");
+    GLCHECK("tex loc");
+    _glUniform1i(tex_loc, 0);
+    GLCHECK("tex uniform");
 
     success = true;
   } while (false);
@@ -714,6 +721,8 @@ glGetAttribLocation_t _glGetAttribLocation;
 glBindFragDataLocation_t _glBindFragDataLocation;
 glEnableVertexAttribArray_t _glEnableVertexAttribArray;
 glVertexAttribPointer_t _glVertexAttribPointer;
+glGetUniformLocation_t _glGetUniformLocation;
+glUniform1i_t _glUniform1i;
 /////////////////////////////////
 // GL functions end
 /////////////////////////////////

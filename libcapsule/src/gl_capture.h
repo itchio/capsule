@@ -274,6 +274,12 @@ typedef void(LAB_STDCALL *glVertexAttribPointer_t)(GLuint index, GLint size,
                                                    const void *pointer);
 extern glVertexAttribPointer_t _glVertexAttribPointer;
 
+typedef GLint(LAB_STDCALL *glGetUniformLocation_t)(GLuint program, const GLchar *name);
+extern glGetUniformLocation_t _glGetUniformLocation;
+
+typedef void(LAB_STDCALL *glUniform1i_t)(GLint location, GLint v0);
+extern glUniform1i_t _glUniform1i;
+
 namespace capsule {
 namespace gl {
 
