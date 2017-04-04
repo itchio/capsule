@@ -259,10 +259,10 @@ static bool InitOverlayVbo(void) {
 
 #define GLCHECK(msg) if (Error("InitOverlayVbo", msg)) { break; }
 #define GLSHADERCHECK(sh) { \
-  GLint success = 0; \
-  _glGetShaderiv(sh, GL_COMPILE_STATUS, &success); \
+  GLint shader_status = 0; \
+  _glGetShaderiv(sh, GL_COMPILE_STATUS, &shader_status); \
   GLCHECK("get shader iv compile"); \
-  if (success == GL_FALSE) { \
+  if (shader_status == GL_FALSE) { \
     Log("gl: shader compilation failed"); \
     GLint log_size = 0; \
     _glGetShaderiv(sh, GL_INFO_LOG_LENGTH, &log_size); \
@@ -276,10 +276,10 @@ static bool InitOverlayVbo(void) {
   } \
 }
 #define GLPROGRAMCHECK(pr) { \
-  GLint success = 0; \
-  _glGetProgramiv(pr, GL_LINK_STATUS, &success); \
+  GLint program_status = 0; \
+  _glGetProgramiv(pr, GL_LINK_STATUS, &program_status); \
   GLCHECK("get program iv link"); \
-  if (success == GL_FALSE) { \
+  if (program_status == GL_FALSE) { \
     Log("gl: program link failed"); \
     GLint log_size = 0; \
     _glGetProgramiv(pr, GL_INFO_LOG_LENGTH, &log_size); \
@@ -293,9 +293,9 @@ static bool InitOverlayVbo(void) {
   } \
   _glValidateProgram(pr); \
   GLCHECK("validate program"); \
-  _glGetProgramiv(pr, GL_VALIDATE_STATUS, &success); \
+  _glGetProgramiv(pr, GL_VALIDATE_STATUS, &program_status); \
   GLCHECK("get program iv validate"); \
-  if (success == GL_FALSE) { \
+  if (program_status == GL_FALSE) { \
     Log("gl: program validate failed"); \
     GLint log_size = 0; \
     _glGetProgramiv(pr, GL_INFO_LOG_LENGTH, &log_size); \
@@ -361,6 +361,22 @@ static bool InitOverlayVbo(void) {
     DebugLog("Program linked & validated!");
     _glUseProgram(state.overlay_shader_program);
     GLCHECK("program use");
+
+    DebugLog("Specifying vertex data layout");
+
+    GLint pos_attrib = _glGetAttribLocation(state.overlay_shader_program, "position");
+    GLCHECK("pos attrib: get location");
+    _glEnableVertexAttribArray(pos_attrib);
+    GLCHECK("pos attrib: enable");
+    _glVertexAttribPointer(pos_attrib, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), 0);
+    GLCHECK("pos attrib: pointer");
+
+    GLint tex_attrib = _glGetAttribLocation(state.overlay_shader_program, "texcoord");
+    GLCHECK("tex attrib: get location");
+    _glEnableVertexAttribArray(tex_attrib);
+    GLCHECK("tex attrib: enable");
+    _glVertexAttribPointer(tex_attrib, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(GLfloat), (void*)(2 * sizeof(GLfloat)));
+    GLCHECK("tex attrib: pointer");
 
     success = true;
   } while (false);
