@@ -68,6 +68,7 @@ struct State {
   GLuint                  overlay_fragment_shader;
   GLuint                  overlay_vertex_shader;
   GLuint                  overlay_shader_program;
+  GLuint                  overlay_pbo;
 };
 
 static State state = {0};
@@ -222,12 +223,16 @@ static bool InitOverlayTexture(void) {
 #define GLCHECK(msg) if (Error("InitOverlayVbo", msg)) { break; }
 
   GLint last_tex = 0;
+  GLint last_unpack_pbo = 0;
 
   // save the state we change
   auto success = false;
   do {
     _glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_tex);
     GLCHECK("get last tex");
+
+    _glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &last_unpack_pbo);
+    GLCHECK("get last unpack pbo");
 
     success = true;
   } while (false);
@@ -238,8 +243,14 @@ static bool InitOverlayTexture(void) {
 
   success = false;
   do {
-    // TODO: do we need glActiveTexture ?
-    // TODO: PBOs, duh
+    _glGenBuffers(1, &state.overlay_pbo);
+    GLCHECK("gen pbo");
+
+    _glBindBuffer(GL_PIXEL_UNPACK_BUFFER, state.overlay_pbo);
+    GLCHECK("bind pbo");
+
+    _glBufferData(GL_PIXEL_UNPACK_BUFFER, state.overlay_width * state.overlay_height * 4, nullptr, GL_STREAM_DRAW);
+    GLCHECK("bind pbo");
 
     _glGenTextures(1, &state.overlay_tex);
     GLCHECK("gen texture");
@@ -254,15 +265,15 @@ static bool InitOverlayTexture(void) {
     GLCHECK("set texture max level");
 
     _glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
-      state.overlay_width, state.overlay_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, state.overlay_pixels);
-    GLCHECK("upload data");
+    state.overlay_width, state.overlay_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
 
     success = true;
   } while(false);
 
 #undef GLCHECK
 
-  _glBindTexture(GL_TEXTURE_2D, state.overlay_tex);
+  _glBindTexture(GL_TEXTURE_2D, last_tex);
+  _glBindBuffer(GL_PIXEL_UNPACK_BUFFER, last_unpack_pbo);
 
   return success;
 }
@@ -672,7 +683,10 @@ void ShmemCapture () {
   _glBindFramebuffer(GL_DRAW_FRAMEBUFFER, last_fbo);
 }
 
-static inline void UpdateOverlayTexture() {
+static inline bool UpdateOverlayTexture() {
+
+#define GLCHECK(msg) if (Error("UpdateOverlayTexture", msg)) { return false; }
+
   size_t pixels_size = state.overlay_width * 4 * state.overlay_height;
   for (int y = 0; y < state.overlay_height; y++) {
     for (int x = 0; x < state.overlay_width; x++) {
@@ -684,12 +698,28 @@ static inline void UpdateOverlayTexture() {
     }
   }
 
-  // TODO: PBOs
+  _glBindBuffer(GL_PIXEL_UNPACK_BUFFER, state.overlay_pbo);
+  GLCHECK("bind buffer");
+
+  _glBufferData(GL_PIXEL_UNPACK_BUFFER, pixels_size, 0, GL_STREAM_DRAW);
+  GLCHECK("buffer data");
+
+  void *mapped = (void *) _glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_WRITE_ONLY);
+  GLCHECK("map buffer");
+
+  if (mapped) {
+    memcpy(mapped, state.overlay_pixels, pixels_size);
+    _glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
+    GLCHECK("unmap buffer");
+  } else {
+    Log("UpdateOverlayTexture: failed to map texture pbo");
+  }
+
   _glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-    state.overlay_width, state.overlay_height, GL_RGBA, GL_UNSIGNED_BYTE, state.overlay_pixels);
-	if (Error("UpdateOverlayTexture", "failed to set texture data")) {
-		return;
-	}
+    state.overlay_width, state.overlay_height, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+  GLCHECK("tex sub image 2d");
+
+  return true;
 }
 
 void DrawOverlay() {
@@ -701,6 +731,7 @@ void DrawOverlay() {
   GLint last_vao = 0;
   GLint last_vbo = 0;
   GLint last_program = 0;
+  GLint last_unpack_pbo = 0;
 
   // save the state we change
   auto success = false;
@@ -710,6 +741,9 @@ void DrawOverlay() {
 
     _glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_vbo);
     GLCHECK("get last vbo");
+
+    _glGetIntegerv(GL_PIXEL_UNPACK_BUFFER_BINDING, &last_unpack_pbo);
+    GLCHECK("get last unpack pbo");
 
     _glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
     GLCHECK("get last program");
@@ -728,7 +762,9 @@ void DrawOverlay() {
     _glBindTexture(GL_TEXTURE_2D, state.overlay_tex);
     GLCHECK("bind texture");
 
-    UpdateOverlayTexture();
+    if (!UpdateOverlayTexture()) {
+      break;
+    }
 
     _glBindVertexArray(state.overlay_vao);
     GLCHECK("bind vao");
@@ -745,11 +781,15 @@ void DrawOverlay() {
   _glBindVertexArray(last_vao);
   _glBindBuffer(GL_ARRAY_BUFFER, last_vbo);
   _glUseProgram(last_program);
+  _glBindBuffer(GL_PIXEL_UNPACK_BUFFER, last_unpack_pbo);
 
 #undef GLCHECK
 
-  DebugLog("Done drawing overlay!");
-
+  if (success) {
+    DebugLog("Done drawing overlay!");
+  } else {
+    Log("Drawing overlay failed!");
+  }
 }
 
 /**

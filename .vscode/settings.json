@@ -33,7 +33,8 @@
       "xlocmes": "cpp",
       "xlocmon": "cpp",
       "xlocnum": "cpp",
-      "random": "cpp"
+      "random": "cpp",
+      "map": "cpp"
     },
     "files.exclude": {
       "**/.git": true,
