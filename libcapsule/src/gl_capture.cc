@@ -131,6 +131,13 @@ bool InitFunctions() {
   GLSYM(glCreateShader)
   GLSYM(glShaderSource)
   GLSYM(glCompileShader)
+  GLSYM(glCreateProgram)
+  GLSYM(glAttachShader)
+  GLSYM(glLinkProgram)
+  GLSYM(glUseProgram)
+  GLSYM(glGetAttribLocation)
+  GLSYM(glEnableVertexAttribArray)
+  GLSYM(glVertexAttribPointer)
 
   return true;
 }
@@ -549,16 +556,21 @@ void Capture(int width, int height) {
 } // namespace gl
 } // namespace capture
 
+/////////////////////////////////
 // GL functions start
+/////////////////////////////////
 glGetError_t _glGetError;
 glGetIntegerv_t _glGetIntegerv;
+
 glGenTextures_t _glGenTextures;
 glBindTexture_t _glBindTexture;
 glTexImage2D_t _glTexImage2D;
 glGetTexImage_t _glGetTexImage;
 glDeleteTextures_t _glDeleteTextures;
+
 glGenVertexArrays_t _glGenVertexArrays;
 glBindVertexArray_t _glBindVertexArray;
+
 glGenBuffers_t _glGenBuffers;
 glBindBuffer_t _glBindBuffer;
 glReadBuffer_t _glReadBuffer;
@@ -567,12 +579,23 @@ glBufferData_t _glBufferData;
 glMapBuffer_t _glMapBuffer;
 glUnmapBuffer_t _glUnmapBuffer;
 glDeleteBuffers_t _glDeleteBuffers;
+
 glGenFramebuffers_t _glGenFramebuffers;
 glBindFramebuffer_t _glBindFramebuffer;
 glBlitFramebuffer_t _glBlitFramebuffer;
 glFramebufferTexture2D_t _glFramebufferTexture2D;
 glDeleteFramebuffers_t _glDeleteFramebuffers;
+
 glCreateShader_t _glCreateShader;
 glShaderSource_t _glShaderSource;
 glCompileShader_t _glCompileShader;
+glCreateProgram_t _glCreateProgram;
+glAttachShader_t _glAttachShader;
+glLinkProgram_t _glLinkProgram;
+glUseProgram_t _glUseProgram;
+glGetAttribLocation_t _glGetAttribLocation;
+glEnableVertexAttribArray_t _glEnableVertexAttribArray;
+glVertexAttribPointer_t _glVertexAttribPointer;
+/////////////////////////////////
 // GL functions end
+/////////////////////////////////

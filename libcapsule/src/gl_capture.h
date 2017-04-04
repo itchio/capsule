@@ -213,6 +213,31 @@ extern glShaderSource_t _glShaderSource;
 typedef void(LAB_STDCALL *glCompileShader_t)(GLuint shader);
 extern glCompileShader_t _glCompileShader;
 
+typedef GLuint(LAB_STDCALL *glCreateProgram_t)();
+extern glCreateProgram_t _glCreateProgram;
+
+typedef void(LAB_STDCALL *glAttachShader_t)(GLuint program, GLuint shader);
+extern glAttachShader_t _glAttachShader;
+
+typedef void(LAB_STDCALL *glLinkProgram_t)(GLuint program);
+extern glLinkProgram_t _glLinkProgram;
+
+typedef void(LAB_STDCALL *glUseProgram_t)(GLuint program);
+extern glUseProgram_t _glUseProgram;
+
+typedef GLint(LAB_STDCALL *glGetAttribLocation_t)(GLuint program, GLchar *attribName);
+extern glGetAttribLocation_t _glGetAttribLocation;
+
+typedef void(LAB_STDCALL *glEnableVertexAttribArray_t)(GLuint index);
+extern glEnableVertexAttribArray_t _glEnableVertexAttribArray;
+
+typedef void(LAB_STDCALL *glVertexAttribPointer_t)(GLuint index, GLint size,
+                                                   GLenum type,
+                                                   GLboolean normalized,
+                                                   GLsizei stride,
+                                                   const void *pointer);
+extern glVertexAttribPointer_t _glVertexAttribPointer;
+
 namespace capsule {
 namespace gl {
 
