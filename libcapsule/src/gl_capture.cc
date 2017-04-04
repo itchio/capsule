@@ -148,6 +148,10 @@ bool InitFunctions() {
   GLSYM(glGetUniformLocation)
   GLSYM(glUniform1i)
 
+  GLSYM(glDrawArrays)
+  GLSYM(glClearColor)
+  GLSYM(glClear)
+
   return true;
 }
 
@@ -214,6 +218,9 @@ static bool InitOverlayVbo(void) {
   Log("OpenGL version: %s", _glGetString(GL_VERSION));
   Log("OpenGL shading language version: %s", _glGetString(GL_SHADING_LANGUAGE_VERSION));
 
+  state.overlay_width = 256;
+  state.overlay_height = 128;
+
   // gl coordinate system: (0, 0) = bottom-left
   float cx = (float) state.cx;
   float cy = (float) state.cy;
@@ -236,28 +243,6 @@ static bool InitOverlayVbo(void) {
     r, t,     1.0f, 0.0f,
     r, b,     1.0f, 1.0f
   };
-
-  GLint last_vao;
-  GLint last_vbo;
-  GLint last_program;
-
-  // save the state we change
-  {
-    _glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vao);
-    if (Error("InitOverlayVbo", "failed to get last vao")) {
-      return false;
-    }
-
-    _glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_vbo);
-    if (Error("InitOverlayVbo", "failed to get last vbo")) {
-      return false;
-    }
-
-    _glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-    if (Error("InitOverlayVbo", "failed to get last program")) {
-      return false;
-    }
-  }
 
 #define GLCHECK(msg) if (Error("InitOverlayVbo", msg)) { break; }
 #define GLSHADERCHECK(sh) { \
@@ -311,7 +296,29 @@ static bool InitOverlayVbo(void) {
   } \
 }
 
+  GLint last_vao = 0;
+  GLint last_vbo = 0;
+  GLint last_program = 0;
+
+  // save the state we change
   auto success = false;
+  do {
+    _glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vao);
+    GLCHECK("get last vao");
+
+    _glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_vbo);
+    GLCHECK("get last vbo");
+
+    _glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
+    GLCHECK("get last program");
+
+    success = true;
+  } while(false);
+  if (!success) {
+    return false;
+  }
+
+  success = false;
   do {
     DebugLog("Creating overlay vao...");
     _glGenVertexArrays(1, &state.overlay_vao);
@@ -613,6 +620,61 @@ void ShmemCapture () {
   _glBindFramebuffer(GL_DRAW_FRAMEBUFFER, last_fbo);
 }
 
+void DrawOverlay() {
+
+  DebugLog("Drawing overlay!");
+
+#define GLCHECK(msg) if (Error("DrawOverlay", msg)) { break; }
+
+  GLint last_vao = 0;
+  GLint last_vbo = 0;
+  GLint last_program = 0;
+
+  // save the state we change
+  auto success = false;
+  do {
+    _glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vao);
+    GLCHECK("get last vao");
+
+    _glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_vbo);
+    GLCHECK("get last vbo");
+
+    _glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
+    GLCHECK("get last program");
+
+    success = true;
+  } while(false);
+  if (!success) {
+    return;
+  }
+
+  success = false;
+  do {
+    _glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    GLCHECK("clear color buffer bit");
+
+    _glBindVertexArray(state.overlay_vao);
+    GLCHECK("bind vao");
+
+    _glUseProgram(state.overlay_shader_program);
+    GLCHECK("use program");
+
+    _glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    GLCHECK("draw arrays");
+
+    success = true;
+  } while(false);
+
+  _glBindVertexArray(last_vao);
+  _glBindBuffer(GL_ARRAY_BUFFER, last_vbo);
+  _glUseProgram(last_program);
+
+#undef GLCHECK
+
+  DebugLog("Done drawing overlay!");
+
+}
+
 /**
  * Capture one OpenGL frame
  */
@@ -669,6 +731,8 @@ void Capture(int width, int height) {
 
     ShmemCapture();
   }
+
+  DrawOverlay();
 }
 
 } // namespace gl
@@ -723,6 +787,10 @@ glEnableVertexAttribArray_t _glEnableVertexAttribArray;
 glVertexAttribPointer_t _glVertexAttribPointer;
 glGetUniformLocation_t _glGetUniformLocation;
 glUniform1i_t _glUniform1i;
+
+glDrawArrays_t _glDrawArrays;
+glClearColor_t _glClearColor;
+glClear_t _glClear;
 /////////////////////////////////
 // GL functions end
 /////////////////////////////////

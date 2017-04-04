@@ -40,6 +40,7 @@ static const char* kFragmentSource = R"glsl(
     uniform sampler2D diffuse;
     void main()
     {
-        outColor = texture(diffuse, Texcoord);
+        // outColor = texture(diffuse, Texcoord);
+        outColor = vec4(1, 0, 0, 1);
     }
 )glsl";

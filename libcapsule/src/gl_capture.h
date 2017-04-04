@@ -56,6 +56,8 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_FRONT 0x0404
 #define GL_BACK 0x0405
 
+#define GL_TRIANGLE_STRIP 0x0005
+
 #define GL_FLOAT 0x1406
 
 #define GL_INVALID_OPERATION 0x0502
@@ -108,7 +110,9 @@ typedef ptrdiff_t GLsizeiptrARB;
 
 #define GL_READ_FRAMEBUFFER 0x8CA8
 #define GL_DRAW_FRAMEBUFFER 0x8CA9
-#define GL_COLOR_BUFFER_BIT 0x00004000
+#define GL_DEPTH_BUFFER_BIT   0x00000100
+#define GL_STENCIL_BUFFER_BIT 0x00000400
+#define GL_COLOR_BUFFER_BIT   0x00004000
 #define GL_COLOR_ATTACHMENT0 0x8CE0
 #define GL_COLOR_ATTACHMENT1 0x8CE1
 
@@ -279,6 +283,17 @@ extern glGetUniformLocation_t _glGetUniformLocation;
 
 typedef void(LAB_STDCALL *glUniform1i_t)(GLint location, GLint v0);
 extern glUniform1i_t _glUniform1i;
+
+// drawing stuff
+
+typedef void(LAB_STDCALL *glDrawArrays_t)(GLenum mode, GLint fist, GLsizei count);
+extern glDrawArrays_t _glDrawArrays;
+
+typedef void(LAB_STDCALL *glClearColor_t)(GLfloat r, GLfloat g, GLfloat b, GLfloat a);
+extern glClearColor_t _glClearColor;
+
+typedef void(LAB_STDCALL *glClear_t)(GLbitfield mask);
+extern glClear_t _glClear;
 
 namespace capsule {
 namespace gl {
