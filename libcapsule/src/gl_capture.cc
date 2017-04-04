@@ -70,7 +70,7 @@ struct State {
   GLuint                  overlay_shader_program;
 };
 
-static State state = {};
+static State state = {0};
 
 LibHandle handle;
 
@@ -103,6 +103,7 @@ bool InitFunctions() {
 
   GLSYM(glGetError)
   GLSYM(glGetIntegerv)
+  GLSYM(glGetString)
 
   GLSYM(glGenTextures)
   GLSYM(glBindTexture)
@@ -206,6 +207,11 @@ static inline bool ShmemInitData(size_t idx, size_t size) {
 }
 
 static bool InitOverlayVbo(void) {
+  Log("OpenGL vendor: %s", _glGetString(GL_VENDOR));
+  Log("OpenGL renderer: %s", _glGetString(GL_RENDERER));
+  Log("OpenGL version: %s", _glGetString(GL_VERSION));
+  Log("OpenGL shading language version: %s", _glGetString(GL_SHADING_LANGUAGE_VERSION));
+
   // gl coordinate system: (0, 0) = bottom-left
   float cx = (float) state.cx;
   float cy = (float) state.cy;
@@ -264,8 +270,8 @@ static bool InitOverlayVbo(void) {
     auto log = new char[log_size]; \
     _glGetShaderInfoLog(sh, log_size, nullptr, log); \
     GLCHECK("get shader info log"); \
-    Log("gl: shader compilation log:\n%s", log); \
-    delete log; \
+    Log("gl: shader compilation log (size %d):\n%s", log_size, log); \
+    delete[] log; \
     break; \
   } \
 }
@@ -282,7 +288,7 @@ static bool InitOverlayVbo(void) {
     _glGetProgramInfoLog(pr, log_size, nullptr, log); \
     GLCHECK("get program info log"); \
     Log("gl: program link log:\n%s", log); \
-    delete log; \
+    delete[] log; \
     break; \
   } \
   _glValidateProgram(pr); \
@@ -298,7 +304,7 @@ static bool InitOverlayVbo(void) {
     _glGetProgramInfoLog(pr, log_size, nullptr, log); \
     GLCHECK("get program info log"); \
     Log("gl: program validate log:\n%s", log); \
-    delete log; \
+    delete[] log; \
     break; \
   } \
 }
@@ -650,6 +656,7 @@ void Capture(int width, int height) {
 /////////////////////////////////
 glGetError_t _glGetError;
 glGetIntegerv_t _glGetIntegerv;
+glGetString_t _glGetString;
 
 glGenTextures_t _glGenTextures;
 glBindTexture_t _glBindTexture;

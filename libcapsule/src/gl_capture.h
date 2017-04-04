@@ -51,7 +51,7 @@ typedef ptrdiff_t GLsizeiptrARB;
 // one possible reference for these:
 // https://code.woboq.org/qt5/include/GLES2/gl2.h.html
 
-#define GL_FALSE 1
+#define GL_FALSE 0
 #define GL_TRUE 1
 #define GL_FRONT 0x0404
 #define GL_BACK 0x0405
@@ -112,6 +112,11 @@ typedef ptrdiff_t GLsizeiptrARB;
 
 #define GL_VIEWPORT 0x0BA2
 
+#define GL_VENDOR 0x1F00
+#define GL_RENDERER 0x1F01
+#define GL_VERSION 0x1F02
+#define GL_SHADING_LANGUAGE_VERSION 0x8B8C
+
 #define GL_COMPILE_STATUS 0x8B81
 #define GL_LINK_STATUS 0x8B82
 #define GL_VALIDATE_STATUS 0x8B83
@@ -124,6 +129,9 @@ extern glGetError_t _glGetError;
 
 typedef void *(LAB_STDCALL *glGetIntegerv_t)(GLenum pname, GLint *data);
 extern glGetIntegerv_t _glGetIntegerv;
+
+typedef char *(LAB_STDCALL *glGetString_t)(GLenum pname);
+extern glGetString_t _glGetString;
 
 // textures
 
