@@ -552,8 +552,7 @@ struct vertex {
   } tex;
 };
 
-static bool InitQuadVbo(void)
-{
+static bool InitQuadVbo(void) {
   HRESULT hr;
   const vertex verts[4] = {
     { { -1.0f,  1.0f, 0.0f, 1.0f }, { 0.0f, 0.0f } },
@@ -581,8 +580,7 @@ static bool InitQuadVbo(void)
   return true;
 }
 
-static bool InitOverlayVbo(void)
-{
+static bool InitOverlayVbo(void) {
   // d3d11 coordinate system: (0, 0) = bottom-left
   float cx = (float) state.cx;
   float cy = (float) state.cy;

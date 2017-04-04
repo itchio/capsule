@@ -29,6 +29,8 @@
 #include "io.h"
 #include "capture.h"
 
+#include "gl_shaders.h"
+
 namespace capsule {
 namespace gl {
 
@@ -53,6 +55,13 @@ struct State {
   bool                    texture_ready[capture::kNumBuffers];
   bool                    texture_mapped[capture::kNumBuffers];
   int64_t                 timestamps[capture::kNumBuffers];
+
+  int                     overlay_width;  
+  int                     overlay_height;  
+  unsigned char           *overlay_pixels;
+  GLuint                  overlay_vao;
+  GLuint                  overlay_vbo;
+  GLuint                  overlay_tex;
 };
 
 static State state = {};
@@ -94,6 +103,9 @@ bool InitFunctions() {
   GLSYM(glTexImage2D)
   GLSYM(glGetTexImage)
   GLSYM(glDeleteTextures)
+
+  GLSYM(glGenVertexArrays)
+  GLSYM(glBindVertexArray)
 
   GLSYM(glGenBuffers)
   GLSYM(glBindBuffer)
@@ -170,6 +182,77 @@ static inline bool ShmemInitData(size_t idx, size_t size) {
 	return true;
 }
 
+static bool InitOverlayVbo(void) {
+  // gl coordinate system: (0, 0) = bottom-left
+  float cx = (float) state.cx;
+  float cy = (float) state.cy;
+  float width = (float) state.overlay_width;
+  float height = (float) state.overlay_height;
+  float x = cx - width;
+  float y = 0;
+
+  float l = x / cx * 2.0f - 1.0f;
+  float r = (x + width) / cx * 2.0f - 1.0f;
+  float b = y / cy * 2.0f - 1.0f;
+  float t = (y + height) / cy * 2.0f - 1.0f;
+
+  Log("Overlay vbo: left = %.2f, right = %.2f, top = %.2f, bottom = %.2f", l, r, t, b);
+
+  const GLfloat verts[] = {
+    // pos    texcoord
+    l, t,     0.0f, 0.0f,
+    l, b,     0.0f, 1.0f,
+    r, t,     1.0f, 0.0f,
+    r, b,     1.0f, 1.0f
+  };
+
+  GLint last_vao;
+  GLint last_vbo;
+
+  // save the state we change
+  {
+    _glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vao);
+    if (Error("InitOverlayVbo", "failed to get last vao")) {
+      return false;
+    }
+
+    _glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_vbo);
+    if (Error("InitOverlayVbo", "failed to get last vbo")) {
+      return false;
+    }
+  }
+
+  _glGenVertexArrays(1, &state.overlay_vao);
+	if (Error("InitOverlayVbo", "failed to gen vao")) {
+		return false;
+	}
+
+  _glBindVertexArray(state.overlay_vao);
+	if (Error("InitOverlayVbo", "failed to bind vao")) {
+		return false;
+	}
+
+  _glGenBuffers(1, &state.overlay_vbo);
+	if (Error("InitOverlayVbo", "failed to gen vbo")) {
+		return false;
+	}
+
+  _glBindBuffer(GL_ARRAY_BUFFER, state.overlay_vbo);
+	if (Error("InitOverlayVbo", "failed to bind vbo")) {
+		return false;
+	}
+
+  _glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+	if (Error("InitOverlayVbo", "failed to upload vertex buffer")) {
+		return false;
+	}
+
+  _glBindVertexArray(last_vao);
+  _glBindBuffer(GL_ARRAY_BUFFER, last_vbo);
+
+  return true;
+}
+
 static inline bool ShmemInitBuffers(void) {
 	size_t size = state.cx * state.cy * 4;
 	GLint last_pbo;
@@ -219,7 +302,7 @@ static bool ShmemInit() {
 	return true;
 }
 
-static bool Init (int width, int height) {
+static inline void FixWidthHeight(int &width, int &height) {
   if (width == 0 || height == 0) {
     int viewport[4];
     _glGetIntegerv(GL_VIEWPORT, viewport);
@@ -243,6 +326,10 @@ static bool Init (int width, int height) {
     width++;
     height += 2;
   }
+}
+
+static bool Init (int width, int height) {
+  FixWidthHeight(width, height);
 
   const int components = 4; // BGRA
   const size_t pitch = width * components;
@@ -251,8 +338,12 @@ static bool Init (int width, int height) {
   state.cy = height;
   state.pitch = pitch;
 
-  bool success = ShmemInit();
+  if (!InitOverlayVbo()) {
+    exit(1337);
+    return false;
+  }
 
+  bool success = ShmemInit();
   if (!success) {
     Free();
     return false;
@@ -441,6 +532,8 @@ glBindTexture_t _glBindTexture;
 glTexImage2D_t _glTexImage2D;
 glGetTexImage_t _glGetTexImage;
 glDeleteTextures_t _glDeleteTextures;
+glGenVertexArrays_t _glGenVertexArrays;
+glBindVertexArray_t _glBindVertexArray;
 glGenBuffers_t _glGenBuffers;
 glBindBuffer_t _glBindBuffer;
 glReadBuffer_t _glReadBuffer;

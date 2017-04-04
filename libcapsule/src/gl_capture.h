@@ -78,10 +78,13 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_DYNAMIC_DRAW 0x88E8
 #define GL_DYNAMIC_READ 0x88E9
 #define GL_DYNAMIC_COPY 0x88EA
+#define GL_ARRAY_BUFFER 0x8892
 #define GL_PIXEL_PACK_BUFFER 0x88EB
 #define GL_PIXEL_UNPACK_BUFFER 0x88EC
+#define GL_ARRAY_BUFFER_BINDING 0x8894
 #define GL_PIXEL_PACK_BUFFER_BINDING 0x88ED
 #define GL_PIXEL_UNPACK_BUFFER_BINDING 0x88EF
+#define GL_VERTEX_ARRAY_BINDING 0x85B5
 
 #define GL_TEXTURE_2D 0x0DE1
 #define GL_TEXTURE_BINDING_2D 0x8069
@@ -133,6 +136,14 @@ extern glGetTexImage_t _glGetTexImage;
 typedef void(LAB_STDCALL *glDeleteTextures_t)(GLsizei n,
                                                   const GLuint *buffers);
 extern glDeleteTextures_t _glDeleteTextures;
+
+// vertex arrays
+
+typedef void(LAB_STDCALL *glGenVertexArrays_t)(GLsizei n, GLuint *buffers);
+extern glGenVertexArrays_t _glGenVertexArrays;
+
+typedef void(LAB_STDCALL *glBindVertexArray_t)(GLuint buffer);
+extern glBindVertexArray_t _glBindVertexArray;
 
 // buffers
 
