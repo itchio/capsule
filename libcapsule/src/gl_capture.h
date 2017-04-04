@@ -70,6 +70,8 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_BGR 0x80E0
 #define GL_BGRA 0x80E1
 
+#define GL_RGBA8 0x8058
+
 #define GL_NEAREST 0x2600
 #define GL_LINEAR 0x2601
 
@@ -103,6 +105,9 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_TEXTURE_2D 0x0DE1
 #define GL_TEXTURE_BINDING_2D 0x8069
 #define GL_DRAW_FRAMEBUFFER_BINDING 0x8CA6
+
+#define GL_TEXTURE_BASE_LEVEL 0x813C
+#define GL_TEXTURE_MAX_LEVEL 0x813D
 
 #define WGL_ACCESS_READ_ONLY_NV 0x0000
 #define WGL_ACCESS_READ_WRITE_NV 0x0001
@@ -147,6 +152,9 @@ extern glGenTextures_t _glGenTextures;
 typedef void(LAB_STDCALL *glBindTexture_t)(GLenum target, GLuint texture);
 extern glBindTexture_t _glBindTexture;
 
+typedef void(LAB_STDCALL *glTexParameteri_t)(GLenum target, GLenum pname, GLint param);
+extern glTexParameteri_t _glTexParameteri;
+
 typedef void(LAB_STDCALL *glTexImage2D_t)(GLenum target, GLint level,
                                               GLint internal_format,
                                               GLsizei width, GLsizei height,
@@ -154,7 +162,14 @@ typedef void(LAB_STDCALL *glTexImage2D_t)(GLenum target, GLint level,
                                               GLenum type, const GLvoid *data);
 extern glTexImage2D_t _glTexImage2D;
 
-typedef void(LAB_STDCALL *glGetTexImage_t)(GLenum target, GLint level,
+typedef void(LAB_STDCALL *glTexSubImage2D_t)(GLenum target, GLint level,
+                                             GLint xoffset, GLint yoffset,
+                                             GLsizei width, GLsizei height,
+                                             GLenum format, GLenum type,
+                                             const GLvoid *pixels);
+extern glTexSubImage2D_t _glTexSubImage2D;
+
+    typedef void(LAB_STDCALL *glGetTexImage_t)(GLenum target, GLint level,
                                                GLenum format, GLenum type,
                                                GLvoid *img);
 extern glGetTexImage_t _glGetTexImage;

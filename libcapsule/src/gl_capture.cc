@@ -107,7 +107,9 @@ bool InitFunctions() {
 
   GLSYM(glGenTextures)
   GLSYM(glBindTexture)
+  GLSYM(glTexParameteri)
   GLSYM(glTexImage2D)
+  GLSYM(glTexSubImage2D)
   GLSYM(glGetTexImage)
   GLSYM(glDeleteTextures)
 
@@ -212,14 +214,64 @@ static inline bool ShmemInitData(size_t idx, size_t size) {
 	return true;
 }
 
+static bool InitOverlayTexture(void) {
+  state.overlay_width = 256;
+  state.overlay_height = 128;
+  state.overlay_pixels = (unsigned char*) malloc(state.overlay_width * 4 * state.overlay_height);
+
+#define GLCHECK(msg) if (Error("InitOverlayVbo", msg)) { break; }
+
+  GLint last_tex = 0;
+
+  // save the state we change
+  auto success = false;
+  do {
+    _glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_tex);
+    GLCHECK("get last tex");
+
+    success = true;
+  } while (false);
+
+  if (!success) {
+    return false;
+  }
+
+  success = false;
+  do {
+    // TODO: do we need glActiveTexture ?
+    // TODO: PBOs, duh
+
+    _glGenTextures(1, &state.overlay_tex);
+    GLCHECK("gen texture");
+
+    _glBindTexture(GL_TEXTURE_2D, state.overlay_tex);
+    GLCHECK("bind texture");
+
+    _glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+    GLCHECK("set texture base level");
+
+    _glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+    GLCHECK("set texture max level");
+
+    _glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
+      state.overlay_width, state.overlay_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, state.overlay_pixels);
+    GLCHECK("upload data");
+
+    success = true;
+  } while(false);
+
+#undef GLCHECK
+
+  _glBindTexture(GL_TEXTURE_2D, state.overlay_tex);
+
+  return success;
+}
+
 static bool InitOverlayVbo(void) {
   Log("OpenGL vendor: %s", _glGetString(GL_VENDOR));
   Log("OpenGL renderer: %s", _glGetString(GL_RENDERER));
   Log("OpenGL version: %s", _glGetString(GL_VERSION));
   Log("OpenGL shading language version: %s", _glGetString(GL_SHADING_LANGUAGE_VERSION));
-
-  state.overlay_width = 256;
-  state.overlay_height = 128;
 
   // gl coordinate system: (0, 0) = bottom-left
   float cx = (float) state.cx;
@@ -491,7 +543,7 @@ static bool Init (int width, int height) {
   state.cy = height;
   state.pitch = pitch;
 
-  if (!InitOverlayVbo()) {
+  if (!InitOverlayTexture() || !InitOverlayVbo()) {
     Free();
     return false;
   }
@@ -620,6 +672,26 @@ void ShmemCapture () {
   _glBindFramebuffer(GL_DRAW_FRAMEBUFFER, last_fbo);
 }
 
+static inline void UpdateOverlayTexture() {
+  size_t pixels_size = state.overlay_width * 4 * state.overlay_height;
+  for (int y = 0; y < state.overlay_height; y++) {
+    for (int x = 0; x < state.overlay_width; x++) {
+      int i = (y * state.overlay_width + x) * 4;
+      state.overlay_pixels[i]     = (state.overlay_pixels[i]     + 1) % 256;
+      state.overlay_pixels[i + 1] = (state.overlay_pixels[i + 1] + 1) % 256;
+      state.overlay_pixels[i + 2] = (state.overlay_pixels[i + 2] + 1) % 256;
+      // state.overlay_pixels[i + 3] = (state.overlay_pixels[i + 3] + 1) % 256;
+    }
+  }
+
+  // TODO: PBOs
+  _glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+    state.overlay_width, state.overlay_height, GL_RGBA, GL_UNSIGNED_BYTE, state.overlay_pixels);
+	if (Error("UpdateOverlayTexture", "failed to set texture data")) {
+		return;
+	}
+}
+
 void DrawOverlay() {
 
   DebugLog("Drawing overlay!");
@@ -652,6 +724,11 @@ void DrawOverlay() {
   do {
     _glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     GLCHECK("clear color buffer bit");
+
+    _glBindTexture(GL_TEXTURE_2D, state.overlay_tex);
+    GLCHECK("bind texture");
+
+    UpdateOverlayTexture();
 
     _glBindVertexArray(state.overlay_vao);
     GLCHECK("bind vao");
@@ -747,7 +824,9 @@ glGetString_t _glGetString;
 
 glGenTextures_t _glGenTextures;
 glBindTexture_t _glBindTexture;
+glTexParameteri_t _glTexParameteri;
 glTexImage2D_t _glTexImage2D;
+glTexSubImage2D_t _glTexSubImage2D;
 glGetTexImage_t _glGetTexImage;
 glDeleteTextures_t _glDeleteTextures;
 

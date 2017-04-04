@@ -623,8 +623,7 @@ static bool InitOverlayVbo(void) {
   return true;
 }
 
-static bool InitOverlayTexture(void)
-{
+static bool InitOverlayTexture(void) {
   state.overlay_width = 256;
   state.overlay_height = 128;
   state.overlay_pixels = (unsigned char*) malloc(state.overlay_width * 4 * state.overlay_height);
