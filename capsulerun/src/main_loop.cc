@@ -60,6 +60,10 @@ void MainLoop::Run () {
           CaptureFlip();
           break;
         }
+        case messages::Message_CaptureStop: {
+          CaptureStop();
+          break;
+        }
         case messages::Message_VideoSetup: {
           auto vs = pkt->message_as_VideoSetup();
           StartSession(vs);

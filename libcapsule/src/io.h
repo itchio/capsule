@@ -31,6 +31,7 @@ void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pit
 void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size);
 void WriteAudioFrames(char *data, int64_t frames);
 void WriteHotkeyPressed();
+void WriteCaptureStop();
 
 } // namespace io
 } // namespace capsule

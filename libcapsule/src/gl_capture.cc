@@ -225,6 +225,7 @@ static bool InitOverlayVbo(void) {
 
   GLint last_vao;
   GLint last_vbo;
+  GLint last_program;
 
   // save the state we change
   {
@@ -235,6 +236,11 @@ static bool InitOverlayVbo(void) {
 
     _glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_vbo);
     if (Error("InitOverlayVbo", "failed to get last vbo")) {
+      return false;
+    }
+
+    _glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
+    if (Error("InitOverlayVbo", "failed to get last program")) {
       return false;
     }
   }
@@ -274,6 +280,18 @@ static bool InitOverlayVbo(void) {
     _glCompileShader(state.overlay_fragment_shader);
     GLCHECK("fshader compile");
 
+    DebugLog("Creating shader program...");
+    state.overlay_shader_program = _glCreateProgram();
+    GLCHECK("program create");
+    _glAttachShader(state.overlay_shader_program, state.overlay_vertex_shader);
+    GLCHECK("vshader attach");
+    _glAttachShader(state.overlay_shader_program, state.overlay_fragment_shader);
+    GLCHECK("fshader attach");
+    _glLinkProgram(state.overlay_shader_program);
+    GLCHECK("program link");
+    _glUseProgram(state.overlay_shader_program);
+    GLCHECK("program use");
+
     success = true;
   } while (false);
 
@@ -281,6 +299,7 @@ static bool InitOverlayVbo(void) {
 
   _glBindVertexArray(last_vao);
   _glBindBuffer(GL_ARRAY_BUFFER, last_vbo);
+  _glUseProgram(last_program);
 
   return success;
 }
@@ -371,7 +390,7 @@ static bool Init (int width, int height) {
   state.pitch = pitch;
 
   if (!InitOverlayVbo()) {
-    exit(1337);
+    Free();
     return false;
   }
 
@@ -534,7 +553,11 @@ void Capture(int width, int height) {
   }
 
   if (!state.cx) {
-    Init(width, height);
+    if (!Init(width, height)) {
+      Log("GL: initialization failed, stopping capture");
+      io::WriteCaptureStop();
+      return;
+    }
   }
 
   if (state.cx) {

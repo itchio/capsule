@@ -334,6 +334,24 @@ void WriteHotkeyPressed() {
     }
 }
 
+void WriteCaptureStop() {
+    flatbuffers::FlatBufferBuilder builder(32);
+
+    auto hkp = messages::CreateCaptureStop(builder);
+    auto pkt = messages::CreatePacket(
+        builder,
+        messages::Message_CaptureStop,
+        hkp.Union()
+    );
+
+    builder.Finish(pkt);
+
+    {
+        std::lock_guard<std::mutex> lock(out_mutex);
+        lab::packet::Fwrite(builder, out_file);
+    }
+}
+
 void Init() {
     Log("Our pipe path is %s", lab::env::Get("CAPSULE_PIPE_PATH").c_str());
 
