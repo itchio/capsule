@@ -780,10 +780,7 @@ void DrawOverlay() {
 
   success = false;
   do {
-    _glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    GLCHECK("clear color");
-
-    _glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+    _glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     GLCHECK("clear");
 
     _glBindTexture(GL_TEXTURE_2D, state.overlay_tex);

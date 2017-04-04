@@ -46,8 +46,6 @@ void *GetProcAddress(const char *symbol) {
 CGLError CapsuleCglFlushDrawable (CGLContextObj ctx) {
   capsule::capture::SawBackend(capsule::capture::kBackendGL);
 
-  CGLError ret = CGLFlushDrawable(ctx);
-
   int width = 0;
   int height = 0;
 
@@ -63,6 +61,8 @@ CGLError CapsuleCglFlushDrawable (CGLContextObj ctx) {
   }
 
   capsule::gl::Capture(width, height);
+
+  CGLError ret = CGLFlushDrawable(ctx);
 
   return ret;
 }
