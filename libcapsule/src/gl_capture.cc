@@ -31,7 +31,7 @@
 
 #include "gl_shaders.h"
 
-#define DebugLog(...) capsule::Log(__VA_ARGS__)
+#define DebugLog(...) capsule::Log("gl: " __VA_ARGS__)
 // #define DebugLog(...)
 
 namespace capsule {
@@ -131,11 +131,17 @@ bool InitFunctions() {
   GLSYM(glCreateShader)
   GLSYM(glShaderSource)
   GLSYM(glCompileShader)
+  GLSYM(glGetShaderiv)
+  GLSYM(glGetShaderInfoLog)
   GLSYM(glCreateProgram)
   GLSYM(glAttachShader)
   GLSYM(glLinkProgram)
+  GLSYM(glValidateProgram)
+  GLSYM(glGetProgramiv)
+  GLSYM(glGetProgramInfoLog)
   GLSYM(glUseProgram)
   GLSYM(glGetAttribLocation)
+  GLSYM(glBindFragDataLocation);
   GLSYM(glEnableVertexAttribArray)
   GLSYM(glVertexAttribPointer)
 
@@ -246,6 +252,56 @@ static bool InitOverlayVbo(void) {
   }
 
 #define GLCHECK(msg) if (Error("InitOverlayVbo", msg)) { break; }
+#define GLSHADERCHECK(sh) { \
+  GLint success = 0; \
+  _glGetShaderiv(sh, GL_COMPILE_STATUS, &success); \
+  GLCHECK("get shader iv compile"); \
+  if (success == GL_FALSE) { \
+    Log("gl: shader compilation failed"); \
+    GLint log_size = 0; \
+    _glGetShaderiv(sh, GL_INFO_LOG_LENGTH, &log_size); \
+    GLCHECK("get shader iv log"); \
+    auto log = new char[log_size]; \
+    _glGetShaderInfoLog(sh, log_size, nullptr, log); \
+    GLCHECK("get shader info log"); \
+    Log("gl: shader compilation log:\n%s", log); \
+    delete log; \
+    break; \
+  } \
+}
+#define GLPROGRAMCHECK(pr) { \
+  GLint success = 0; \
+  _glGetProgramiv(pr, GL_LINK_STATUS, &success); \
+  GLCHECK("get program iv link"); \
+  if (success == GL_FALSE) { \
+    Log("gl: program link failed"); \
+    GLint log_size = 0; \
+    _glGetProgramiv(pr, GL_INFO_LOG_LENGTH, &log_size); \
+    GLCHECK("get program iv log"); \
+    auto log = new char[log_size]; \
+    _glGetProgramInfoLog(pr, log_size, nullptr, log); \
+    GLCHECK("get program info log"); \
+    Log("gl: program link log:\n%s", log); \
+    delete log; \
+    break; \
+  } \
+  _glValidateProgram(pr); \
+  GLCHECK("validate program"); \
+  _glGetProgramiv(pr, GL_VALIDATE_STATUS, &success); \
+  GLCHECK("get program iv validate"); \
+  if (success == GL_FALSE) { \
+    Log("gl: program validate failed"); \
+    GLint log_size = 0; \
+    _glGetProgramiv(pr, GL_INFO_LOG_LENGTH, &log_size); \
+    GLCHECK("get program iv log length"); \
+    auto log = new char[log_size]; \
+    _glGetProgramInfoLog(pr, log_size, nullptr, log); \
+    GLCHECK("get program info log"); \
+    Log("gl: program validate log:\n%s", log); \
+    delete log; \
+    break; \
+  } \
+}
 
   auto success = false;
   do {
@@ -271,6 +327,8 @@ static bool InitOverlayVbo(void) {
     GLCHECK("vshader source");
     _glCompileShader(state.overlay_vertex_shader);
     GLCHECK("vshader compile");
+    GLSHADERCHECK(state.overlay_vertex_shader);
+    DebugLog("Vertex shader compiled!");
 
     DebugLog("Creating overlay fragment shader...");
     state.overlay_fragment_shader = _glCreateShader(GL_FRAGMENT_SHADER);
@@ -279,6 +337,8 @@ static bool InitOverlayVbo(void) {
     GLCHECK("fshader source");
     _glCompileShader(state.overlay_fragment_shader);
     GLCHECK("fshader compile");
+    GLSHADERCHECK(state.overlay_fragment_shader);
+    DebugLog("Fragment shader compiled!");
 
     DebugLog("Creating shader program...");
     state.overlay_shader_program = _glCreateProgram();
@@ -287,8 +347,12 @@ static bool InitOverlayVbo(void) {
     GLCHECK("vshader attach");
     _glAttachShader(state.overlay_shader_program, state.overlay_fragment_shader);
     GLCHECK("fshader attach");
+    _glBindFragDataLocation(state.overlay_shader_program, 0, "outColor");
+    GLCHECK("bind frag data location");
     _glLinkProgram(state.overlay_shader_program);
     GLCHECK("program link");
+    GLPROGRAMCHECK(state.overlay_shader_program);
+    DebugLog("Program linked & validated!");
     _glUseProgram(state.overlay_shader_program);
     GLCHECK("program use");
 
@@ -296,6 +360,8 @@ static bool InitOverlayVbo(void) {
   } while (false);
 
 #undef GLCHECK
+#undef GLSHADERCHECK
+#undef GLPROGRAMCHECK
 
   _glBindVertexArray(last_vao);
   _glBindBuffer(GL_ARRAY_BUFFER, last_vbo);
@@ -612,11 +678,17 @@ glDeleteFramebuffers_t _glDeleteFramebuffers;
 glCreateShader_t _glCreateShader;
 glShaderSource_t _glShaderSource;
 glCompileShader_t _glCompileShader;
+glGetShaderiv_t _glGetShaderiv;
+glGetShaderInfoLog_t _glGetShaderInfoLog;
 glCreateProgram_t _glCreateProgram;
 glAttachShader_t _glAttachShader;
 glLinkProgram_t _glLinkProgram;
+glValidateProgram_t _glValidateProgram;
+glGetProgramiv_t _glGetProgramiv;
+glGetProgramInfoLog_t _glGetProgramInfoLog;
 glUseProgram_t _glUseProgram;
 glGetAttribLocation_t _glGetAttribLocation;
+glBindFragDataLocation_t _glBindFragDataLocation;
 glEnableVertexAttribArray_t _glEnableVertexAttribArray;
 glVertexAttribPointer_t _glVertexAttribPointer;
 /////////////////////////////////

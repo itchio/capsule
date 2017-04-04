@@ -27,7 +27,8 @@
       "type_traits": "cpp",
       "typeinfo": "cpp",
       "xloctime": "cpp",
-      "mutex": "cpp"
+      "mutex": "cpp",
+      "functional": "cpp"
     },
     "files.exclude": {
       "**/.git": true,

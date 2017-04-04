@@ -48,6 +48,11 @@ typedef void GLvoid;
 typedef ptrdiff_t GLintptrARB;
 typedef ptrdiff_t GLsizeiptrARB;
 
+// one possible reference for these:
+// https://code.woboq.org/qt5/include/GLES2/gl2.h.html
+
+#define GL_FALSE 1
+#define GL_TRUE 1
 #define GL_FRONT 0x0404
 #define GL_BACK 0x0405
 
@@ -88,8 +93,8 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_VERTEX_ARRAY_BINDING 0x85B5
 #define GL_CURRENT_PROGRAM 0x8B8D
 
-#define GL_VERTEX_SHADER 0x8B31
 #define GL_FRAGMENT_SHADER 0x8B30
+#define GL_VERTEX_SHADER 0x8B31
 
 #define GL_TEXTURE_2D 0x0DE1
 #define GL_TEXTURE_BINDING_2D 0x8069
@@ -105,10 +110,12 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_COLOR_ATTACHMENT0 0x8CE0
 #define GL_COLOR_ATTACHMENT1 0x8CE1
 
-#define GL_VIEWPORT 2978
-#define GL_RENDERBUFFER 36161
-#define GL_RENDERBUFFER_WIDTH 36162
-#define GL_RENDERBUFFER_HEIGHT 36163
+#define GL_VIEWPORT 0x0BA2
+
+#define GL_COMPILE_STATUS 0x8B81
+#define GL_LINK_STATUS 0x8B82
+#define GL_VALIDATE_STATUS 0x8B83
+#define GL_INFO_LOG_LENGTH 0x8B84
 
 // state getters
 
@@ -214,6 +221,12 @@ extern glShaderSource_t _glShaderSource;
 typedef void(LAB_STDCALL *glCompileShader_t)(GLuint shader);
 extern glCompileShader_t _glCompileShader;
 
+typedef void(LAB_STDCALL *glGetShaderiv_t)(GLuint shader, GLenum target, GLint *params);
+extern glGetShaderiv_t _glGetShaderiv;
+
+typedef void(LAB_STDCALL *glGetShaderInfoLog_t)(GLuint shader, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
+extern glGetShaderInfoLog_t _glGetShaderInfoLog;
+
 typedef GLuint(LAB_STDCALL *glCreateProgram_t)();
 extern glCreateProgram_t _glCreateProgram;
 
@@ -223,11 +236,23 @@ extern glAttachShader_t _glAttachShader;
 typedef void(LAB_STDCALL *glLinkProgram_t)(GLuint program);
 extern glLinkProgram_t _glLinkProgram;
 
+typedef void(LAB_STDCALL *glValidateProgram_t)(GLuint program);
+extern glValidateProgram_t _glValidateProgram;
+
+typedef void(LAB_STDCALL *glGetProgramiv_t)(GLuint program, GLenum target, GLint *params);
+extern glGetProgramiv_t _glGetProgramiv;
+
+typedef void(LAB_STDCALL *glGetProgramInfoLog_t)(GLuint program, GLsizei bufSize, GLsizei *length, GLchar *infoLog);
+extern glGetProgramInfoLog_t _glGetProgramInfoLog;
+
 typedef void(LAB_STDCALL *glUseProgram_t)(GLuint program);
 extern glUseProgram_t _glUseProgram;
 
 typedef GLint(LAB_STDCALL *glGetAttribLocation_t)(GLuint program, GLchar *attribName);
 extern glGetAttribLocation_t _glGetAttribLocation;
+
+typedef GLint(LAB_STDCALL *glBindFragDataLocation_t)(GLuint program, GLuint colorNumber, const char *name);
+extern glBindFragDataLocation_t _glBindFragDataLocation;
 
 typedef void(LAB_STDCALL *glEnableVertexAttribArray_t)(GLuint index);
 extern glEnableVertexAttribArray_t _glEnableVertexAttribArray;
