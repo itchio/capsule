@@ -218,7 +218,11 @@ static inline bool ShmemInitData(size_t idx, size_t size) {
 static bool InitOverlayTexture(void) {
   state.overlay_width = 256;
   state.overlay_height = 128;
-  state.overlay_pixels = (unsigned char*) malloc(state.overlay_width * 4 * state.overlay_height);
+  size_t pixels_size = state.overlay_width * 4 * state.overlay_height;
+  state.overlay_pixels = (unsigned char*) malloc(pixels_size);
+  for (size_t i = 0; i < pixels_size; i++) {
+    state.overlay_pixels[i] = 255;
+  }
 
 #define GLCHECK(msg) if (Error("InitOverlayVbo", msg)) { break; }
 
@@ -266,6 +270,7 @@ static bool InitOverlayTexture(void) {
 
     _glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8,
     state.overlay_width, state.overlay_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+    GLCHECK("tex image 2d");
 
     success = true;
   } while(false);
@@ -718,6 +723,8 @@ static inline bool UpdateOverlayTexture() {
   _glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
     state.overlay_width, state.overlay_height, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
   GLCHECK("tex sub image 2d");
+
+#undef GLCHECK
 
   return true;
 }

@@ -22,24 +22,25 @@
 #pragma once
 
 static const char* kVertexSource = R"glsl(
-    #version 150 core
-    in vec2 position;
-    in vec2 texcoord;
-    out vec2 Texcoord;
-    void main()
-    {
-        Texcoord = texcoord;
+    #version 120
+    attribute vec2 position;
+    attribute vec2 texcoord;
+
+    varying vec2 texcoordOut;
+
+    void main() {
+        texcoordOut = texcoord;
         gl_Position = vec4(position, 0.0, 1.0);
     }
 )glsl";
 
 static const char* kFragmentSource = R"glsl(
-    #version 150 core
-    in vec2 Texcoord;
-    out vec4 outColor;
+    #version 120
+    varying vec2 texcoordOut;
+
     uniform sampler2D diffuse;
-    void main()
-    {
-        outColor = texture(diffuse, Texcoord);
+    void main() {
+        gl_FragColor = texture2D(diffuse, texcoordOut);
+        gl_FragColor.a = 0.4;
     }
 )glsl";

@@ -277,7 +277,7 @@ extern glGetProgramInfoLog_t _glGetProgramInfoLog;
 typedef void(LAB_STDCALL *glUseProgram_t)(GLuint program);
 extern glUseProgram_t _glUseProgram;
 
-typedef GLint(LAB_STDCALL *glGetAttribLocation_t)(GLuint program, GLchar *attribName);
+typedef GLint(LAB_STDCALL *glGetAttribLocation_t)(GLuint program, const GLchar *attribName);
 extern glGetAttribLocation_t _glGetAttribLocation;
 
 typedef GLint(LAB_STDCALL *glBindFragDataLocation_t)(GLuint program, GLuint colorNumber, const char *name);
