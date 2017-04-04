@@ -67,9 +67,13 @@ Executor::Executor() {
 }
 
 ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
+  std::string ldpreload_orig = lab::env::Get("LD_PRELOAD");
   std::string libcapsule32_path = lab::paths::Join(std::string(args->libpath), "libcapsule32.so");
   std::string libcapsule64_path = lab::paths::Join(std::string(args->libpath), "libcapsule64.so");
   std::string ldpreload_var = libcapsule32_path + ":" + libcapsule64_path;
+  if (ldpreload_orig != "") {
+    ldpreload_var += ":" + ldpreload_orig;
+  }
 
   pid_t child_pid;
 
