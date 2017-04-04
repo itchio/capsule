@@ -31,6 +31,9 @@
 
 #include "gl_shaders.h"
 
+#define DebugLog(...) capsule::Log(__VA_ARGS__)
+// #define DebugLog(...)
+
 namespace capsule {
 namespace gl {
 
@@ -62,6 +65,9 @@ struct State {
   GLuint                  overlay_vao;
   GLuint                  overlay_vbo;
   GLuint                  overlay_tex;
+  GLuint                  overlay_fragment_shader;
+  GLuint                  overlay_vertex_shader;
+  GLuint                  overlay_shader_program;
 };
 
 static State state = {};
@@ -121,6 +127,10 @@ bool InitFunctions() {
   GLSYM(glBlitFramebuffer)
   GLSYM(glFramebufferTexture2D)
   GLSYM(glDeleteFramebuffers)
+
+  GLSYM(glCreateShader)
+  GLSYM(glShaderSource)
+  GLSYM(glCompileShader)
 
   return true;
 }
@@ -222,35 +232,50 @@ static bool InitOverlayVbo(void) {
     }
   }
 
-  _glGenVertexArrays(1, &state.overlay_vao);
-	if (Error("InitOverlayVbo", "failed to gen vao")) {
-		return false;
-	}
+#define GLCHECK(msg) if (Error("InitOverlayVbo", msg)) { break; }
 
-  _glBindVertexArray(state.overlay_vao);
-	if (Error("InitOverlayVbo", "failed to bind vao")) {
-		return false;
-	}
+  auto success = false;
+  do {
+    DebugLog("Creating overlay vao...");
+    _glGenVertexArrays(1, &state.overlay_vao);
+    GLCHECK("vao gen");
+    _glBindVertexArray(state.overlay_vao);
+    GLCHECK("vao bind");
 
-  _glGenBuffers(1, &state.overlay_vbo);
-	if (Error("InitOverlayVbo", "failed to gen vbo")) {
-		return false;
-	}
+    DebugLog("Creating overlay vbo...");
+    _glGenBuffers(1, &state.overlay_vbo);
+    GLCHECK("vbo gen");
+    _glBindBuffer(GL_ARRAY_BUFFER, state.overlay_vbo);
+    GLCHECK("vbo bind");
 
-  _glBindBuffer(GL_ARRAY_BUFFER, state.overlay_vbo);
-	if (Error("InitOverlayVbo", "failed to bind vbo")) {
-		return false;
-	}
+    _glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
+    GLCHECK("vbo upload");
 
-  _glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
-	if (Error("InitOverlayVbo", "failed to upload vertex buffer")) {
-		return false;
-	}
+    DebugLog("Creating overlay vertex shader...");
+    state.overlay_vertex_shader = _glCreateShader(GL_VERTEX_SHADER);
+    GLCHECK("vshader create");
+    _glShaderSource(state.overlay_vertex_shader, 1, &kVertexSource, nullptr);
+    GLCHECK("vshader source");
+    _glCompileShader(state.overlay_vertex_shader);
+    GLCHECK("vshader compile");
+
+    DebugLog("Creating overlay fragment shader...");
+    state.overlay_fragment_shader = _glCreateShader(GL_FRAGMENT_SHADER);
+    GLCHECK("fshader create");
+    _glShaderSource(state.overlay_fragment_shader, 1, &kFragmentSource, nullptr);
+    GLCHECK("fshader source");
+    _glCompileShader(state.overlay_fragment_shader);
+    GLCHECK("fshader compile");
+
+    success = true;
+  } while (false);
+
+#undef GLCHECK
 
   _glBindVertexArray(last_vao);
   _glBindBuffer(GL_ARRAY_BUFFER, last_vbo);
 
-  return true;
+  return success;
 }
 
 static inline bool ShmemInitBuffers(void) {
@@ -547,4 +572,7 @@ glBindFramebuffer_t _glBindFramebuffer;
 glBlitFramebuffer_t _glBlitFramebuffer;
 glFramebufferTexture2D_t _glFramebufferTexture2D;
 glDeleteFramebuffers_t _glDeleteFramebuffers;
+glCreateShader_t _glCreateShader;
+glShaderSource_t _glShaderSource;
+glCompileShader_t _glCompileShader;
 // GL functions end

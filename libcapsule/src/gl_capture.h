@@ -28,6 +28,7 @@
 
 #include "gl_capture_callback.h"
 
+typedef char GLchar;
 typedef unsigned int GLenum;
 typedef unsigned int GLbitfield;
 typedef unsigned int GLuint;
@@ -85,6 +86,9 @@ typedef ptrdiff_t GLsizeiptrARB;
 #define GL_PIXEL_PACK_BUFFER_BINDING 0x88ED
 #define GL_PIXEL_UNPACK_BUFFER_BINDING 0x88EF
 #define GL_VERTEX_ARRAY_BINDING 0x85B5
+
+#define GL_VERTEX_SHADER 0x8B31
+#define GL_FRAGMENT_SHADER 0x8B30
 
 #define GL_TEXTURE_2D 0x0DE1
 #define GL_TEXTURE_BINDING_2D 0x8069
@@ -197,6 +201,17 @@ extern glFramebufferTexture2D_t _glFramebufferTexture2D;
 typedef void(LAB_STDCALL *glDeleteFramebuffers_t)(GLsizei n,
                                                       GLuint *framebuffers);
 extern glDeleteFramebuffers_t _glDeleteFramebuffers;
+
+// shaders
+
+typedef GLuint(LAB_STDCALL *glCreateShader_t)(GLenum target);
+extern glCreateShader_t _glCreateShader;
+
+typedef void(LAB_STDCALL *glShaderSource_t)(GLuint shader, GLsizei n, const GLchar* const* source, GLint *length);
+extern glShaderSource_t _glShaderSource;
+
+typedef void(LAB_STDCALL *glCompileShader_t)(GLuint shader);
+extern glCompileShader_t _glCompileShader;
 
 namespace capsule {
 namespace gl {
