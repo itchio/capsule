@@ -117,6 +117,11 @@ bool InitFunctions() {
   GLSYM(glGenVertexArrays)
   GLSYM(glBindVertexArray)
 
+#if defined(LAB_MACOS)
+  GLSYM(glGenVertexArraysAPPLE)
+  GLSYM(glBindVertexArrayAPPLE)
+#endif
+
   GLSYM(glGenBuffers)
   GLSYM(glBindBuffer)
   GLSYM(glReadBuffer)
@@ -389,9 +394,17 @@ static bool InitOverlayVbo(void) {
   success = false;
   do {
     DebugLog("Creating overlay vao...");
+#if defined(LAB_MACOS)
+    _glGenVertexArraysAPPLE(1, &state.overlay_vao);
+#else
     _glGenVertexArrays(1, &state.overlay_vao);
+#endif
     GLCHECK("vao gen");
+#if defined(LAB_MACOS)
+    _glBindVertexArrayAPPLE(state.overlay_vao);
+#else
     _glBindVertexArray(state.overlay_vao);
+#endif
     GLCHECK("vao bind");
 
     DebugLog("Creating overlay vbo...");
@@ -467,7 +480,11 @@ static bool InitOverlayVbo(void) {
 #undef GLSHADERCHECK
 #undef GLPROGRAMCHECK
 
+#if defined(LAB_MACOS)
+  _glBindVertexArrayAPPLE(last_vao);
+#else
   _glBindVertexArray(last_vao);
+#endif
   _glBindBuffer(GL_ARRAY_BUFFER, last_vbo);
   _glUseProgram(last_program);
 
@@ -763,8 +780,11 @@ void DrawOverlay() {
 
   success = false;
   do {
-    _glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    GLCHECK("clear color buffer bit");
+    _glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    GLCHECK("clear color");
+
+    _glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT | GL_COLOR_BUFFER_BIT);
+    GLCHECK("clear");
 
     _glBindTexture(GL_TEXTURE_2D, state.overlay_tex);
     GLCHECK("bind texture");
@@ -773,7 +793,11 @@ void DrawOverlay() {
       break;
     }
 
+#if defined(LAB_MACOS)
+    _glBindVertexArrayAPPLE(state.overlay_vao);
+#else
     _glBindVertexArray(state.overlay_vao);
+#endif
     GLCHECK("bind vao");
 
     _glUseProgram(state.overlay_shader_program);
@@ -785,7 +809,12 @@ void DrawOverlay() {
     success = true;
   } while(false);
 
+#if defined(LAB_MACOS)
+  _glBindVertexArrayAPPLE(last_vao);
+#else
   _glBindVertexArray(last_vao);
+#endif
+
   _glBindBuffer(GL_ARRAY_BUFFER, last_vbo);
   _glUseProgram(last_program);
   _glBindBuffer(GL_PIXEL_UNPACK_BUFFER, last_unpack_pbo);
@@ -879,6 +908,11 @@ glDeleteTextures_t _glDeleteTextures;
 
 glGenVertexArrays_t _glGenVertexArrays;
 glBindVertexArray_t _glBindVertexArray;
+
+#if defined(LAB_MACOS)
+glGenVertexArraysAPPLE_t _glGenVertexArraysAPPLE;
+glBindVertexArrayAPPLE_t _glBindVertexArrayAPPLE;
+#endif
 
 glGenBuffers_t _glGenBuffers;
 glBindBuffer_t _glBindBuffer;

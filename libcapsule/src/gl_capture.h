@@ -186,6 +186,14 @@ extern glGenVertexArrays_t _glGenVertexArrays;
 typedef void(LAB_STDCALL *glBindVertexArray_t)(GLuint buffer);
 extern glBindVertexArray_t _glBindVertexArray;
 
+#if defined(LAB_MACOS)
+typedef glGenVertexArrays_t glGenVertexArraysAPPLE_t;
+extern glGenVertexArraysAPPLE_t _glGenVertexArraysAPPLE;
+
+typedef glBindVertexArray_t glBindVertexArrayAPPLE_t;
+extern glBindVertexArrayAPPLE_t _glBindVertexArrayAPPLE;
+#endif
+
 // buffers
 
 typedef void(LAB_STDCALL *glGenBuffers_t)(GLsizei n, GLuint *buffers);
