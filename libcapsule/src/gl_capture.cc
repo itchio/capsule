@@ -752,14 +752,18 @@ void DrawOverlay() {
 
 #define GLCHECK(msg) if (Error("DrawOverlay", msg)) { break; }
 
+  GLint last_tex = 0;
   GLint last_vao = 0;
   GLint last_vbo = 0;
-  GLint last_program = 0;
   GLint last_unpack_pbo = 0;
+  GLint last_program = 0;
 
   // save the state we change
   auto success = false;
   do {
+    _glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_tex);
+    GLCHECK("get last tex");
+
     _glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vao);
     GLCHECK("get last vao");
 
@@ -805,6 +809,8 @@ void DrawOverlay() {
 
     success = true;
   } while(false);
+
+  _glBindTexture(GL_TEXTURE_2D, last_tex);
 
 #if defined(LAB_MACOS)
   _glBindVertexArrayAPPLE(last_vao);
