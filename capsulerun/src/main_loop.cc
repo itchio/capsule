@@ -57,7 +57,6 @@ void MainLoop::PollConnection (Connection *conn) {
         break;
       }
 
-      Log("Received message from connection %s", conn->GetPipeName().c_str());
       LoopMessage msg{conn, buf};
       queue_.Push(msg);
     }
@@ -81,8 +80,6 @@ void MainLoop::Run () {
   while (true) {
     MICROPROFILE_SCOPE(MainLoopCycle);
     MicroProfileFlip(0);
-
-    Log("MainLoop::Run popping message from queue...");
 
     queue_.WaitAndPop(msg);
     auto conn = msg.conn;
