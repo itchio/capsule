@@ -76,8 +76,6 @@ void Router::Run() {
       conn->Write(builder);
     }
 
-    // Sleep(1000);
-
     conn->Close();
     delete conn;
   }

@@ -26,9 +26,7 @@ namespace packet {
 
 char *Fread(FILE *file) {
     if (!file) {
-        while (true) {
-            Sleep(1000);
-        }
+        return nullptr;
     };
 
     uint32_t pkt_size = 0;
