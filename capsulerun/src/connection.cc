@@ -159,8 +159,8 @@ void Connection::Close() {
   CloseHandle(pipe_r_);
   CloseHandle(pipe_w_);
 #else
-  close(fifo_r_)
-  close(fifo_w_)
+  close(fifo_r_);
+  close(fifo_w_);
 #endif
 }
 
