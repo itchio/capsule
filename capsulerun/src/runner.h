@@ -24,6 +24,7 @@
 #include "args.h"
 #include "connection.h"
 #include "main_loop.h"
+#include "router.h"
 
 #include <thread>
 
@@ -65,6 +66,8 @@ class Runner {
 
   private:
     void WaitForChild();
+
+    Router *router_ = nullptr;
 
     MainArgs *args_ = nullptr;
     ExecutorInterface *executor_ = nullptr;

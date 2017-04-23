@@ -26,6 +26,8 @@
 #include "logging.h"
 #include "audio_intercept_receiver.h"
 
+#include <thread>
+
 MICROPROFILE_DEFINE(MainLoopMain, "MainLoop", "Main", 0xff0000);
 MICROPROFILE_DEFINE(MainLoopCycle, "MainLoop", "Cycle", 0xff00ff38);
 MICROPROFILE_DEFINE(MainLoopRead, "MainLoop", "Read", 0xff00ff00);
@@ -33,19 +35,47 @@ MICROPROFILE_DEFINE(MainLoopProcess, "MainLoop", "Process", 0xff773744);
 
 namespace capsule {
 
+void MainLoop::AddConnection (Connection *conn) {
+  Log("MainLoop::AddConnection - adding %p", conn);
+  conns_.push_back(conn);
+  new std::thread(&MainLoop::PollConnection, this, conn);
+}
+
+void MainLoop::PollConnection (Connection *conn) {
+  while (true) {
+    char *buf = conn->Read();
+    if (!buf) {
+      // done polling queue!
+      return;
+    }
+
+    Log("Received message from connection %p", conn);
+    LoopMessage msg{conn, buf};
+    queue_.Push(msg);
+  }
+}
+
 void MainLoop::Run () {
   MICROPROFILE_SCOPE(MainLoopCycle);
   Log("In MainLoop::Run, exec is %s", args_->exec);
+
+  LoopMessage msg;
 
   while (true) {
     MICROPROFILE_SCOPE(MainLoopCycle);
     MicroProfileFlip(0);
 
-    char *buf;
+    Log("MainLoop::Run popping message from queue...");
+
+    queue_.WaitAndPop(msg);
+    auto conn = msg.conn;
+    char *buf = msg.buf;
+
+    Log("MainLoop::Run got a message from conn %p", conn);
 
     {
       MICROPROFILE_SCOPE(MainLoopRead);
-      buf = conn_->Read();
+      buf = conn->Read();
       if (!buf) {
         Log("MainLoop::Run: pipe closed");
         break;
@@ -66,7 +96,7 @@ void MainLoop::Run () {
         }
         case messages::Message_VideoSetup: {
           auto vs = pkt->message_as_VideoSetup();
-          StartSession(vs);
+          StartSession(vs, conn);
           break;
         }
         case messages::Message_VideoFrameCommitted: {
@@ -112,7 +142,12 @@ void MainLoop::CaptureStart () {
   auto cps = messages::CreateCaptureStart(builder, args_->fps, args_->size_divider, args_->gpu_color_conv);
   auto opkt = messages::CreatePacket(builder, messages::Message_CaptureStart, cps.Union());
   builder.Finish(opkt);
-  conn_->Write(builder);
+
+  // FIXME: pick best conn instead
+  for (Connection *conn: conns_) {
+    Log("MainLoop::CaptureStart: sending to connection %p", conn);
+    conn->Write(builder);
+  }
 }
 
 void MainLoop::EndSession () {
@@ -146,10 +181,14 @@ void MainLoop::CaptureStop () {
   auto cps = messages::CreateCaptureStop(builder);
   auto opkt = messages::CreatePacket(builder, messages::Message_CaptureStop, cps.Union());
   builder.Finish(opkt);
-  conn_->Write(builder);
+
+  for (Connection *conn: conns_) {
+    Log("MainLoop::CaptureStop: sending to connection %p", conn);
+    conn->Write(builder);
+  }
 }
 
-void MainLoop::StartSession (const messages::VideoSetup *vs) {
+void MainLoop::StartSession (const messages::VideoSetup *vs, Connection *conn) {
   Log("Setting up encoder");
 
   encoder::VideoFormat vfmt;
@@ -177,7 +216,7 @@ void MainLoop::StartSession (const messages::VideoSetup *vs) {
     num_buffered_frames = args_->buffered_frames;
   }
 
-  auto video = new video::VideoReceiver(conn_, vfmt, shm, num_buffered_frames);
+  auto video = new video::VideoReceiver(conn, vfmt, shm, num_buffered_frames);
 
   audio::AudioReceiver *audio = nullptr;
   if (args_->no_audio) {
@@ -185,7 +224,7 @@ void MainLoop::StartSession (const messages::VideoSetup *vs) {
   } else {
     auto as = vs->audio();
     if (as) {
-      audio = new audio::AudioInterceptReceiver(conn_, *as);
+      audio = new audio::AudioInterceptReceiver(conn, *as);
     } else if (audio_receiver_factory_) {
       Log("No audio intercept (or disabled), trying factory");
       audio = audio_receiver_factory_();

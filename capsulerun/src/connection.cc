@@ -152,7 +152,22 @@ void Connection::Connect() {
   connected_ = true;
 }
 
+void Connection::Close() {
+  connected_ = false;
+#if defined(LAB_WINDOWS)
+  CloseHandle(pipe_r_);
+  CloseHandle(pipe_w_);
+#else
+  close(fifo_r_)
+  close(fifo_w_)
+#endif
+}
+
 void Connection::Write(const flatbuffers::FlatBufferBuilder &builder) {
+  if (!connected_) {
+    return;
+  }
+
 #if defined(LAB_WINDOWS)
   lab::packet::Hwrite(builder, pipe_w_);
 #else // LAB_WINDOWS
@@ -161,11 +176,23 @@ void Connection::Write(const flatbuffers::FlatBufferBuilder &builder) {
 }
 
 char *Connection::Read() {
+  if (!connected_) {
+    return nullptr;
+  }
+
+  char *result;
+
 #if defined(LAB_WINDOWS)
-  return lab::packet::Hread(pipe_r_);
+  result = lab::packet::Hread(pipe_r_);
 #else // LAB_WINDOWS
-  return lab::packet::Read(fifo_r_);
+  result = lab::packet::Read(fifo_r_);
 #endif // !LAB_WINDOWS
+
+  if (!result) {
+    connected_ = false;
+  }
+
+  return result;
 }
 
 } // namespace capsule

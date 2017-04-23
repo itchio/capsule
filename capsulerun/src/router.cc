@@ -19,22 +19,35 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
  */
 
-#pragma once
+#include "router.h"
+#include "logging.h"
 
-#include <lab/types.h>
-
-#include <string>
+#include <thread>
 
 namespace capsule {
-namespace io {
 
-void Init();
-void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch);
-void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size);
-void WriteAudioFrames(char *data, int64_t frames);
-void WriteHotkeyPressed();
-void WriteCaptureStop();
-std::string GetPipePath();
+Router::~Router() {
+  // muffin
+}
 
-} // namespace io
+void Router::Start() {
+  new std::thread(&Router::Run, this);
+}
+
+void Router::Run() {
+  while (true) {
+    Log("Router: Accepting connection...");
+    conn_->Connect();
+
+    if (!conn_->IsConnected()) {
+      Log("Router: Failed to accept connection, bailing out");
+      exit(127);
+    }
+
+    Log("Router: Should dispatch connection!");
+    // conn_->Close();
+    loop_->AddConnection(conn_);
+  }
+}
+
 } // namespace capsule

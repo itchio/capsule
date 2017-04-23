@@ -28,6 +28,9 @@
 #include "win_capture.h"
 #include "../logging.h"
 
+#include <lab/env.h>
+#include "../io.h"
+
 namespace capsule {
 namespace process {
 

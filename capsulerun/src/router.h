@@ -21,20 +21,25 @@
 
 #pragma once
 
-#include <lab/types.h>
-
-#include <string>
+#include "connection.h"
+#include "main_loop.h"
 
 namespace capsule {
-namespace io {
 
-void Init();
-void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch);
-void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size);
-void WriteAudioFrames(char *data, int64_t frames);
-void WriteHotkeyPressed();
-void WriteCaptureStop();
-std::string GetPipePath();
+class Router {
+  public:
+    Router(Connection *conn, MainLoop *loop) :
+      conn_(conn),
+      loop_(loop) {};
+    ~Router();
 
-} // namespace io
+    void Start();
+
+  private:
+    void Run();
+
+    Connection *conn_ = nullptr;
+    MainLoop *loop_ = nullptr;
+};
+
 } // namespace capsule

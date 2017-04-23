@@ -27,6 +27,7 @@ include_directories(
 
 set(capsulerun_SRC
   ${capsulerun_SOURCE_DIR}/runner.cc
+  ${capsulerun_SOURCE_DIR}/router.cc
   ${capsulerun_SOURCE_DIR}/main.cc
   ${capsulerun_SOURCE_DIR}/encoder.cc
   ${capsulerun_SOURCE_DIR}/main_loop.cc

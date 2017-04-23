@@ -34,33 +34,42 @@
 #include "audio_receiver.h"
 #include "session.h"
 #include "connection.h"
+#include "locking_queue.h"
 
 namespace capsule {
 
 typedef audio::AudioReceiver * (*AudioReceiverFactory)();
 
+struct LoopMessage {
+  Connection *conn;
+  char *buf;
+};
+
 class MainLoop {
   public:
-    MainLoop(MainArgs *args, Connection *conn) :
-      args_(args),
-      conn_(conn)
-      {};
+    MainLoop(MainArgs *args) :
+      args_(args) {};
     void Run(void);
     void CaptureFlip();
+
+    void AddConnection(Connection *conn);
 
     AudioReceiverFactory audio_receiver_factory_ = nullptr;
 
   private:
     void EndSession();
     void JoinSessions();
+    void PollConnection(Connection *conn);
 
     void CaptureStart();
     void CaptureStop();
-    void StartSession(const messages::VideoSetup *vs);
+    void StartSession(const messages::VideoSetup *vs, Connection *conn);
 
     MainArgs *args_;
+    LockingQueue<LoopMessage> queue_;
 
-    Connection *conn_;
+    std::vector<Connection *> conns_;
+
     Session *session_ = nullptr;
     std::vector<Session *> old_sessions_;
 };

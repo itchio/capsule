@@ -25,6 +25,7 @@
 
 #include "logging.h"
 #include "hotkey.h"
+#include "router.h"
 
 namespace capsule {
 
@@ -42,18 +43,16 @@ void Runner::Run () {
     wait_thread_ = new std::thread(&Runner::WaitForChild, this);
   }
 
-  Log("Connecting pipe...");
-  conn_->Connect();
-
-  if (!conn_->IsConnected()) {
-    Log("Couldn't connect pipe, bailing out");
-    exit(127);
-  }
-
-  loop_ = new MainLoop(args_, conn_);
+  loop_ = new MainLoop(args_);
   loop_->audio_receiver_factory_ = executor_->GetAudioReceiverFactory();
   hotkey::Init(loop_);
+
+  auto router = new Router(conn_, loop_);
+  router->Start();
+
+  Log("Running loop...");
   loop_->Run();
+  Log("Loop finished running!");
 
   exit(exit_code_);
 }

@@ -29,6 +29,7 @@ class Connection {
   public:
     Connection(std::string pipe_name);
     void Connect();
+    void Close();
 
     void Write(const flatbuffers::FlatBufferBuilder &builder);
     char *Read();
