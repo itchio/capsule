@@ -20,9 +20,14 @@
  */
 
 #include "router.h"
+
+#include <lab/packet.h>
+
+#include "capsule/messages_generated.h"
 #include "logging.h"
 
 #include <thread>
+#include <sstream>
 
 namespace capsule {
 
@@ -36,17 +41,45 @@ void Router::Start() {
 
 void Router::Run() {
   while (true) {
-    Log("Router: Accepting connection...");
-    conn_->Connect();
+    auto conn = new Connection(pipe_path_);
 
-    if (!conn_->IsConnected()) {
+    Log("Router: Accepting connection...");
+    conn->Connect();
+
+    if (!conn->IsConnected()) {
       Log("Router: Failed to accept connection, bailing out");
       exit(127);
     }
 
-    Log("Router: Should dispatch connection!");
-    // conn_->Close();
-    loop_->AddConnection(conn_);
+    had_connections_ = true;
+
+    std::ostringstream oss;    
+    oss << "capsule" << seed_++;
+    auto new_conn_name = oss.str();
+
+    Log("Router: dispatching connection to %s", new_conn_name.c_str());
+    loop_->AddConnection(new Connection(new_conn_name));
+
+    {
+      flatbuffers::FlatBufferBuilder builder(32);
+
+      auto pipe = builder.CreateString(new_conn_name);
+      auto hkp = messages::CreateReadyForYou(builder, pipe);
+      auto pkt = messages::CreatePacket(
+          builder,
+          messages::Message_ReadyForYou,
+          hkp.Union()
+      );
+
+      builder.Finish(pkt);
+      Log("Router: sending ReadyForYou");
+      conn->Write(builder);
+    }
+
+    Sleep(1000);
+
+    conn->Close();
+    delete conn;
   }
 }
 

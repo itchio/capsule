@@ -40,6 +40,7 @@ enum SampleFmt:int {
 }
 
 union Message {
+    ReadyForYou,
     HotkeyPressed,
     CaptureStart,
     CaptureStop,
@@ -52,6 +53,10 @@ union Message {
 
 table Packet {
     message: Message;
+}
+
+table ReadyForYou {
+    pipe: string;
 }
 
 table HotkeyPressed {}

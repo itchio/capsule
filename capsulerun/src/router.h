@@ -28,18 +28,22 @@ namespace capsule {
 
 class Router {
   public:
-    Router(Connection *conn, MainLoop *loop) :
-      conn_(conn),
+    Router(std::string pipe_path, MainLoop *loop) :
+      pipe_path_(pipe_path),
       loop_(loop) {};
     ~Router();
 
     void Start();
+    bool HadConnections() { return had_connections_; };
 
   private:
     void Run();
 
-    Connection *conn_ = nullptr;
+    std::string pipe_path_;
     MainLoop *loop_ = nullptr;
+
+    int seed_ = 0;
+    bool had_connections_ = false;
 };
 
 } // namespace capsule

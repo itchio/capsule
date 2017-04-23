@@ -11,6 +11,8 @@ namespace messages {
 
 struct Packet;
 
+struct ReadyForYou;
+
 struct HotkeyPressed;
 
 struct CaptureStart;
@@ -89,14 +91,15 @@ inline const char *EnumNameSampleFmt(SampleFmt e) {
 
 enum Message {
   Message_NONE = 0,
-  Message_HotkeyPressed = 1,
-  Message_CaptureStart = 2,
-  Message_CaptureStop = 3,
-  Message_VideoSetup = 4,
-  Message_VideoFrameCommitted = 5,
-  Message_VideoFrameProcessed = 6,
-  Message_AudioFramesCommitted = 7,
-  Message_AudioFramesProcessed = 8,
+  Message_ReadyForYou = 1,
+  Message_HotkeyPressed = 2,
+  Message_CaptureStart = 3,
+  Message_CaptureStop = 4,
+  Message_VideoSetup = 5,
+  Message_VideoFrameCommitted = 6,
+  Message_VideoFrameProcessed = 7,
+  Message_AudioFramesCommitted = 8,
+  Message_AudioFramesProcessed = 9,
   Message_MIN = Message_NONE,
   Message_MAX = Message_AudioFramesProcessed
 };
@@ -104,6 +107,7 @@ enum Message {
 inline const char **EnumNamesMessage() {
   static const char *names[] = {
     "NONE",
+    "ReadyForYou",
     "HotkeyPressed",
     "CaptureStart",
     "CaptureStop",
@@ -124,6 +128,10 @@ inline const char *EnumNameMessage(Message e) {
 
 template<typename T> struct MessageTraits {
   static const Message enum_value = Message_NONE;
+};
+
+template<> struct MessageTraits<ReadyForYou> {
+  static const Message enum_value = Message_ReadyForYou;
 };
 
 template<> struct MessageTraits<HotkeyPressed> {
@@ -173,6 +181,9 @@ struct Packet FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     return GetPointer<const void *>(VT_MESSAGE);
   }
   template<typename T> const T *message_as() const;
+  const ReadyForYou *message_as_ReadyForYou() const {
+    return (message_type() == Message_ReadyForYou)? static_cast<const ReadyForYou *>(message()) : nullptr;
+  }
   const HotkeyPressed *message_as_HotkeyPressed() const {
     return (message_type() == Message_HotkeyPressed)? static_cast<const HotkeyPressed *>(message()) : nullptr;
   }
@@ -205,6 +216,10 @@ struct Packet FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.EndTable();
   }
 };
+
+template<> inline const ReadyForYou *Packet::message_as<ReadyForYou>() const {
+  return message_as_ReadyForYou();
+}
 
 template<> inline const HotkeyPressed *Packet::message_as<HotkeyPressed>() const {
   return message_as_HotkeyPressed();
@@ -267,6 +282,55 @@ inline flatbuffers::Offset<Packet> CreatePacket(
   builder_.add_message(message);
   builder_.add_message_type(message_type);
   return builder_.Finish();
+}
+
+struct ReadyForYou FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  enum {
+    VT_PIPE = 4
+  };
+  const flatbuffers::String *pipe() const {
+    return GetPointer<const flatbuffers::String *>(VT_PIPE);
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<flatbuffers::uoffset_t>(verifier, VT_PIPE) &&
+           verifier.Verify(pipe()) &&
+           verifier.EndTable();
+  }
+};
+
+struct ReadyForYouBuilder {
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_pipe(flatbuffers::Offset<flatbuffers::String> pipe) {
+    fbb_.AddOffset(ReadyForYou::VT_PIPE, pipe);
+  }
+  ReadyForYouBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ReadyForYouBuilder &operator=(const ReadyForYouBuilder &);
+  flatbuffers::Offset<ReadyForYou> Finish() {
+    const auto end = fbb_.EndTable(start_, 1);
+    auto o = flatbuffers::Offset<ReadyForYou>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<ReadyForYou> CreateReadyForYou(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    flatbuffers::Offset<flatbuffers::String> pipe = 0) {
+  ReadyForYouBuilder builder_(_fbb);
+  builder_.add_pipe(pipe);
+  return builder_.Finish();
+}
+
+inline flatbuffers::Offset<ReadyForYou> CreateReadyForYouDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    const char *pipe = nullptr) {
+  return capsule::messages::CreateReadyForYou(
+      _fbb,
+      pipe ? _fbb.CreateString(pipe) : 0);
 }
 
 struct HotkeyPressed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -847,6 +911,10 @@ inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Mess
   switch (type) {
     case Message_NONE: {
       return true;
+    }
+    case Message_ReadyForYou: {
+      auto ptr = reinterpret_cast<const ReadyForYou *>(obj);
+      return verifier.VerifyTable(ptr);
     }
     case Message_HotkeyPressed: {
       auto ptr = reinterpret_cast<const HotkeyPressed *>(obj);

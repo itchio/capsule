@@ -27,6 +27,7 @@
 #include "audio_intercept_receiver.h"
 
 #include <thread>
+#include <algorithm>
 
 MICROPROFILE_DEFINE(MainLoopMain, "MainLoop", "Main", 0xff0000);
 MICROPROFILE_DEFINE(MainLoopCycle, "MainLoop", "Cycle", 0xff00ff38);
@@ -37,21 +38,37 @@ namespace capsule {
 
 void MainLoop::AddConnection (Connection *conn) {
   Log("MainLoop::AddConnection - adding %p", conn);
-  conns_.push_back(conn);
+  {
+    std::lock_guard<std::mutex> lock(conns_mutex_);
+    conns_.push_back(conn);
+  }
   new std::thread(&MainLoop::PollConnection, this, conn);
 }
 
 void MainLoop::PollConnection (Connection *conn) {
-  while (true) {
-    char *buf = conn->Read();
-    if (!buf) {
-      // done polling queue!
-      return;
-    }
+  Log("MainLoop::PollConnection - opening...");
+  conn->Connect();
 
-    Log("Received message from connection %p", conn);
-    LoopMessage msg{conn, buf};
-    queue_.Push(msg);
+  if (conn->IsConnected()) {
+    while (true) {
+      char *buf = conn->Read();
+      if (!buf) {
+        // done polling queue!
+        break;
+      }
+
+      Log("Received message from connection %p", conn);
+      LoopMessage msg{conn, buf};
+      queue_.Push(msg);
+    }
+  } else {
+    Log("MainLoop::PollConnection - could not open %p, bailing out", conn);
+  }
+
+  {
+    Log("MainLoop::PollConnection - culling %p", conn);
+    std::lock_guard<std::mutex> lock(conns_mutex_);
+    conns_.erase(std::remove(conns_.begin(), conns_.end(), conn), conns_.end());
   }
 }
 

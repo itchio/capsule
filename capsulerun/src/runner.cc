@@ -30,8 +30,6 @@
 namespace capsule {
 
 void Runner::Run () {
-  conn_ = new Connection(std::string(args_->pipe));
-
   if (args_->exec) {
     process_ = executor_->LaunchProcess(args_);
     if (!process_) {
@@ -47,7 +45,7 @@ void Runner::Run () {
   loop_->audio_receiver_factory_ = executor_->GetAudioReceiverFactory();
   hotkey::Init(loop_);
 
-  auto router = new Router(conn_, loop_);
+  auto router = new Router(args_->pipe, loop_);
   router->Start();
 
   Log("Running loop...");
@@ -76,7 +74,7 @@ void Runner::WaitForChild () {
     Log("Child left in unknown state");
   }
 
-  if (!conn_->IsConnected()) {
+  if (!router_->HadConnections()) {
     // if we haven't connected by this point, we never will:
     // the child doesn't exist anymore.
     // this also works for "disappearing launchers": even the launchers

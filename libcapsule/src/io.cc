@@ -352,22 +352,54 @@ void WriteCaptureStop() {
     }
 }
 
-void Init() {
-    Log("Our pipe path is %s", lab::env::Get("CAPSULE_PIPE_PATH").c_str());
-
+void Connect(std::string pipe_path) {
     {
         Log("Opening write channel...");
-        std::string w_path = lab::env::Get("CAPSULE_PIPE_PATH") + ".runread";
+        std::string w_path = pipe_path + ".runread";
         out_file = lab::io::Fopen(lab::paths::PipePath(w_path), "wb");
         Ensure("Opened output file", !!out_file);
     }
 
     {
         Log("Opening read channel...");
-        std::string r_path = lab::env::Get("CAPSULE_PIPE_PATH") + ".runwrite";
+        std::string r_path = pipe_path + ".runwrite";
         in_file = lab::io::Fopen(lab::paths::PipePath(r_path), "rb");
         Ensure("Opened input file", !!in_file);
     }
+}
+
+void Init() {
+    std::string pipe_path = lab::env::Get("CAPSULE_PIPE_PATH");
+    Log("First pipe path is '%s'", pipe_path.c_str());
+    Connect(pipe_path);
+
+    Log("Waiting for ready...");
+    char *buf = lab::packet::Fread(in_file);
+    if (!buf) {
+        Log("Could not even get ready, bailing out");
+        return;
+    }
+
+    fclose(in_file);
+    in_file = nullptr;
+    fclose(out_file);
+    out_file = nullptr;
+
+    auto pkt = messages::GetPacket(buf);
+    if (pkt->message_type() != messages::Message_ReadyForYou) {
+        Log("Error: Didn't get ReadyForYou, got %s", EnumNameMessage(pkt->message_type()));
+        delete[] buf;
+        return;
+    }
+
+    {
+        auto rfy = pkt->message_as_ReadyForYou();
+        pipe_path = rfy->pipe()->str();
+        Log("Second pipe path is '%s'", pipe_path.c_str());
+        Connect(pipe_path);
+    }
+
+    delete[] buf;
 
     std::thread poll_thread(PollInfile);
     poll_thread.detach();

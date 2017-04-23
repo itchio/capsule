@@ -21,9 +21,6 @@
 
 #pragma once
 
-#include <thread>
-#include <vector>
-
 #include <shoom.h>
 
 #include <lab/packet.h>
@@ -35,6 +32,10 @@
 #include "session.h"
 #include "connection.h"
 #include "locking_queue.h"
+
+#include <thread>
+#include <mutex>
+#include <vector>
 
 namespace capsule {
 
@@ -69,6 +70,7 @@ class MainLoop {
     LockingQueue<LoopMessage> queue_;
 
     std::vector<Connection *> conns_;
+    std::mutex conns_mutex_;
 
     Session *session_ = nullptr;
     std::vector<Session *> old_sessions_;
