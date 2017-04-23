@@ -37,7 +37,7 @@ MICROPROFILE_DEFINE(MainLoopProcess, "MainLoop", "Process", 0xff773744);
 namespace capsule {
 
 void MainLoop::AddConnection (Connection *conn) {
-  Log("MainLoop::AddConnection - adding %p", conn);
+  Log("MainLoop::AddConnection - adding %s", conn->GetPipeName().c_str());
   {
     std::lock_guard<std::mutex> lock(conns_mutex_);
     conns_.push_back(conn);
@@ -57,16 +57,16 @@ void MainLoop::PollConnection (Connection *conn) {
         break;
       }
 
-      Log("Received message from connection %p", conn);
+      Log("Received message from connection %s", conn->GetPipeName().c_str());
       LoopMessage msg{conn, buf};
       queue_.Push(msg);
     }
   } else {
-    Log("MainLoop::PollConnection - could not open %p, bailing out", conn);
+    Log("MainLoop::PollConnection - could not open %s, bailing out", conn->GetPipeName().c_str());
   }
 
   {
-    Log("MainLoop::PollConnection - culling %p", conn);
+    Log("MainLoop::PollConnection - culling %s", conn->GetPipeName().c_str());
     std::lock_guard<std::mutex> lock(conns_mutex_);
     conns_.erase(std::remove(conns_.begin(), conns_.end(), conn), conns_.end());
   }
@@ -88,16 +88,7 @@ void MainLoop::Run () {
     auto conn = msg.conn;
     char *buf = msg.buf;
 
-    Log("MainLoop::Run got a message from conn %p", conn);
-
-    {
-      MICROPROFILE_SCOPE(MainLoopRead);
-      buf = conn->Read();
-      if (!buf) {
-        Log("MainLoop::Run: pipe closed");
-        break;
-      }
-    }
+    Log("MainLoop::Run got a message from conn %s", conn->GetPipeName().c_str());
 
     {
       MICROPROFILE_SCOPE(MainLoopProcess);
@@ -161,10 +152,11 @@ void MainLoop::CaptureStart () {
   builder.Finish(opkt);
 
   // FIXME: pick best conn instead
-  for (Connection *conn: conns_) {
-    Log("MainLoop::CaptureStart: sending to connection %p", conn);
-    conn->Write(builder);
-  }
+  // for (Connection *conn: conns_) {
+  auto conn = conns_.back();
+  Log("MainLoop::CaptureStart: sending to connection %s", conn->GetPipeName().c_str());
+  conn->Write(builder);
+  // }
 }
 
 void MainLoop::EndSession () {
@@ -200,7 +192,7 @@ void MainLoop::CaptureStop () {
   builder.Finish(opkt);
 
   for (Connection *conn: conns_) {
-    Log("MainLoop::CaptureStop: sending to connection %p", conn);
+    Log("MainLoop::CaptureStop: sending to connection %s", conn->GetPipeName().c_str());
     conn->Write(builder);
   }
 }

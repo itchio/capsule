@@ -35,8 +35,10 @@ class Connection {
     char *Read();
 
     bool IsConnected() { return connected_; };
+    std::string GetPipeName() { return pipe_name_; };
 
   private:
+    std::string pipe_name_;
     std::string r_path_;
     std::string w_path_;
 #if defined(LAB_WINDOWS)

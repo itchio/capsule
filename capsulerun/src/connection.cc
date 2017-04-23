@@ -91,6 +91,7 @@ static int OpenFifo (
 #endif // !LAB_WINDOWS
 
 Connection::Connection(std::string pipe_name) {
+  pipe_name_ = pipe_name;
   r_path_ = lab::paths::PipePath(pipe_name + ".runread");
   w_path_ = lab::paths::PipePath(pipe_name + ".runwrite");
 
