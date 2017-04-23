@@ -13,6 +13,8 @@ struct Packet;
 
 struct ReadyForYou;
 
+struct SawBackend;
+
 struct HotkeyPressed;
 
 struct CaptureStart;
@@ -89,6 +91,31 @@ inline const char *EnumNameSampleFmt(SampleFmt e) {
   return EnumNamesSampleFmt()[index];
 }
 
+enum Backend {
+  Backend_UNKNOWN = 0,
+  Backend_GL = 1,
+  Backend_D3D9 = 2,
+  Backend_DXGI = 3,
+  Backend_MIN = Backend_UNKNOWN,
+  Backend_MAX = Backend_DXGI
+};
+
+inline const char **EnumNamesBackend() {
+  static const char *names[] = {
+    "UNKNOWN",
+    "GL",
+    "D3D9",
+    "DXGI",
+    nullptr
+  };
+  return names;
+}
+
+inline const char *EnumNameBackend(Backend e) {
+  const size_t index = static_cast<int>(e);
+  return EnumNamesBackend()[index];
+}
+
 enum Message {
   Message_NONE = 0,
   Message_ReadyForYou = 1,
@@ -100,8 +127,9 @@ enum Message {
   Message_VideoFrameProcessed = 7,
   Message_AudioFramesCommitted = 8,
   Message_AudioFramesProcessed = 9,
+  Message_SawBackend = 10,
   Message_MIN = Message_NONE,
-  Message_MAX = Message_AudioFramesProcessed
+  Message_MAX = Message_SawBackend
 };
 
 inline const char **EnumNamesMessage() {
@@ -116,6 +144,7 @@ inline const char **EnumNamesMessage() {
     "VideoFrameProcessed",
     "AudioFramesCommitted",
     "AudioFramesProcessed",
+    "SawBackend",
     nullptr
   };
   return names;
@@ -166,6 +195,10 @@ template<> struct MessageTraits<AudioFramesProcessed> {
   static const Message enum_value = Message_AudioFramesProcessed;
 };
 
+template<> struct MessageTraits<SawBackend> {
+  static const Message enum_value = Message_SawBackend;
+};
+
 bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Message type);
 bool VerifyMessageVector(flatbuffers::Verifier &verifier, const flatbuffers::Vector<flatbuffers::Offset<void>> *values, const flatbuffers::Vector<uint8_t> *types);
 
@@ -207,6 +240,9 @@ struct Packet FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   const AudioFramesProcessed *message_as_AudioFramesProcessed() const {
     return (message_type() == Message_AudioFramesProcessed)? static_cast<const AudioFramesProcessed *>(message()) : nullptr;
+  }
+  const SawBackend *message_as_SawBackend() const {
+    return (message_type() == Message_SawBackend)? static_cast<const SawBackend *>(message()) : nullptr;
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -251,6 +287,10 @@ template<> inline const AudioFramesCommitted *Packet::message_as<AudioFramesComm
 
 template<> inline const AudioFramesProcessed *Packet::message_as<AudioFramesProcessed>() const {
   return message_as_AudioFramesProcessed();
+}
+
+template<> inline const SawBackend *Packet::message_as<SawBackend>() const {
+  return message_as_SawBackend();
 }
 
 struct PacketBuilder {
@@ -331,6 +371,46 @@ inline flatbuffers::Offset<ReadyForYou> CreateReadyForYouDirect(
   return capsule::messages::CreateReadyForYou(
       _fbb,
       pipe ? _fbb.CreateString(pipe) : 0);
+}
+
+struct SawBackend FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
+  enum {
+    VT_BACKEND = 4
+  };
+  Backend backend() const {
+    return static_cast<Backend>(GetField<int32_t>(VT_BACKEND, 0));
+  }
+  bool Verify(flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyField<int32_t>(verifier, VT_BACKEND) &&
+           verifier.EndTable();
+  }
+};
+
+struct SawBackendBuilder {
+  flatbuffers::FlatBufferBuilder &fbb_;
+  flatbuffers::uoffset_t start_;
+  void add_backend(Backend backend) {
+    fbb_.AddElement<int32_t>(SawBackend::VT_BACKEND, static_cast<int32_t>(backend), 0);
+  }
+  SawBackendBuilder(flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  SawBackendBuilder &operator=(const SawBackendBuilder &);
+  flatbuffers::Offset<SawBackend> Finish() {
+    const auto end = fbb_.EndTable(start_, 1);
+    auto o = flatbuffers::Offset<SawBackend>(end);
+    return o;
+  }
+};
+
+inline flatbuffers::Offset<SawBackend> CreateSawBackend(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    Backend backend = Backend_UNKNOWN) {
+  SawBackendBuilder builder_(_fbb);
+  builder_.add_backend(backend);
+  return builder_.Finish();
 }
 
 struct HotkeyPressed FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -946,6 +1026,10 @@ inline bool VerifyMessage(flatbuffers::Verifier &verifier, const void *obj, Mess
     }
     case Message_AudioFramesProcessed: {
       auto ptr = reinterpret_cast<const AudioFramesProcessed *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Message_SawBackend: {
+      auto ptr = reinterpret_cast<const SawBackend *>(obj);
       return verifier.VerifyTable(ptr);
     }
     default: return false;
