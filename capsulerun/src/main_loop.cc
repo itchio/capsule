@@ -141,7 +141,6 @@ void MainLoop::CaptureFlip () {
   if (session_) {
     CaptureStop();
   } else {
-    // TODO: ignore subsequent CaptureStart until the capture actually started
     CaptureStart();
   }
 }
@@ -201,7 +200,17 @@ void MainLoop::CaptureStop () {
 }
 
 void MainLoop::StartSession (const messages::VideoSetup *vs, Connection *conn) {
-  Log("Setting up encoder");
+  if (session_) {
+    Log("Already got a session, ignoring request from %s", conn->GetPipeName().c_str());
+    return;
+  }
+
+  if (vs->width() == 0 || vs->height() == 0) {
+    Log("Null width or height, ignoring request from %s", conn->GetPipeName().c_str());
+    return;
+  }
+
+  Log("Setting up encoder for %s", conn->GetPipeName().c_str());
 
   encoder::VideoFormat vfmt;
   vfmt.width = vs->width();
@@ -223,7 +232,7 @@ void MainLoop::StartSession (const messages::VideoSetup *vs, Connection *conn) {
     return;
   }
 
-  int num_buffered_frames = 60;
+  int num_buffered_frames = 3;
   if (args_->buffered_frames) {
     num_buffered_frames = args_->buffered_frames;
   }
