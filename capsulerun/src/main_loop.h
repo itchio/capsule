@@ -74,6 +74,8 @@ class MainLoop {
 
     Session *session_ = nullptr;
     std::vector<Session *> old_sessions_;
+
+    Connection *best_conn_ = nullptr;
 };
 
 } // namespace capsule

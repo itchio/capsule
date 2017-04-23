@@ -31,7 +31,6 @@
 #include <lab/paths.h>
 #include <lab/io.h>
 
-#include "capsule/messages_generated.h"
 #include "capsule/audio_math.h"
 #include "capture.h"
 #include "logging.h"
@@ -337,11 +336,29 @@ void WriteHotkeyPressed() {
 void WriteCaptureStop() {
     flatbuffers::FlatBufferBuilder builder(32);
 
-    auto hkp = messages::CreateCaptureStop(builder);
+    auto cs = messages::CreateCaptureStop(builder);
     auto pkt = messages::CreatePacket(
         builder,
         messages::Message_CaptureStop,
-        hkp.Union()
+        cs.Union()
+    );
+
+    builder.Finish(pkt);
+
+    {
+        std::lock_guard<std::mutex> lock(out_mutex);
+        lab::packet::Fwrite(builder, out_file);
+    }
+}
+
+void WriteSawBackend(messages::Backend backend) {
+    flatbuffers::FlatBufferBuilder builder(32);
+
+    auto sb = messages::CreateSawBackend(builder, backend);
+    auto pkt = messages::CreatePacket(
+        builder,
+        messages::Message_SawBackend,
+        sb.Union()
     );
 
     builder.Finish(pkt);

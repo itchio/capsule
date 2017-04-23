@@ -30,6 +30,7 @@
 #include <lab/platform.h>
 
 #include "logging.h"
+#include "io.h"
 
 #if defined(LAB_WINDOWS)
 #include "windows/win_capture.h"
@@ -123,13 +124,13 @@ bool Ready () {
   return FrameReady();
 }
 
-// TODO: inform capsulerun!
 void SawBackend(Backend backend) {
   switch (backend) {
     case kBackendGL: {
       if (!state.saw_gl) {
         Log("Saw GL backend!");
         state.saw_gl = true;
+        io::WriteSawBackend(messages::Backend_GL);
       }
       break;
     }
@@ -137,6 +138,7 @@ void SawBackend(Backend backend) {
       if (!state.saw_d3d9) {
         Log("Saw D3D9 backend!");
         state.saw_d3d9 = true;
+        io::WriteSawBackend(messages::Backend_D3D9);
       }
       break;
     }
@@ -144,6 +146,7 @@ void SawBackend(Backend backend) {
       if (!state.saw_dxgi) {
         Log("Saw DXGI backend!");
         state.saw_dxgi = true;
+        io::WriteSawBackend(messages::Backend_D3D9);
       }
       break;
     }

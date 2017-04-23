@@ -24,6 +24,7 @@
 #include <lab/types.h>
 
 #include <string>
+#include "capsule/messages_generated.h"
 
 namespace capsule {
 namespace io {
@@ -34,6 +35,7 @@ void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size
 void WriteAudioFrames(char *data, int64_t frames);
 void WriteHotkeyPressed();
 void WriteCaptureStop();
+void WriteSawBackend(messages::Backend backend);
 std::string GetPipePath();
 
 } // namespace io

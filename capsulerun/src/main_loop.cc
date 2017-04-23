@@ -88,8 +88,6 @@ void MainLoop::Run () {
     auto conn = msg.conn;
     char *buf = msg.buf;
 
-    Log("MainLoop::Run got a message from conn %s", conn->GetPipeName().c_str());
-
     {
       MICROPROFILE_SCOPE(MainLoopProcess);
       auto pkt = messages::GetPacket(buf);
@@ -119,6 +117,12 @@ void MainLoop::Run () {
           if (session_ && session_->audio_) {
             session_->audio_->FramesCommitted(afc->offset(), afc->frames());
           }
+          break;
+        }
+        case messages::Message_SawBackend: {
+          auto sb = pkt->message_as_SawBackend();
+          Log("MainLoop::Run: saw backend %s at %s", EnumNameBackend(sb->backend()), conn->GetPipeName().c_str());
+          best_conn_ = conn;
           break;
         }
         default: {
@@ -151,12 +155,14 @@ void MainLoop::CaptureStart () {
   auto opkt = messages::CreatePacket(builder, messages::Message_CaptureStart, cps.Union());
   builder.Finish(opkt);
 
-  // FIXME: pick best conn instead
-  // for (Connection *conn: conns_) {
-  auto conn = conns_.back();
+  auto conn = best_conn_;
+  if (!conn) {
+    // pick the first one, it'll give us DC capture on windows
+    conn = conns_.front();
+  }
+
   Log("MainLoop::CaptureStart: sending to connection %s", conn->GetPipeName().c_str());
   conn->Write(builder);
-  // }
 }
 
 void MainLoop::EndSession () {
