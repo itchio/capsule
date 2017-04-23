@@ -118,6 +118,7 @@ BOOL LAB_STDCALL CreateProcessW_hook (
   if (envErr != 0) {
     // Deviare uses CreateProcessW internally, so we need to temporarily disable our hook
     cHookMgr.EnableHook(CreateProcessW_hookId, FALSE);
+    const char* libcapsule_init_function_name = "CapsuleWindowsInit";
     DWORD err = NktHookLibHelpers::CreateProcessWithDllW(
         lpApplicationName,
         lpCommandLine,
@@ -131,7 +132,7 @@ BOOL LAB_STDCALL CreateProcessW_hook (
         lpProcessInformation,
         libcapsule_path_w,     /* DLL to inject */
         NULL,                  /* signal completed */
-        "capsule_windows_init" /* init function name */
+        libcapsule_init_function_name /* init function name */
     );
     cHookMgr.EnableHook(CreateProcessW_hookId, TRUE);
     success = SUCCEEDED(err) ? 1 : 0;
