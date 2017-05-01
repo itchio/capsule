@@ -51,9 +51,6 @@ void MainLoop::PollConnection (Connection *conn) {
 
   if (conn->IsConnected()) {
     while (true) {
-      fprintf(stdout, "reading...\n");
-      fflush(stdout);
-
       char *buf = conn->Read();
       if (!buf) {
         // done polling queue!
