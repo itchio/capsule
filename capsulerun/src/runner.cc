@@ -34,7 +34,7 @@ void Runner::Run () {
     process_ = executor_->LaunchProcess(args_);
     if (!process_) {
       Log("Couldn't start child, bailing out");
-      exit(127);
+      Exit(127);
     }
 
     Log("Watching on child in the background");
@@ -45,14 +45,14 @@ void Runner::Run () {
   loop_->audio_receiver_factory_ = executor_->GetAudioReceiverFactory();
   hotkey::Init(loop_);
 
-  auto router = new Router(args_->pipe, loop_);
-  router->Start();
+  router_ = new Router(args_->pipe, loop_);
+  router_->Start();
 
   Log("Running loop...");
   loop_->Run();
   Log("Loop finished running!");
 
-  exit(exit_code_);
+  Exit(exit_code_);
 }
 
 void Runner::WaitForChild () {
@@ -74,13 +74,20 @@ void Runner::WaitForChild () {
     Log("Child left in unknown state");
   }
 
-  if (!router_->HadConnections()) {
+  if ((router_ == nullptr) || (!router_->HadConnections())) {
     // if we haven't connected by this point, we never will:
     // the child doesn't exist anymore.
     // this also works for "disappearing launchers": even the launchers
     // should connect once first, and then their spawn will use a second connection.
-    exit(fate.code);
+    Exit(fate.code);
   }
+  Log("Had connections, waiting for something else to exit");
+}
+
+void Runner::Exit(int code) {
+  fflush(stdout);
+  fflush(stderr);
+  exit(code);
 }
 
 Runner::~Runner() {

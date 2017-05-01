@@ -40,6 +40,7 @@ void Process::Wait(ProcessFate *fate) {
 
   DWORD exit_code;
   GetExitCodeProcess(process_handle_, &exit_code);
+  Log("Process::Wait, DWORD exit_code = %d", exit_code);
 
   fate->status = kProcessStatusExited;
   fate->code = static_cast<int>(exit_code);

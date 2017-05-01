@@ -134,8 +134,7 @@ int main (int argc, char **argv) {
     args.exec_argc = argc - num_positional_args;
     args.exec_argv = argv + num_positional_args;
 
-#if !defined(LAB_WINDOWS)
-    // on non-windows platforms, exec_argv needs to include the executable
+    // most platforoms, exec_argv needs to include the executable
     int real_exec_argc = args.exec_argc + 1;
     char **real_exec_argv = (char **) calloc(real_exec_argc + 1, sizeof(char *));
 
@@ -146,7 +145,6 @@ int main (int argc, char **argv) {
 
     args.exec_argc = real_exec_argc;
     args.exec_argv = real_exec_argv;
-#endif // !LAB_WINDOWS
   }
 
   capsule::Log("thanks for flying capsule on %s", lab::kPlatform);

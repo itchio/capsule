@@ -51,6 +51,9 @@ void MainLoop::PollConnection (Connection *conn) {
 
   if (conn->IsConnected()) {
     while (true) {
+      fprintf(stdout, "reading...\n");
+      fflush(stdout);
+
       char *buf = conn->Read();
       if (!buf) {
         // done polling queue!
@@ -81,7 +84,17 @@ void MainLoop::Run () {
     MICROPROFILE_SCOPE(MainLoopCycle);
     MicroProfileFlip(0);
 
-    queue_.WaitAndPop(msg);
+    auto didPop = queue_.TryWaitAndPop(msg, 200);
+    if (!didPop) {
+      std::lock_guard<std::mutex> lock(conns_mutex_);
+      if (conns_.empty()) {
+        Log("MainLoop::Run: no conns left, quitting");
+        break;
+      } else {
+        continue;
+      }
+    }
+
     auto conn = msg.conn;
     char *buf = msg.buf;
 
@@ -129,10 +142,13 @@ void MainLoop::Run () {
       }
     }
 
+    Log("MainLoop::Run - deleting buf");
     delete[] buf;
   }
 
+  Log("MainLoop::Run: ending session...");
   EndSession();  
+  Log("MainLoop::Run: joining session...");
   JoinSessions();
 }
 

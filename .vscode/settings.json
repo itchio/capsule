@@ -34,7 +34,8 @@
       "xlocmon": "cpp",
       "xlocnum": "cpp",
       "random": "cpp",
-      "map": "cpp"
+      "map": "cpp",
+      "regex": "cpp"
     },
     "files.exclude": {
       "**/.git": true,

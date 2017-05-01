@@ -66,6 +66,7 @@ class Runner {
 
   private:
     void WaitForChild();
+    void Exit(int code);
 
     Router *router_ = nullptr;
 
