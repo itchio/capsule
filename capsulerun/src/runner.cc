@@ -59,7 +59,7 @@ void Runner::Run () {
   } else {
     Log("Child still running, waiting...");
     while (true) {
-      Sleep(1000);
+      std::this_thread::sleep_for(std::chrono::seconds(1));
     }
   }
 }

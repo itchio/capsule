@@ -35,7 +35,14 @@
       "xlocnum": "cpp",
       "random": "cpp",
       "map": "cpp",
-      "regex": "cpp"
+      "regex": "cpp",
+      "atomic": "cpp",
+      "condition_variable": "cpp",
+      "iterator": "cpp",
+      "queue": "cpp",
+      "stack": "cpp",
+      "tuple": "cpp",
+      "xutility": "cpp"
     },
     "files.exclude": {
       "**/.git": true,

@@ -35,6 +35,7 @@
 #include "capture.h"
 #include "logging.h"
 #include "ensure.h"
+#include "connection.h"
 
 // #define DebugLog(...) Log(__VA_ARGS__)
 #define DebugLog(...)
@@ -42,9 +43,7 @@
 namespace capsule {
 namespace io {
 
-static FILE *out_file = 0;
-static FILE *in_file = 0;
-static HANDLE in_file_async = INVALID_HANDLE_VALUE;
+static Connection *connection = nullptr;
 
 bool frame_locked[capture::kNumBuffers];
 std::mutex frame_locked_mutex;
@@ -223,7 +222,7 @@ void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pit
     builder.Finish(pkt);
     {
         std::lock_guard<std::mutex> lock(out_mutex);
-        lab::packet::Fwrite(builder, out_file);
+        connection->Write(builder);
     }
 }
 
@@ -266,7 +265,7 @@ void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size
     LockFrame(next_frame_index);
     {
         std::lock_guard<std::mutex> lock(out_mutex);
-        lab::packet::Fwrite(builder, out_file);
+        connection->Write(builder);
     }
 
     next_frame_index = (next_frame_index + 1) % capture::kNumBuffers;
@@ -314,7 +313,7 @@ void WriteAudioFrames(char *src_data, int64_t src_frames) {
 
         {
           std::lock_guard<std::mutex> lock(out_mutex);
-          lab::packet::Fwrite(builder, out_file);
+          connection->Write(builder);
         }
 
         audio_shm_committed_offset += write_frames;
@@ -337,7 +336,7 @@ void WriteHotkeyPressed() {
 
     {
         std::lock_guard<std::mutex> lock(out_mutex);
-        lab::packet::Fwrite(builder, out_file);
+        connection->Write(builder);
     }
 }
 
@@ -355,7 +354,7 @@ void WriteCaptureStop() {
 
     {
         std::lock_guard<std::mutex> lock(out_mutex);
-        lab::packet::Fwrite(builder, out_file);
+        connection->Write(builder);
     }
 }
 
@@ -373,111 +372,48 @@ void WriteSawBackend(messages::Backend backend) {
 
     {
         std::lock_guard<std::mutex> lock(out_mutex);
-        lab::packet::Fwrite(builder, out_file);
+        connection->Write(builder);
     }
-}
-
-void Connect(std::string pipe_path, bool async_read) {
-    {
-        Log("Opening write channel...");
-        std::string w_path = pipe_path + ".runread";
-        out_file = lab::io::Fopen(lab::paths::PipePath(w_path), "wb");
-        Ensure("Opened output file", !!out_file);
-    }
-
-    {
-        if (async_read) {
-            Log("Opening read channel (async)...");
-            std::string r_path = pipe_path + ".runwrite";
-            auto pipe_path = lab::paths::PipePath(r_path);
-            auto wide_path = lab::strings::ToWide(pipe_path);
-            in_file_async = CreateFileW(
-                wide_path.c_str(), /* lpFileName */
-                GENERIC_READ, /* dwDesiredAccess */
-                0, /* dwShareMode */
-                nullptr, /* lpSecurityAttributes */
-                OPEN_EXISTING, /* dwCreationDisposition */
-                FILE_FLAG_OVERLAPPED, /* dwFlagsAndAttributes */
-                nullptr /* hTemplateFile */
-            );
-            Ensure("Opened input file", !!in_file_async);
-        } else {
-            Log("Opening read channel (sync)...");
-            std::string r_path = pipe_path + ".runwrite";
-            in_file = lab::io::Fopen(lab::paths::PipePath(r_path), "rb");
-            Ensure("Opened input file", !!in_file);
-        }
-    }
-}
-
-char *async_buf = nullptr;
-bool reading_msg_size = true;
-uint32_t msg_size;
-OVERLAPPED overlapped;
-
-static void QueueNextRead();
-
-static void WINAPI ProcessRead(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
-                        OVERLAPPED *overlapped) {
-  // TODO: error handling I'm guessing                            
-  if (reading_msg_size) {
-    async_buf = new char[msg_size];
-  } else {
-    HandlePacket(async_buf);
-  }
-  reading_msg_size = !reading_msg_size;
-  QueueNextRead();
-}
-
-static void QueueNextRead() {
-  ReadFileEx(in_file_async,                            /* hFile */
-             reading_msg_size ? ((char*) &msg_size) : async_buf, /* lPBuffer */
-             reading_msg_size ? sizeof(msg_size)
-                              : msg_size, /* nNumberOfBytesToRead */
-             &overlapped,                 /* lpOverlapped */
-             ProcessRead                 /* lpCompletionRoutine */
-             );
 }
 
 static void PollInfile() {
-  ZeroMemory(&overlapped, sizeof(overlapped));
-  QueueNextRead();
-
   while (true) {
-    SleepEx(INFINITE, true);
+    if (!connection) {
+      break;
+    }
 
-    // Log("Doing first fread, in_file = %p", in_file);
-    // char *buf = lab::packet::Fread(in_file);
-    // Log("Done with first fread, buf = %p", buf);
+    char *buf = connection->Read();
+    if (!buf) {
+        break;
+    }
 
-    // if (!buf) {
-    //     break;
-    // }
-
-    // HandlePacket(buf);
+    HandlePacket(buf);
   }
 }
 
 void Init() {
     std::string pipe_path = lab::env::Get("CAPSULE_PIPE_PATH");
     Log("First pipe path is '%s'", pipe_path.c_str());
-    Connect(pipe_path, false);
-
-    Log("Waiting for ready...");
-    char *buf = lab::packet::Fread(in_file);
-    if (!buf) {
-        Log("Could not even get ready, bailing out");
+    auto temp_conn = new Connection(pipe_path);
+    temp_conn->Connect();
+    if (!temp_conn->IsConnected()) {
+        delete temp_conn;
+        Log("Error: Could not reach capsulerun router, bailing out");
         return;
     }
 
-    fclose(in_file);
-    in_file = nullptr;
-    fclose(out_file);
-    out_file = nullptr;
+    Log("Waiting for ready...");
+    char *buf = temp_conn->Read();
+    temp_conn->Close();
+    delete temp_conn;
+    if (!buf) {
+        Log("Error: Could not even get ready, bailing out");
+        return;
+    }
 
     auto pkt = messages::GetPacket(buf);
     if (pkt->message_type() != messages::Message_ReadyForYou) {
-        Log("Error: Didn't get ReadyForYou, got %s", EnumNameMessage(pkt->message_type()));
+        Log("Error: didn't get ReadyForYou, got %s", EnumNameMessage(pkt->message_type()));
         delete[] buf;
         return;
     }
@@ -486,38 +422,28 @@ void Init() {
         auto rfy = pkt->message_as_ReadyForYou();
         pipe_path = rfy->pipe()->str();
         Log("Second pipe path is '%s'", pipe_path.c_str());
-        Connect(pipe_path, true);
+        connection = new Connection(pipe_path);
+        connection->Connect();
+        if (!connection->IsConnected()) {
+            delete connection;
+            connection = nullptr;
+            Log("Error: could not make second connection");
+            return;
+        }
     }
 
     delete[] buf;
 
-    std::thread poll_thread(PollInfile);
-    poll_thread.detach();
-
-    // QueueNextRead();
-
+    new std::thread(PollInfile);
     Log("Connection with capsulerun established!");
 }
 
 void Cleanup() {
     Log("capsule::io cleaning up");
-    if (in_file) {
-        Log("capsule::io closing in_file (sync)");
-        fclose(in_file);
-        Log("capsule::io done closing in_file (sync)");
-        in_file = nullptr;
-    }
-    if (in_file_async) {
-        Log("capsule::io closing in_file (async)");
-        CloseHandle(in_file_async);
-        Log("capsule::io done closing in_file (async)");
-        in_file_async = INVALID_HANDLE_VALUE;
-    }
-    if (out_file) {
-        Log("capsule::io closing out_file");
-        fclose(out_file);
-        Log("capsule::io done closing out_file");
-        out_file = nullptr;
+    if (connection) {
+        connection->Close();
+        delete connection;
+        connection = nullptr;
     }
 }
 

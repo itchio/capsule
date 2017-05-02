@@ -28,6 +28,7 @@ set(libcapsule_SRC
     ${libcapsule_SOURCE_DIR}/logging.cc
     ${libcapsule_SOURCE_DIR}/ensure.cc
     ${libcapsule_SOURCE_DIR}/io.cc
+    ${libcapsule_SOURCE_DIR}/connection.cc
     ${libcapsule_SOURCE_DIR}/capture.cc
     ${libcapsule_SOURCE_DIR}/gl_capture.cc
 )

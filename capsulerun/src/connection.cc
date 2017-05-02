@@ -22,13 +22,11 @@
 #include "connection.h"
 
 #if defined(LAB_LINUX)
-#include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
 #include <unistd.h>   // unlink
 #include <signal.h>   // signal, SIGPIPE
 #elif defined(LAB_MACOS)
-#include <sys/mman.h>
 #include <sys/stat.h> // for mode constants
 #include <fcntl.h>    // for O_* constants
 #include <errno.h>    // for errno
@@ -40,7 +38,7 @@
 #undef WIN32_LEAN_AND_MEAN
 
 #include <io.h>
-#endif // !(LAB_WINDOWS || LAB_MACOS)
+#endif // !(LAB_LINUX || LAB_MACOS)
 
 #include <lab/paths.h>
 
