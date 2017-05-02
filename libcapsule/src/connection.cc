@@ -21,6 +21,7 @@
 
 #include "connection.h"
 
+#include <lab/io.h>
 #include <lab/paths.h>
 #include <lab/strings.h>
 
@@ -113,8 +114,9 @@ struct OutgoingMessage {
   OVERLAPPED overlapped;
   char *buffer;
 };
-#endif
+#endif // LAB_WINDOWS
 
+#if defined(LAB_WINDOWS)
 static void WINAPI WriteComplete(DWORD dwErrorCode,
                                  DWORD dwNumberOfBytesTransfered,
                                  OVERLAPPED *overlapped) {
@@ -123,6 +125,7 @@ static void WINAPI WriteComplete(DWORD dwErrorCode,
   delete[] message->buffer;
   delete message;
 }
+#endif // LAB_WINDOWS
 
 void Connection::Write(const flatbuffers::FlatBufferBuilder &builder) {
   if (!connected_) {
@@ -148,14 +151,17 @@ void Connection::Write(const flatbuffers::FlatBufferBuilder &builder) {
               WriteComplete          /* lpCompletionRoutine */
               );
 #else // LAB_WINDOWS
+  lab::packet::Fwrite(builder, fifo_w_);
 #endif // !LAB_WINDOWS
 }
 
+#if defined(LAB_WINDOWS)
 static void WINAPI ReadComplete(DWORD dwErrorCode,
                                 DWORD dwNumberOfBytesTransfered,
                                 OVERLAPPED *overlapped) {
   Log("Read finished");
 }
+#endif // LAB_WINDOWS
 
 char *Connection::Read() {
   if (!connected_) {
@@ -193,6 +199,7 @@ char *Connection::Read() {
 
   return buf;
 #else // LAB_WINDOWS
+  return lab::packet::Fread(fifo_r_);
 #endif // !LAB_WINDOWS
 }
 
