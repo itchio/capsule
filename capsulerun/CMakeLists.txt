@@ -44,6 +44,7 @@ if(WIN32)
     ${capsulerun_SOURCE_DIR}/windows/wasapi_receiver.cc
     ${capsulerun_SOURCE_DIR}/windows/hotkey.cc
     ${capsulerun_SOURCE_DIR}/windows/executor.cc
+    ${capsulerun_SOURCE_DIR}/windows/relay.c
   )
 endif()
 

@@ -68,6 +68,8 @@ DWORD __declspec(dllexport) CapsuleWindowsInit() {
   GetModuleBaseName(GetCurrentProcess(), nullptr, process_name, MAX_PATH);
   DWORD pid = GetCurrentProcessId();
 
+  atexit(capsule::io::Cleanup);
+
   capsule::Log("capsule warming up for %S (pid %d)", process_name, pid);
   capsule::io::Init();
   capsule::InstallHooks();

@@ -32,14 +32,20 @@ namespace windows {
 
 class Process : public ProcessInterface {
   public:
-    Process(HANDLE process_handle) :
-      process_handle_(process_handle) {};
+    Process(HANDLE process_handle, HANDLE thread_handle, HANDLE out_thread_handle, HANDLE err_thread_handle) :
+      process_handle_(process_handle),
+      thread_handle_(thread_handle),
+      out_thread_handle_(out_thread_handle),
+      err_thread_handle_(err_thread_handle) {};
     ~Process() override;
 
     void Wait(ProcessFate *fate) override;
 
   private:
     HANDLE process_handle_ = INVALID_HANDLE_VALUE;
+    HANDLE thread_handle_ = INVALID_HANDLE_VALUE;
+    HANDLE out_thread_handle_ = INVALID_HANDLE_VALUE;
+    HANDLE err_thread_handle_ = INVALID_HANDLE_VALUE;
 };
 
 class Executor : public ExecutorInterface {

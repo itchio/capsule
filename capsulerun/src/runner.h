@@ -80,6 +80,8 @@ class Runner {
     MainLoop *loop_ = nullptr;
 
     int exit_code_ = 0;
+    bool runner_done_ = false;
+    bool exec_done_ = false;
 };
 
 } // namespace capsule

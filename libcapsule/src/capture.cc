@@ -57,7 +57,8 @@ bool Active () {
 bool TryStart (struct Settings *settings) {
   std::lock_guard<std::mutex> lock(state_mutex);
   if (state.active) {
-    Log("TryStart: already active, ignoring start");
+    Log("TryStart: already active, stopping instead");
+    Stop();
     return false;
   }
 

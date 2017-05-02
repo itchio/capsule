@@ -54,15 +54,6 @@ void Log(const char *format, ...) {
 
   fprintf(logfile, "\n");
   fflush(logfile);
-
-  fprintf(stderr, "[capsule] ");
-
-  va_start(args, format);
-  vfprintf(stderr, format, args);
-  va_end(args);
-
-  fprintf(stderr, "\n");
-  fflush(stderr);
 }
 
 } // namespace capsule

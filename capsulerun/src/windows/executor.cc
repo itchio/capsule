@@ -29,7 +29,10 @@
 
 #include <string>
 
+#include <process.h>
+
 #include "wasapi_receiver.h"
+#include "relay.h"
 #include "../logging.h"
 
 namespace capsule {
@@ -41,6 +44,18 @@ void Process::Wait(ProcessFate *fate) {
   DWORD exit_code;
   GetExitCodeProcess(process_handle_, &exit_code);
   Log("Process::Wait, DWORD exit_code = %d", exit_code);
+
+  CloseHandle(process_handle_);
+  CloseHandle(thread_handle_);
+
+  // Now wait for relay threads
+  Log("Process::Wait, waiting for out...");
+  WaitForSingleObject(out_thread_handle_, 1000);
+  Log("Process::Wait, done waiting for out");
+
+  Log("Process::Wait, waiting for err...");
+  WaitForSingleObject(err_thread_handle_, 1000);
+  Log("Process::Wait, done waiting for err");
 
   fate->status = kProcessStatusExited;
   fate->code = static_cast<int>(exit_code);
@@ -60,13 +75,12 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
   // i.e.: "mydll_x86.dll" will become "mydll_x64.dll" on 64-bit processes.
   std::string libcapsule_path = lab::paths::Join(std::string(args->libpath), "capsule32.dll");
 
-  STARTUPINFOW si;
   PROCESS_INFORMATION pi;
+  ZeroMemory(&pi, sizeof(pi));  
 
+  STARTUPINFOW si;
   ZeroMemory(&si, sizeof(si));  
   si.cb = sizeof(si);
-
-  ZeroMemory(&pi, sizeof(pi));  
 
   auto executable_path_w = lab::strings::ToWide(std::string(args->exec));
   auto libcapsule_path_w = lab::strings::ToWide(libcapsule_path);
@@ -97,12 +111,60 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
   Log("Injecting '%S'", libcapsule_path_w.c_str());
   const char* libcapsule_init_function_name = "CapsuleWindowsInit";
 
+  // handles for stdout/stderr pipe given to child process
+  HANDLE hChildStd_OUT_Rd = NULL;
+  HANDLE hChildStd_OUT_Wr = NULL;
+  HANDLE hChildStd_ERR_Rd = NULL;
+  HANDLE hChildStd_ERR_Wr = NULL;
+
+  si.dwFlags |= STARTF_USESTDHANDLES;
+  createChildPipe(&hChildStd_OUT_Rd, &hChildStd_OUT_Wr);
+  createChildPipe(&hChildStd_ERR_Rd, &hChildStd_ERR_Wr);
+
+  si.hStdOutput = hChildStd_OUT_Wr;
+  si.hStdError = hChildStd_ERR_Wr;
+
+  // relay stdout and stderr in threads
+  HANDLE outThread;
+  HANDLE errThread;
+
+  RelayArgs *outRelayArgs;
+  RelayArgs *errRelayArgs;
+  // int bufsize = 4096;
+  int bufsize = 1;
+
+  {
+    /* Set up stdout and stderr relays */
+    outRelayArgs = (RelayArgs *) calloc(1, sizeof(RelayArgs));
+    outRelayArgs->bufsize = bufsize;
+    outRelayArgs->in = hChildStd_OUT_Rd;
+    outRelayArgs->out = GetStdHandle(STD_OUTPUT_HANDLE);
+    outThread = (HANDLE) _beginthreadex(NULL, 0, relayThread, outRelayArgs, 0, NULL);
+
+    if (!outThread) {
+      Log("Could not create out relay thread");
+      exit(134);
+    }
+
+    errRelayArgs = (RelayArgs *) calloc(1, sizeof(RelayArgs));
+    errRelayArgs->bufsize = bufsize;
+    errRelayArgs->in = hChildStd_ERR_Rd;
+    errRelayArgs->out = GetStdHandle(STD_ERROR_HANDLE);
+    errThread = (HANDLE) _beginthreadex(NULL, 0, relayThread, errRelayArgs, 0, NULL);
+
+    if (!errThread) {
+      Log("Could not create err relay thread");
+      exit(134);
+    }
+  }
+  Log("Set up out & err relay threads");
+
   DWORD err = NktHookLibHelpers::CreateProcessWithDllW(
     (LPCWSTR) executable_path_w.c_str(), // applicationName
     (LPWSTR) command_line_w.c_str(), // commandLine
     NULL, // processAttributes
     NULL, // threadAttributes
-    FALSE, // inheritHandles
+    TRUE, // inheritHandles
     0, // creationFlags
     NULL, // environment
     NULL, // currentDirectory
@@ -120,7 +182,10 @@ ProcessInterface * Executor::LaunchProcess(MainArgs *args) {
     return nullptr;
   }
 
-  return new Process(pi.hProcess);
+  CloseHandle(hChildStd_OUT_Wr);
+  CloseHandle(hChildStd_ERR_Wr);
+
+  return new Process(pi.hProcess, pi.hThread, outThread, errThread);
 }
 
 static audio::AudioReceiver *WasapiReceiverFactory() {

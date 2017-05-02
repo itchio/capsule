@@ -52,7 +52,16 @@ void Runner::Run () {
   loop_->Run();
   Log("Loop finished running!");
 
-  Exit(exit_code_);
+  runner_done_ = true;
+  if (!args_->exec || exec_done_) {
+    Log("Quitting from Runner::Run");
+    Exit(exit_code_);
+  } else {
+    Log("Child still running, waiting...");
+    while (true) {
+      Sleep(1000);
+    }
+  }
 }
 
 void Runner::WaitForChild () {
@@ -73,8 +82,10 @@ void Runner::WaitForChild () {
   } else if (fate.status == kProcessStatusUnknown) {
     Log("Child left in unknown state");
   }
+  exec_done_ = true;
 
-  if ((router_ == nullptr) || (!router_->HadConnections())) {
+  // FIXME: evil (the runner_done_ part)
+  if ((router_ == nullptr) || (!router_->HadConnections()) || runner_done_) {
     // if we haven't connected by this point, we never will:
     // the child doesn't exist anymore.
     // this also works for "disappearing launchers": even the launchers

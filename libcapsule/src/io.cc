@@ -44,6 +44,7 @@ namespace io {
 
 static FILE *out_file = 0;
 static FILE *in_file = 0;
+static HANDLE in_file_async = INVALID_HANDLE_VALUE;
 
 bool frame_locked[capture::kNumBuffers];
 std::mutex frame_locked_mutex;
@@ -57,6 +58,8 @@ int64_t audio_shm_committed_offset = 0;
 int64_t audio_shm_processed_offset = 0;
 
 std::mutex out_mutex;
+std::mutex shm_mutex;
+std::mutex audio_shm_mutex;
 
 static bool IsFrameLocked(int i) {
     std::lock_guard<std::mutex> lock(frame_locked_mutex);
@@ -73,55 +76,50 @@ static void UnlockFrame(int i) {
     frame_locked[i] = false;
 }
 
-static void PollInfile() {
-    while (true) {
-        char *buf = lab::packet::Fread(in_file);
-        if (!buf) {
+static void HandlePacket(char *buf) {
+    auto pkt = messages::GetPacket(buf);
+    switch (pkt->message_type()) {
+        case messages::Message_CaptureStart: {
+            auto cps = pkt->message_as_CaptureStart();
+            Log("poll_infile: received CaptureStart");
+            capture::Settings settings;
+            settings.fps = cps->fps();
+            settings.size_divider = cps->size_divider();
+            settings.gpu_color_conv = cps->gpu_color_conv();
+            Log("poll_infile: capture settings: %d fps, %d divider, %d gpu_color_conv", settings.fps, settings.size_divider, settings.gpu_color_conv);
+            capture::Start(&settings);
             break;
         }
-
-        auto pkt = messages::GetPacket(buf);
-        switch (pkt->message_type()) {
-            case messages::Message_CaptureStart: {
-                auto cps = pkt->message_as_CaptureStart();
-                Log("poll_infile: received CaptureStart");
-                capture::Settings settings;
-                settings.fps = cps->fps();
-                settings.size_divider = cps->size_divider();
-                settings.gpu_color_conv = cps->gpu_color_conv();
-                Log("poll_infile: capture settings: %d fps, %d divider, %d gpu_color_conv", settings.fps, settings.size_divider, settings.gpu_color_conv);
-                capture::Start(&settings);
-                break;
+        case messages::Message_CaptureStop: {
+            Log("poll_infile: received CaptureStop");
+            capture::Stop();
+            if (shm) {
+                std::lock_guard<std::mutex> lock(shm_mutex);
+                delete shm;
+                shm = nullptr;
             }
-            case messages::Message_CaptureStop: {
-                Log("poll_infile: received CaptureStop");
-                capture::Stop();
-                if (shm) {
-                    delete shm;
-                    shm = nullptr;
-                }
-                if (audio_shm) {
-                    delete audio_shm;
-                    audio_shm = nullptr;
-                }
-                break;
+            if (audio_shm) {
+                std::lock_guard<std::mutex> lock(audio_shm_mutex);
+                delete audio_shm;
+                audio_shm = nullptr;
             }
-            case messages::Message_VideoFrameProcessed: {
-                auto vfp = pkt->message_as_VideoFrameProcessed();
-                UnlockFrame(vfp->index());
-                break;
-            }
-            case messages::Message_AudioFramesProcessed: {
-                auto afp = pkt->message_as_AudioFramesProcessed();
-                Log("AudioFramesProcessed: offset %d frames %d", afp->offset(), afp->frames());
-                break;
-            }
-            default:
-                Log("poll_infile: unknown message type %s", EnumNameMessage(pkt->message_type()));
+            break;
         }
-
-        delete[] buf;
+        case messages::Message_VideoFrameProcessed: {
+            auto vfp = pkt->message_as_VideoFrameProcessed();
+            UnlockFrame(vfp->index());
+            break;
+        }
+        case messages::Message_AudioFramesProcessed: {
+            auto afp = pkt->message_as_AudioFramesProcessed();
+            Log("AudioFramesProcessed: offset %d frames %d", afp->offset(), afp->frames());
+            break;
+        }
+        default:
+            Log("poll_infile: unknown message type %s", EnumNameMessage(pkt->message_type()));
     }
+
+    delete[] buf;
 }
 
 void WriteVideoFormat(int width, int height, int format, bool vflip, int64_t pitch) {
@@ -247,8 +245,17 @@ void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size
     flatbuffers::FlatBufferBuilder builder(64);
 
     int64_t offset = (frame_data_size * next_frame_index);
-    char *target = reinterpret_cast<char*>(shm->Data() + offset);
-    memcpy(target, frame_data, frame_data_size);
+
+    {
+        std::lock_guard<std::mutex> lock(shm_mutex);
+        if (!shm) {
+            Log("SHM is gone, not writing video frame");
+            return;
+        }
+
+        char *target = reinterpret_cast<char*>(shm->Data() + offset);
+        memcpy(target, frame_data, frame_data_size);
+    }
 
     auto vfc = messages::CreateVideoFrameCommitted(builder, timestamp,
                                                    next_frame_index);
@@ -266,8 +273,9 @@ void WriteVideoFrame(int64_t timestamp, char *frame_data, size_t frame_data_size
 }
 
 void WriteAudioFrames(char *src_data, int64_t src_frames) {
+    std::lock_guard<std::mutex> lock(audio_shm_mutex);
     if (!audio_shm) {
-        Log("WriteAudioFrames called but no audio_shm, ignoring");
+        Log("Audio SHM is gone, not writing audio frame");
         return;
     }
 
@@ -369,7 +377,7 @@ void WriteSawBackend(messages::Backend backend) {
     }
 }
 
-void Connect(std::string pipe_path) {
+void Connect(std::string pipe_path, bool async_read) {
     {
         Log("Opening write channel...");
         std::string w_path = pipe_path + ".runread";
@@ -378,17 +386,82 @@ void Connect(std::string pipe_path) {
     }
 
     {
-        Log("Opening read channel...");
-        std::string r_path = pipe_path + ".runwrite";
-        in_file = lab::io::Fopen(lab::paths::PipePath(r_path), "rb");
-        Ensure("Opened input file", !!in_file);
+        if (async_read) {
+            Log("Opening read channel (async)...");
+            std::string r_path = pipe_path + ".runwrite";
+            auto pipe_path = lab::paths::PipePath(r_path);
+            auto wide_path = lab::strings::ToWide(pipe_path);
+            in_file_async = CreateFileW(
+                wide_path.c_str(), /* lpFileName */
+                GENERIC_READ, /* dwDesiredAccess */
+                0, /* dwShareMode */
+                nullptr, /* lpSecurityAttributes */
+                OPEN_EXISTING, /* dwCreationDisposition */
+                FILE_FLAG_OVERLAPPED, /* dwFlagsAndAttributes */
+                nullptr /* hTemplateFile */
+            );
+            Ensure("Opened input file", !!in_file_async);
+        } else {
+            Log("Opening read channel (sync)...");
+            std::string r_path = pipe_path + ".runwrite";
+            in_file = lab::io::Fopen(lab::paths::PipePath(r_path), "rb");
+            Ensure("Opened input file", !!in_file);
+        }
     }
+}
+
+char *async_buf = nullptr;
+bool reading_msg_size = true;
+uint32_t msg_size;
+OVERLAPPED overlapped;
+
+static void QueueNextRead();
+
+static void WINAPI ProcessRead(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered,
+                        OVERLAPPED *overlapped) {
+  // TODO: error handling I'm guessing                            
+  if (reading_msg_size) {
+    async_buf = new char[msg_size];
+  } else {
+    HandlePacket(async_buf);
+  }
+  reading_msg_size = !reading_msg_size;
+  QueueNextRead();
+}
+
+static void QueueNextRead() {
+  ReadFileEx(in_file_async,                            /* hFile */
+             reading_msg_size ? ((char*) &msg_size) : async_buf, /* lPBuffer */
+             reading_msg_size ? sizeof(msg_size)
+                              : msg_size, /* nNumberOfBytesToRead */
+             &overlapped,                 /* lpOverlapped */
+             ProcessRead                 /* lpCompletionRoutine */
+             );
+}
+
+static void PollInfile() {
+  ZeroMemory(&overlapped, sizeof(overlapped));
+  QueueNextRead();
+
+  while (true) {
+    SleepEx(INFINITE, true);
+
+    // Log("Doing first fread, in_file = %p", in_file);
+    // char *buf = lab::packet::Fread(in_file);
+    // Log("Done with first fread, buf = %p", buf);
+
+    // if (!buf) {
+    //     break;
+    // }
+
+    // HandlePacket(buf);
+  }
 }
 
 void Init() {
     std::string pipe_path = lab::env::Get("CAPSULE_PIPE_PATH");
     Log("First pipe path is '%s'", pipe_path.c_str());
-    Connect(pipe_path);
+    Connect(pipe_path, false);
 
     Log("Waiting for ready...");
     char *buf = lab::packet::Fread(in_file);
@@ -413,14 +486,39 @@ void Init() {
         auto rfy = pkt->message_as_ReadyForYou();
         pipe_path = rfy->pipe()->str();
         Log("Second pipe path is '%s'", pipe_path.c_str());
-        Connect(pipe_path);
+        Connect(pipe_path, true);
     }
 
     delete[] buf;
 
     std::thread poll_thread(PollInfile);
     poll_thread.detach();
+
+    // QueueNextRead();
+
     Log("Connection with capsulerun established!");
+}
+
+void Cleanup() {
+    Log("capsule::io cleaning up");
+    if (in_file) {
+        Log("capsule::io closing in_file (sync)");
+        fclose(in_file);
+        Log("capsule::io done closing in_file (sync)");
+        in_file = nullptr;
+    }
+    if (in_file_async) {
+        Log("capsule::io closing in_file (async)");
+        CloseHandle(in_file_async);
+        Log("capsule::io done closing in_file (async)");
+        in_file_async = INVALID_HANDLE_VALUE;
+    }
+    if (out_file) {
+        Log("capsule::io closing out_file");
+        fclose(out_file);
+        Log("capsule::io done closing out_file");
+        out_file = nullptr;
+    }
 }
 
 } // namespace io

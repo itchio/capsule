@@ -138,8 +138,6 @@ void MainLoop::Run () {
         }
       }
     }
-
-    Log("MainLoop::Run - deleting buf");
     delete[] buf;
   }
 
