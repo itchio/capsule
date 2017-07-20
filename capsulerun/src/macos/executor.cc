@@ -88,20 +88,19 @@ ProcessInterface *Executor::LaunchProcess(MainArgs *args) {
   struct stat exe_stat;
   int stat_ret = stat(args->exec, &exe_stat);
   if (stat_ret != 0) {
-    Log("Could not access executable (error %d): %s", stat_ret, strerror(stat_ret));
-    return nullptr;
-  }
-
-  if (exe_stat.st_mode & S_IFDIR) {
-    auto exec = bundle::ExecPath(args->exec);
-    if (exec == "") {
-      Log("Cannot launch, exec is neither an executable or a valid app bundle: %s", args->exec);
-      return nullptr;
+    // assume it's in $PATH - so probably not an app bundle
+  } else {
+    if (exe_stat.st_mode & S_IFDIR) {
+      auto exec = bundle::ExecPath(args->exec);
+      if (exec == "") {
+        Log("Cannot launch, exec is neither an executable or a valid app bundle: %s", args->exec);
+        return nullptr;
+      }
+      Log("Launching an app bundle...");
+      char *new_exec = strdup(exec.c_str());
+      args->exec = new_exec;
+      args->exec_argv[0] = new_exec;
     }
-    Log("Launching an app bundle...");
-    char *new_exec = strdup(exec.c_str());
-    args->exec = new_exec;
-    args->exec_argv[0] = new_exec;
   }
 
   pid_t child_pid;
