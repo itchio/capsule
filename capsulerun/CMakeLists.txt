@@ -66,7 +66,11 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   add_definitions(-D__STDC_CONSTANT_MACROS)
 endif()
 
-set(CMAKE_INSTALL_RPATH "\$ORIGIN")
+if(APPLE)
+  set(CMAKE_INSTALL_RPATH "@executable_path/")
+else()
+  set(CMAKE_INSTALL_RPATH "\$ORIGIN")
+endif()
 add_executable(capsulerun ${capsulerun_SRC})
 
 target_link_libraries(capsulerun shoom)

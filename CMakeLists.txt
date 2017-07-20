@@ -84,7 +84,7 @@ if(WIN32)
     message(FATAL_ERROR "Only MSVC is supported on Windows. Sorry!")
   endif()
 elseif(APPLE)
-  set(DEPS_URL ${DEPS_PREFIX}/capsule-deps-darwin-universal.tar.gz)
+  set(DEPS_URL ${DEPS_PREFIX}/capsule-deps-darwin-universal.tar.gz?v=3)
   get_filename_component(FFMPEG_LIBRARY_DIR ${DEPS_DIR}/lib REALPATH)
 
   include(ExternalProject)
