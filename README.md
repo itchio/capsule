@@ -143,6 +143,9 @@ capsulerun supports launching .app bundles and invididual executables. Example u
 /path/to/capsule/build/dist/capsulerun -- path/to/some/Game.app
 ```
 
+**If you can't get `capsulerun` to start from anywhere else than the `dist/capsulerun` directory,
+you may want to use the `scripts/fix-macos-build.js` script. You'll need node.js v8.x or newer.**
+
 ### Building on Windows
 
 Important notes:
