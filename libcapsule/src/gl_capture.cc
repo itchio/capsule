@@ -69,20 +69,25 @@ struct State {
   GLuint                  overlay_vertex_shader;
   GLuint                  overlay_shader_program;
   GLuint                  overlay_pbo;
+
+  int 			  avoid_apple_gl;
 };
 
 static State state = {0};
 
 LibHandle handle;
 
-static inline bool Error(const char *func, const char *str) {
-	GLenum error = _glGetError();
-	if (error != 0) {
-		Log("%s: %s: %lu", func, str, (unsigned long) error);
-		return true;
-	}
+static inline bool ErrorEx(const char *func, const char *str, GLenum error) {
+  if (error != 0) {
+    Log("%s: %s: %lu", func, str, (unsigned long) error);
+    return true;
+  }
 
-	return false;
+  return false;
+}
+
+static inline bool Error(const char *func, const char *str) {
+  return ErrorEx(func, str, _glGetError());
 }
 
 bool EnsureOpengl() {
@@ -288,6 +293,42 @@ static bool InitOverlayTexture(void) {
   return success;
 }
 
+static inline void safeGlGenVertexArrays(GLsizei n, GLuint *buffers) {
+#if defined(LAB_MACOS)
+  if (!state.avoid_apple_gl) {
+    _glGenVertexArrays(n, buffers);
+  } else {
+    _glGenVertexArraysAPPLE(n, buffers);
+    GLenum error = _glGetError();
+    if (error != 0) {
+      Log("Avoiding Apple GL: %d for glGenVertexArraysAPPLE", error);
+      state.avoid_apple_gl = 1;
+      safeGlGenVertexArrays(n, buffers);
+    }
+  }
+#else
+  _glGenVertexArrays(n, buffers);
+#endif // LAB_MACOS
+}
+
+static inline void safeGlBindVertexArray(GLuint buffer) {
+#if defined(LAB_MACOS)
+  if (state.avoid_apple_gl) {
+    _glBindVertexArray(buffer);
+  } else {
+    _glBindVertexArrayAPPLE(buffer);
+    GLenum error = _glGetError();
+    if (error != 0) {
+      Log("Avoiding Apple GL: %d for glBindVertexArrayAPPLE", error);
+      state.avoid_apple_gl = 1;
+      safeGlBindVertexArray(buffer);
+    }
+  }
+#else
+  _glBindVertexArray(buffer);
+#endif // LAB_MACOS
+}
+
 static bool InitOverlayVbo(void) {
   Log("OpenGL vendor: %s", _glGetString(GL_VENDOR));
   Log("OpenGL renderer: %s", _glGetString(GL_RENDERER));
@@ -394,17 +435,9 @@ static bool InitOverlayVbo(void) {
   success = false;
   do {
     DebugLog("Creating overlay vao...");
-#if defined(LAB_MACOS)
-    _glGenVertexArraysAPPLE(1, &state.overlay_vao);
-#else
-    _glGenVertexArrays(1, &state.overlay_vao);
-#endif
+    safeGlGenVertexArrays(1, &state.overlay_vao);
     GLCHECK("vao gen");
-#if defined(LAB_MACOS)
-    _glBindVertexArrayAPPLE(state.overlay_vao);
-#else
-    _glBindVertexArray(state.overlay_vao);
-#endif
+    safeGlBindVertexArray(state.overlay_vao);
     GLCHECK("vao bind");
 
     DebugLog("Creating overlay vbo...");
@@ -480,11 +513,7 @@ static bool InitOverlayVbo(void) {
 #undef GLSHADERCHECK
 #undef GLPROGRAMCHECK
 
-#if defined(LAB_MACOS)
-  _glBindVertexArrayAPPLE(last_vao);
-#else
-  _glBindVertexArray(last_vao);
-#endif
+  safeGlBindVertexArray(last_vao);
   _glBindBuffer(GL_ARRAY_BUFFER, last_vbo);
   _glUseProgram(last_program);
 
@@ -794,11 +823,7 @@ void DrawOverlay() {
       break;
     }
 
-#if defined(LAB_MACOS)
-    _glBindVertexArrayAPPLE(state.overlay_vao);
-#else
-    _glBindVertexArray(state.overlay_vao);
-#endif
+    safeGlBindVertexArray(state.overlay_vao);
     GLCHECK("bind vao");
 
     _glUseProgram(state.overlay_shader_program);
@@ -812,11 +837,7 @@ void DrawOverlay() {
 
   _glBindTexture(GL_TEXTURE_2D, last_tex);
 
-#if defined(LAB_MACOS)
-  _glBindVertexArrayAPPLE(last_vao);
-#else
-  _glBindVertexArray(last_vao);
-#endif
+  safeGlBindVertexArray(last_vao);
 
   _glBindBuffer(GL_ARRAY_BUFFER, last_vbo);
   _glUseProgram(last_program);
