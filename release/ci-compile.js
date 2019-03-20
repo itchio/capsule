@@ -130,7 +130,6 @@ async function ci_compile_darwin() {
     libName: `libcapsule.dylib`,
     osarch: `darwin-amd64`,
     platform,
-    strip: true,
     test: "DYLD_INSERT_LIBRARIES",
   });
 }
