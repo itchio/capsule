@@ -62,7 +62,7 @@ async function install_rust({name, platform}) {
   $(await $.sh(`"./${name}" --no-modify-path -y`));
 }
 
-async function build_libcapsule({libName, osarch, platform, strip}) {
+async function build_libcapsule({libName, osarch, platform, strip, test}) {
   if (!libName) { throw new Error("missing libName") }
   if (!platform) { throw new Error("missing platform") }
   if (!osarch) { throw new Error("missing osarch") }
@@ -77,6 +77,31 @@ async function build_libcapsule({libName, osarch, platform, strip}) {
     $(await $.sh(`strip "${libFile}"`));
   }
   $(await $.sh(`cp -rf "${libFile}" "compile-artifacts/${osarch}"`));
+
+  if (test) {
+    await $.cd("test", async () => {
+      $(await $.sh(`gcc puts.c -o puts`))
+      let e;
+      try {
+        $(await $.sh(`./puts`));
+      } catch (e2) {
+        e = e2;
+      }
+      if (e) {
+        $.say(`Control test passed (${e.message})`);
+      } else {
+        throw new Error(`Expected crash, got none`);
+      }
+      $(await $.sh(`CAPSULE_TEST=1 ${test}="${libFile}" ./puts > out.txt`))
+      let expectedOutput = "caught dead beef";
+      let actualOutput = (await $.readFile("out.txt")).trim();
+      if (actualOutput == expectedOutput) {
+        $.say(`Injection test passed!`);
+      } else {
+        throw new Error(`Injection test failed:\nexpected\n${expectedOutput}\ngot:${actualOutput}`);
+      }
+    })
+  }
 }
 
 async function ci_compile_windows () {
@@ -106,6 +131,7 @@ async function ci_compile_darwin() {
     osarch: `darwin-amd64`,
     platform,
     strip: true,
+    test: "DYLD_INSERT_LIBRARIES",
   });
 }
 
@@ -120,6 +146,7 @@ async function ci_compile_linux(arch) {
     osarch: `linux-${arch}`,
     platform,
     strip: true,
+    test: "LD_PRELOAD",
   });
 }
 
