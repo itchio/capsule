@@ -72,11 +72,11 @@ async function build_libcapsule({libName, osarch, platform, strip}) {
 
   let dest = path.join("compile-artifacts", osarch);
   $(await $.sh(`mkdir -p "compile-artifacts/${osarch}"`));
-  let libPath = `${libPath}/target/${platform}/release/${libName}`;
+  let libFile = `${libPath}/target/${platform}/release/${libName}`;
   if (strip) {
-    $(await $.sh(`strip "${libPath}"`));
+    $(await $.sh(`strip "${libFile}"`));
   }
-  $(await $.sh(`cp -rf "${libPath}" "compile-artifacts/${osarch}"`));
+  $(await $.sh(`cp -rf "${libFile}" "compile-artifacts/${osarch}"`));
 }
 
 async function ci_compile_windows () {

@@ -1,6 +1,7 @@
 /main
 /.multirust
 /.cargo
+/rustup-init*
 *.a
 *.o
 *.so
