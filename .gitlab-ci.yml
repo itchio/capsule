@@ -11,7 +11,7 @@ cache:
 compile-windows:
   stage: build
   tags:
-    - msbuild
+    - windows
   script:
     - node release\ci-compile.js windows
   artifacts:

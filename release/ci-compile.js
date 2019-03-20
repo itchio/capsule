@@ -56,7 +56,7 @@ async function install_rust({name, platform}) {
 
   process.env.CARGO_HOME = path.join(process.cwd(), ".cargo");
   process.env.RUSTUP_HOME = path.join(process.cwd(), ".multirust");
-  process.env.PATH = `${process.cwd()}/cargo/bin:${process.env.PATH}`;
+  process.env.PATH = `${process.cwd()}/.cargo/bin:${process.env.PATH}`;
   $(await $.sh(`curl --fail --output "${name}" "https://static.rust-lang.org/rustup/dist/${platform}/${name}"`));
   $(await $.sh(`chmod +x "${name}"`));
   $(await $.sh(`"./${name}" --no-modify-path -y`));
@@ -105,13 +105,15 @@ async function ci_compile_darwin() {
 }
 
 async function ci_compile_linux(arch) {
+  let platform = `${rustArch(arch)}-unknown-linux-gnu`;
   await install_rust({
     name: `rustup-init`,
-    platform: `${rustArch(arch)}-unknown-linux-gnu`,
+    platform,
   });
   await build_libcapsule({
     libName: `libcapsule.so`,
     osarch: `linux-${arch}`,
+    platform,
   });
 }
 
