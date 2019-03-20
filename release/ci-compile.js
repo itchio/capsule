@@ -62,7 +62,7 @@ async function install_rust({name, platform}) {
   $(await $.sh(`"./${name}" --no-modify-path -y`));
 }
 
-async function build_libcapsule({libName, osarch, platform}) {
+async function build_libcapsule({libName, osarch, platform, strip}) {
   if (!libName) { throw new Error("missing libName") }
   if (!platform) { throw new Error("missing platform") }
   if (!osarch) { throw new Error("missing osarch") }
@@ -72,7 +72,11 @@ async function build_libcapsule({libName, osarch, platform}) {
 
   let dest = path.join("compile-artifacts", osarch);
   $(await $.sh(`mkdir -p "compile-artifacts/${osarch}"`));
-  $(await $.sh(`cp -rf "${libPath}/target/${platform}/release/${libName}" "compile-artifacts/${osarch}"`));
+  let libPath = `${libPath}/target/${platform}/release/${libName}`;
+  if (strip) {
+    $(await $.sh(`strip "${libPath}"`));
+  }
+  $(await $.sh(`cp -rf "${libPath}" "compile-artifacts/${osarch}"`));
 }
 
 async function ci_compile_windows () {
@@ -101,6 +105,7 @@ async function ci_compile_darwin() {
     libName: `libcapsule.dylib`,
     osarch: `darwin-amd64`,
     platform,
+    strip: true,
   });
 }
 
@@ -114,6 +119,7 @@ async function ci_compile_linux(arch) {
     libName: `libcapsule.so`,
     osarch: `linux-${arch}`,
     platform,
+    strip: true,
   });
 }
 
