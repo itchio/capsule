@@ -2,6 +2,12 @@
 stages:
   - build
 
+cache:
+  key: single-cache
+  paths:
+    - .multirust
+    - .cargo
+
 compile-windows:
   stage: build
   tags:

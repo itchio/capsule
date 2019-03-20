@@ -1,4 +1,6 @@
 /main
+/.multirust
+/.cargo
 *.a
 *.o
 *.so

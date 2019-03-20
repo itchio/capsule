@@ -81,6 +81,8 @@ Things that are *out of scope* (ie. that capsule will not officially support):
 
 ## Build instructions
 
+**This project is being ported to Go & Rust. These instructions are OUTDATED.**
+
 capsule is a (set of) CMake projects, which handles things like:
 
   * Download some dependencies
