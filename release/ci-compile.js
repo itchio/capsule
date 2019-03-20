@@ -18,7 +18,26 @@ function ci_compile (args) {
     arch = args[1];
   }
 
-  $.say(`Compiling ${$.app_name()}`)
+  $.say(`Compiling ${$.app_name()} (v2)`)
+  switch (os) {
+    case 'windows': {
+      ci_compile_windows_v2()
+      break
+    }
+    case 'darwin': {
+      ci_compile_darwin_v2()
+      break
+    }
+    case 'linux': {
+      ci_compile_linux_v2(arch)
+      break
+    }
+    default: {
+      throw new Error(`Unsupported os ${os}`)
+    }
+  }
+
+  $.say(`Compiling ${$.app_name()} (legacy)`)
 
   switch (os) {
     case 'windows': {
@@ -37,6 +56,18 @@ function ci_compile (args) {
       throw new Error(`Unsupported os ${os}`)
     }
   }
+}
+
+function ci_compile_windows_v2 () {
+  throw new Error(`stub!`);
+}
+
+function ci_compile_darwin_v2 () {
+  throw new Error(`stub!`);
+}
+
+function ci_compile_linux_v2 (arch) {
+  throw new Error(`stub!`);
 }
 
 function ci_compile_windows () {
@@ -71,6 +102,7 @@ function ci_compile_windows () {
     $($.cmd(['xcopy', '/y', '/i', spec.dir + '\\dist\\*', 'compile-artifacts\\' + spec.osarch]))
   }
 }
+
 
 function ci_compile_darwin () {
   $.sh(`rm -rf compile-artifacts`)
