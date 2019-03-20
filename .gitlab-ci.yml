@@ -13,7 +13,7 @@ compile-windows:
   tags:
     - windows
   script:
-    - node release\ci-compile.js windows
+    - node release/ci-compile.js windows
   artifacts:
     paths:
       - compile-artifacts
