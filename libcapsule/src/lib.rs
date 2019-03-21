@@ -8,6 +8,8 @@ extern crate lazy_static;
 extern crate libc_print;
 extern crate detour;
 
+mod linux_gl_hooks;
+mod types;
 use detour::RawDetour;
 
 #[cfg(target_os = "macos")]
@@ -25,6 +27,10 @@ fn ctor() {
         }
         Err(_) => {
             libc_println!("thanks for flying capsule on {}", CURRENT_PLATFORM);
+            #[cfg(target_os = "linux")]
+            {
+                linux_gl_hooks::initialize()
+            }
         }
     }
 }

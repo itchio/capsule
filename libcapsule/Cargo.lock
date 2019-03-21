@@ -87,6 +87,7 @@ dependencies = [
  "ctor 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "detour 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.50 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc-print 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "widestring 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
