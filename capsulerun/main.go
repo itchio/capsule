@@ -6,7 +6,24 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"gopkg.in/alecthomas/kingpin.v2"
 )
+
+var (
+	app     = kingpin.New("capsulerun", "Your very own libcapsule injector")
+	version = "master"
+)
+
+var cli = struct {
+	exec string
+	args []string
+}{}
+
+func init() {
+	app.Arg("exec", "The executable to run").Required().StringVar(&cli.exec)
+	app.Arg("args", "Arguments to pass to the executable").StringsVar(&cli.args)
+}
 
 func must(err error) {
 	if err != nil {
@@ -15,9 +32,16 @@ func must(err error) {
 }
 
 func main() {
-	// validate arguments
-	if len(os.Args) < 2 {
-		log.Fatalf("Usage: capsulerun %s", os.Args[0])
+	app.Version(version)
+	app.VersionFlag.Short('V')
+	_, err := app.Parse(os.Args[1:])
+	if err != nil {
+		ctx, _ := app.ParseContext(os.Args[1:])
+		if ctx != nil {
+			app.FatalUsageContext(ctx, "%s\n", err.Error())
+		} else {
+			app.FatalUsage("%s\n", err.Error())
+		}
 	}
 
 	// locate libcapsule (next to capsulerun)
@@ -31,7 +55,7 @@ func main() {
 	must(err)
 
 	// make sure target executable exists
-	execPath := os.Args[1]
+	execPath := cli.exec
 	execPath, err = exec.LookPath(execPath)
 	must(err)
 	_, err = os.Stat(execPath)
@@ -47,6 +71,10 @@ func main() {
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
+	cmd.Args = append(
+		[]string{execPath},
+		cli.args...,
+	)
 	must(cmd.Start())
 	must(cmd.Wait())
 }
