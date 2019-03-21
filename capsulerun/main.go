@@ -32,6 +32,8 @@ func main() {
 
 	// make sure target executable exists
 	execPath := os.Args[1]
+	execPath, err = exec.LookPath(execPath)
+	must(err)
 	_, err = os.Stat(execPath)
 	must(err)
 
