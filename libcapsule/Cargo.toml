@@ -20,7 +20,7 @@ libc = "0.2.50"
 # allocation-free CString literals
 cstr-macro = "0.1.0"
 # terribly naughty identifier manipulation
-paste = "0.1.4"
+paste = "0.1.5"
 
 [lib]
 # cdylibs don't depend on the "Rust runtime", they're just .so/.dylib/.dlls
