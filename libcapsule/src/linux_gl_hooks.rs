@@ -1,9 +1,10 @@
 #![cfg(target_os = "linux")]
+#![link(name = "dl")]
 
 use detour::RawDetour;
 use libc::{c_char, c_int, c_void};
 use std::ffi::CString;
-use std::sync::{Mutex, Once};
+use std::sync::Once;
 use std::time::SystemTime;
 
 ///////////////////////////////////////////
@@ -21,9 +22,7 @@ pub const RTLD_DEFAULT: *const c_void = 0x00000 as *const c_void;
 #[allow(unused)]
 pub const RTLD_NEXT: *const c_void = (-1 as isize) as *const c_void;
 
-#[link(name = "dl")]
 extern "C" {
-    pub fn dlopen(filename: *const c_char, flags: c_int) -> *const c_void;
     pub fn dlsym(handle: *const c_void, symbol: *const c_char) -> *const c_void;
 }
 
@@ -37,7 +36,7 @@ struct LibHandle {
 unsafe impl std::marker::Sync for LibHandle {}
 
 lazy_static! {
-    static ref libGLHandle: LibHandle = unsafe {
+    static ref libGLHandle: LibHandle = {
         let handle = dlopen__next(cstr!("libGL.so"), RTLD_LAZY);
         if handle.is_null() {
             panic!("could not dlopen libGL.so")
@@ -75,48 +74,34 @@ lazy_static! {
 // dlopen hook
 ///////////////////////////////////////////
 
-lazy_static! {
-    static ref dlopen__hook: Mutex<RawDetour> = unsafe {
-        let mut detour = RawDetour::new(dlopen as *const (), dlopen__hooked as *const ()).unwrap();
-        detour.enable().unwrap();
-        Mutex::new(detour)
-    };
-    static ref dlopen__next: unsafe extern "C" fn(filename: *const c_char, flags: c_int) -> *const c_void =
-        unsafe { std::mem::transmute(dlopen__hook.lock().unwrap().trampoline()) };
-}
-
-unsafe extern "C" fn dlopen__hooked(filename: *const c_char, flags: c_int) -> *const c_void {
-    let res = dlopen__next(filename, flags);
-    hookLibGLIfNeeded();
-    res
+hook_extern! {
+    fn dlopen(filename: *const c_char, flags: c_int) -> *const c_void {
+        let res = dlopen__next(filename, flags);
+        hookLibGLIfNeeded();
+        res
+    }
 }
 
 ///////////////////////////////////////////
 // glXSwapBuffers hook
 ///////////////////////////////////////////
 
-lazy_static! {
-    static ref glXSwapBuffers__hook: Mutex<RawDetour> = unsafe {
-        let mut detour = RawDetour::new(
-            getProcAddressARB(&"glXSwapBuffers"),
-            glXSwapBuffers__hooked as *const (),
-        )
-        .unwrap();
-        detour.enable().unwrap();
-        Mutex::new(detour)
-    };
-    static ref glXSwapBuffers__next: unsafe extern "C" fn(display: *const c_void, drawable: *const c_void) -> () =
-        unsafe { std::mem::transmute(glXSwapBuffers__hook.lock().unwrap().trampoline()) };
-}
-
-unsafe extern "C" fn glXSwapBuffers__hooked(display: *const c_void, drawable: *const c_void) -> () {
-    libc_println!(
-        "[{:08}] swapping buffers! (display=0x{:X}, drawable=0x{:X})",
-        startTime.elapsed().unwrap().as_millis(),
-        display as isize,
-        drawable as isize
-    );
-    glXSwapBuffers__next(display, drawable)
+hook_dynamic! {
+    getProcAddressARB => {
+        fn glXSwapBuffers(display: *const c_void, drawable: *const c_void) -> () {
+            libc_println!(
+                "[{:08}] swapping buffers! (display=0x{:X}, drawable=0x{:X})",
+                startTime.elapsed().unwrap().as_millis(),
+                display as isize,
+                drawable as isize
+            );
+            glXSwapBuffers__next(display, drawable)
+        }
+        fn glXQueryVersion(display: *const c_void, major: *mut c_int, minor: *mut c_int) -> c_int {
+            // useless hook, just here to demonstrate we can do multiple hooks if needed
+            glXQueryVersion__next(display, major, minor)
+        }
+    }
 }
 
 /// Returns true if libGL.so was loaded in this process,
