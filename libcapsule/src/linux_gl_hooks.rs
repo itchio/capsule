@@ -51,18 +51,26 @@ unsafe fn getLibGLSymbol(rustName: &str) -> *const () {
     addr as *const ()
 }
 
-unsafe fn getProcAddressARB(rustName: &str) -> *const () {
-    let getProcName = CString::new("glXGetProcAddressARB").unwrap();
-    let getProcAddr = dlsym(libGLHandle.addr, getProcName.as_ptr());
-    if getProcAddr.is_null() {
-        panic!(format!("dlsym({}) = NULL!", rustName))
-    }
-    let getProc: unsafe extern "C" fn(name: *const c_char) -> *const c_void =
-        std::mem::transmute(getProcAddr);
+///////////////////////////////////////////
+// glXGetProcAddressARB wrapper
+///////////////////////////////////////////
 
+lazy_static! {
+    static ref glXGetProcAddressARB: unsafe extern "C" fn(name: *const c_char) -> *const c_void = unsafe {
+        let rustName = "glXGetProcAddressARB";
+        let name = CString::new(rustName).unwrap();
+        let addr = dlsym(libGLHandle.addr, name.as_ptr());
+        if addr.is_null() {
+            panic!(format!("dlsym({}) = NULL!", rustName))
+        }
+        std::mem::transmute(addr)
+    };
+}
+
+unsafe fn getProcAddressARB(rustName: &str) -> *const () {
     let name = CString::new(rustName).unwrap();
-    let addr = getProc(name.as_ptr());
-    libc_println!("dlsym({}) = {:x}", rustName, addr as isize);
+    let addr = glXGetProcAddressARB(name.as_ptr());
+    libc_println!("glXGetProcAddressARB({}) = {:x}", rustName, addr as isize);
     addr as *const ()
 }
 
@@ -105,7 +113,7 @@ unsafe extern "C" fn glXGetProcAddressARB__hooked(name: *const c_char) -> *const
 lazy_static! {
     static ref glXSwapBuffers__hook: Mutex<RawDetour> = unsafe {
         let mut detour = RawDetour::new(
-            getLibGLSymbol(&"glXSwapBuffers"),
+            getProcAddressARB(&"glXSwapBuffers"), // N.B: used to be a call getLibGLSymbol
             glXSwapBuffers__hooked as *const (),
         )
         .unwrap();
@@ -118,7 +126,7 @@ lazy_static! {
 
 unsafe extern "C" fn glXSwapBuffers__hooked(display: *const c_void, drawable: *const c_void) -> () {
     libc_println!(
-        "[{:08}] swapping bcffers! (display=0x{:X}, drawable=0x{:X})",
+        "[{:08}] swapping buffers! (display=0x{:X}, drawable=0x{:X})",
         startTime.elapsed().unwrap().as_millis(),
         display as isize,
         drawable as isize
