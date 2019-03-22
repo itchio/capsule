@@ -1,6 +1,8 @@
 #![allow(non_upper_case_globals, non_snake_case)]
 
 #[macro_use]
+extern crate cstr_macro;
+#[macro_use]
 extern crate ctor;
 #[macro_use]
 extern crate lazy_static;

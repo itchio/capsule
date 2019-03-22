@@ -2,8 +2,8 @@
 
 use detour::RawDetour;
 use libc::{c_char, c_int, c_void};
-use std::ffi::{CStr, CString};
-use std::sync::Mutex;
+use std::ffi::CString;
+use std::sync::{Mutex, Once};
 use std::time::SystemTime;
 
 ///////////////////////////////////////////
@@ -38,23 +38,12 @@ unsafe impl std::marker::Sync for LibHandle {}
 
 lazy_static! {
     static ref libGLHandle: LibHandle = unsafe {
-        let libGLName = CString::new("libGL.so").unwrap();
-        let handle = dlopen(libGLName.as_ptr(), RTLD_LAZY);
+        let handle = dlopen__next(cstr!("libGL.so"), RTLD_LAZY);
         if handle.is_null() {
             panic!("could not dlopen libGL.so")
         }
         LibHandle { addr: handle }
     };
-}
-
-unsafe fn getLibGLSymbol(rustName: &str) -> *const () {
-    let name = CString::new(rustName).unwrap();
-    let addr = dlsym(libGLHandle.addr, name.as_ptr());
-    if addr.is_null() {
-        panic!(format!("dlsym({}) = NULL!", rustName))
-    }
-    libc_println!("dlsym({}) = {:x}", rustName, addr as isize);
-    addr as *const ()
 }
 
 ///////////////////////////////////////////
@@ -63,11 +52,9 @@ unsafe fn getLibGLSymbol(rustName: &str) -> *const () {
 
 lazy_static! {
     static ref glXGetProcAddressARB: unsafe extern "C" fn(name: *const c_char) -> *const c_void = unsafe {
-        let rustName = "glXGetProcAddressARB";
-        let name = CString::new(rustName).unwrap();
-        let addr = dlsym(libGLHandle.addr, name.as_ptr());
+        let addr = dlsym(libGLHandle.addr, cstr!("glXGetProcAddressARB"));
         if addr.is_null() {
-            panic!(format!("dlsym({}) = NULL!", rustName))
+            panic!("libGL.so does not contain glXGetProcAddressARB")
         }
         std::mem::transmute(addr)
     };
@@ -85,13 +72,33 @@ lazy_static! {
 }
 
 ///////////////////////////////////////////
+// dlopen hook
+///////////////////////////////////////////
+
+lazy_static! {
+    static ref dlopen__hook: Mutex<RawDetour> = unsafe {
+        let mut detour = RawDetour::new(dlopen as *const (), dlopen__hooked as *const ()).unwrap();
+        detour.enable().unwrap();
+        Mutex::new(detour)
+    };
+    static ref dlopen__next: unsafe extern "C" fn(filename: *const c_char, flags: c_int) -> *const c_void =
+        unsafe { std::mem::transmute(dlopen__hook.lock().unwrap().trampoline()) };
+}
+
+unsafe extern "C" fn dlopen__hooked(filename: *const c_char, flags: c_int) -> *const c_void {
+    let res = dlopen__next(filename, flags);
+    hookLibGLIfNeeded();
+    res
+}
+
+///////////////////////////////////////////
 // glXSwapBuffers hook
 ///////////////////////////////////////////
 
 lazy_static! {
     static ref glXSwapBuffers__hook: Mutex<RawDetour> = unsafe {
         let mut detour = RawDetour::new(
-            getProcAddressARB(&"glXSwapBuffers"), // N.B: used to be a call getLibGLSymbol
+            getProcAddressARB(&"glXSwapBuffers"),
             glXSwapBuffers__hooked as *const (),
         )
         .unwrap();
@@ -112,13 +119,31 @@ unsafe extern "C" fn glXSwapBuffers__hooked(display: *const c_void, drawable: *c
     glXSwapBuffers__next(display, drawable)
 }
 
+/// Returns true if libGL.so was loaded in this process,
+/// either by ld-linux on startup (if linked with -lGL),
+/// or by dlopen() afterwards.
+unsafe fn hasLibGL() -> bool {
+    // RTLD_NOLOAD lets us check if a library is already loaded.
+    // we never need to dlclose() it, because we don't own it.
+    !dlopen__next(cstr!("libGL.so"), RTLD_NOLOAD | RTLD_LAZY).is_null()
+}
+
+static HOOK_LIBGL_ONCE: Once = Once::new();
+
+/// If libGL.so was loaded, and only once in the lifetime
+/// of this process, hook libGL functions for libcapsule usage.
+unsafe fn hookLibGLIfNeeded() {
+    if hasLibGL() {
+        HOOK_LIBGL_ONCE.call_once(|| {
+            libc_println!("libGL usage detected, hooking libGL");
+            lazy_static::initialize(&glXSwapBuffers__hook);
+        })
+    }
+}
+
 pub fn initialize() {
     unsafe {
-        let name = CString::new("libGL.so").unwrap();
-        let addr = dlopen(name.as_ptr(), RTLD_NOLOAD | RTLD_LAZY);
-        if !addr.is_null() {
-            libc_println!("linked against libGL.so, hooking!");
-            lazy_static::initialize(&glXSwapBuffers__hook);
-        }
+        lazy_static::initialize(&dlopen__hook);
+        hookLibGLIfNeeded()
     }
 }

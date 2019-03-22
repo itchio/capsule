@@ -1,5 +1,4 @@
-#[macro_export]
-macro_rules! detour_hook {
+macro_rules! hook {
     ($(fn $real_fn:ident($($v:ident : $t:ty),*) -> $r:ty $body:block)+) => {
         $(
             paste::item! {
