@@ -1,21 +1,28 @@
-macro_rules! hook {
+#[macro_export]
+macro_rules! hook_extern {
     ($(fn $real_fn:ident($($v:ident : $t:ty),*) -> $r:ty $body:block)+) => {
         $(
             paste::item! {
-                const_cstr! {
-                    [<$real_fn __name>] = stringify!($real_fn);
-                }
-
                 lazy_static! {
-                    pub static ref [<$real_fn __next>]: extern "C" fn ($($v: $t),*) -> $r = unsafe {
-                        let sym = libc::dlsym(libc::RTLD_NEXT, [<$real_fn __name>].as_ptr());
-                        ::std::mem::transmute(sym)
+                    static ref [<$real_fn __hook>]: std::sync::Mutex<detour::RawDetour> = unsafe {
+                        let mut detour = RawDetour::new(
+                            linux_gl_hooks::dlsym(
+                                linux_gl_hooks::RTLD_DEFAULT,
+                                cstr!(stringify!($real_fn))
+                            ) as *const(),
+                            $real_fn as *const ()
+                        ).unwrap();
+                        detour.enable().unwrap();
+                        std::sync::Mutex::new(detour)
+                    };
+                    static ref [<$real_fn __next>]:
+                            extern "C" fn ($($v: $t),*) -> $r = unsafe {
+                        ::std::mem::transmute([<$real_fn __hook>].lock().unwrap().trampoline())
                     };
                 }
             }
 
-            #[no_mangle]
-            pub unsafe extern "C" fn $real_fn ($($v: $t),*) -> $r {
+            unsafe extern "C" fn $real_fn ($($v: $t),*) -> $r {
                 $body
             }
         )+

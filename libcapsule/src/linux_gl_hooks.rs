@@ -11,15 +11,15 @@ use std::time::SystemTime;
 ///////////////////////////////////////////
 
 #[allow(unused)]
-const RTLD_LAZY: c_int = 0x00001;
+pub const RTLD_LAZY: c_int = 0x00001;
 #[allow(unused)]
-const RTLD_NOW: c_int = 0x00002;
+pub const RTLD_NOW: c_int = 0x00002;
 #[allow(unused)]
-const RTLD_NOLOAD: c_int = 0x0004;
+pub const RTLD_NOLOAD: c_int = 0x0004;
 #[allow(unused)]
-const RTLD_DEFAULT: *const c_void = 0x00000 as *const c_void;
+pub const RTLD_DEFAULT: *const c_void = 0x00000 as *const c_void;
 #[allow(unused)]
-const RTLD_NEXT: *const c_void = (-1 as isize) as *const c_void;
+pub const RTLD_NEXT: *const c_void = (-1 as isize) as *const c_void;
 
 #[link(name = "dl")]
 extern "C" {

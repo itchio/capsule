@@ -10,8 +10,11 @@ extern crate lazy_static;
 extern crate libc_print;
 extern crate detour;
 
+use libc::c_char;
+
+#[macro_use]
+mod hook;
 mod linux_gl_hooks;
-mod types;
 use detour::RawDetour;
 
 #[cfg(target_os = "macos")]
@@ -37,24 +40,34 @@ fn ctor() {
     }
 }
 
-extern "C" {
-    pub fn puts(ptr: *const u8) -> ();
-}
-
-unsafe extern "C" fn puts__hooked(ptr: *const u8) {
-    if ptr == (0xDEADBEEF as *const u8) {
-        libc_println!("caught dead beef");
-        return;
+hook_extern! {
+    fn puts(ptr: *const c_char) -> () {
+        if ptr == 0xDEADBEEF as *const c_char {
+            libc_println!("caught dead beef");
+            return;
+        }
+        puts__next(ptr)
     }
-    puts__next(ptr)
 }
 
-lazy_static! {
-    static ref puts__hook: std::sync::Mutex<RawDetour> = unsafe {
-        let mut detour = RawDetour::new(puts as *const (), puts__hooked as *const ()).unwrap();
-        detour.enable().unwrap();
-        std::sync::Mutex::new(detour)
-    };
-    static ref puts__next: unsafe extern "C" fn(ptr: *const u8) -> () =
-        unsafe { std::mem::transmute(puts__hook.lock().unwrap().trampoline()) };
-}
+// extern "C" {
+//     pub fn puts(ptr: *const u8) -> ();
+// }
+
+// unsafe extern "C" fn puts__hooked(ptr: *const u8) {
+//     if ptr == (0xDEADBEEF as *const u8) {
+//         libc_println!("caught dead beef");
+//         return;
+//     }
+//     puts__next(ptr)
+// }
+
+// lazy_static! {
+//     static ref puts__hook: std::sync::Mutex<RawDetour> = unsafe {
+//         let mut detour = RawDetour::new(puts as *const (), puts__hooked as *const ()).unwrap();
+//         detour.enable().unwrap();
+//         std::sync::Mutex::new(detour)
+//     };
+//     static ref puts__next: unsafe extern "C" fn(ptr: *const u8) -> () =
+//         unsafe { std::mem::transmute(puts__hook.lock().unwrap().trampoline()) };
+// }
