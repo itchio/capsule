@@ -14,6 +14,12 @@ use std::time::SystemTime;
 const RTLD_LAZY: c_int = 0x00001;
 #[allow(unused)]
 const RTLD_NOW: c_int = 0x00002;
+#[allow(unused)]
+const RTLD_NOLOAD: c_int = 0x0004;
+#[allow(unused)]
+const RTLD_DEFAULT: *const c_void = 0x00000 as *const c_void;
+#[allow(unused)]
+const RTLD_NEXT: *const c_void = (-1 as isize) as *const c_void;
 
 #[link(name = "dl")]
 extern "C" {
@@ -79,34 +85,6 @@ lazy_static! {
 }
 
 ///////////////////////////////////////////
-// glXGetProcAddressARB hook
-///////////////////////////////////////////
-
-lazy_static! {
-    static ref glXGetProcAddressARB__hook: Mutex<RawDetour> = unsafe {
-        let mut detour = RawDetour::new(
-            getLibGLSymbol(&"glXGetProcAddressARB"),
-            glXGetProcAddressARB__hooked as *const (),
-        )
-        .unwrap();
-        detour.enable().unwrap();
-        Mutex::new(detour)
-    };
-    static ref glXGetProcAddressARB__next: unsafe extern "C" fn(name: *const c_char) -> *const c_void =
-        unsafe { std::mem::transmute(glXGetProcAddressARB__hook.lock().unwrap().trampoline()) };
-}
-
-unsafe extern "C" fn glXGetProcAddressARB__hooked(name: *const c_char) -> *const c_void {
-    let rustName = match CStr::from_ptr(name).to_str() {
-        Ok(x) => x,
-        _ => "<nil>",
-    };
-    let result = glXGetProcAddressARB__next(name);
-    libc_println!("getProcAddressARB({}) = {:x}", rustName, result as isize,);
-    result
-}
-
-///////////////////////////////////////////
 // glXSwapBuffers hook
 ///////////////////////////////////////////
 
@@ -135,6 +113,12 @@ unsafe extern "C" fn glXSwapBuffers__hooked(display: *const c_void, drawable: *c
 }
 
 pub fn initialize() {
-    lazy_static::initialize(&glXSwapBuffers__hook);
-    lazy_static::initialize(&glXGetProcAddressARB__hook);
+    unsafe {
+        let name = CString::new("libGL.so").unwrap();
+        let addr = dlopen(name.as_ptr(), RTLD_NOLOAD | RTLD_LAZY);
+        if !addr.is_null() {
+            libc_println!("linked against libGL.so, hooking!");
+            lazy_static::initialize(&glXSwapBuffers__hook);
+        }
+    }
 }
