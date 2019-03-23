@@ -1,6 +1,6 @@
 # capsule
 
-capsule augments any game so that pressing a key records a video+audio clip. Those clips
+Capsule augments any game so that pressing a KEY, records a video+audio clip. Those clips
 can be easily shared later, see [this tweet](https://twitter.com/moonscript/status/846061609009143809) for example.
 
 It's being developed mainly for integration with the [itch.io app](https://itch.io/app),
@@ -115,11 +115,11 @@ capsulerun usage:
 /path/to/capsule/build64/dist/capsulerun -- path/to/some/game.x86_64
 ```
 
-If nothing's happening, the game isn't using OpenGL, you've got the wrong capsule architecture
+If nothing is happening, the game isn't using OpenGL, you've got the wrong capsule architecture
 (64-bit for a 32-bit game for example), or there's something capsule doesn't support yet.
 
-NB: Launcher scripts may give you a bit of trouble at the moment, as capsulerun will establish
-a connection with the shell and not the game, which will fail. This will be addressed later.
+NB: Launcher scripts may fail and give you a bit of trouble at the moment, as capsulerun will establish
+a connection with the shell and not the game. This will be addressed later.
 
 ### Building on macOS
 
@@ -127,7 +127,7 @@ Pretty much the same as Linux, except you don't need to compile x264 & ffmpeg yo
 a stripped-down home-cooked universal build will be downloaded by cmake.
 
 The resulting capsulerun & libcapsule are universal, which means there's no separate
-32-bit/64-bit build processes and they should work with every app, no matter what their architecture.
+32-bit/64-bit build processes and they should work with every app, no matter what architecture.
 
 Example build:
 
