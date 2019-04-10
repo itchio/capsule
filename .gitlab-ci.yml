@@ -5,7 +5,6 @@ stages:
 cache:
   key: single-cache
   paths:
-    - .multirust
     - .cargo
 
 compile-windows:
