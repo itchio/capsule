@@ -2,10 +2,18 @@
 #![link(name = "dl")]
 
 use detour::RawDetour;
-use libc::{c_char, c_int, c_void};
+use libc::{c_char, c_int, c_uint, c_void};
 use std::ffi::CString;
 use std::sync::Once;
 use std::time::SystemTime;
+
+type GLint = c_int;
+type GLsizei = c_int;
+type GLenum = c_uint;
+type GLvoid = c_void;
+
+const GL_RGBA: GLenum = 0x1908;
+const GL_UNSIGNED_BYTE: GLenum = 0x1401;
 
 ///////////////////////////////////////////
 // libdl definition & link instructions
@@ -95,6 +103,9 @@ hook_dynamic! {
                 display as isize,
                 drawable as isize
             );
+
+            capture_gl_frame();
+
             glXSwapBuffers__next(display, drawable)
         }
         fn glXQueryVersion(display: *const c_void, major: *mut c_int, minor: *mut c_int) -> c_int {
@@ -102,6 +113,18 @@ hook_dynamic! {
             glXQueryVersion__next(display, major, minor)
         }
     }
+}
+
+lazy_static! {
+    static ref glReadPixels: unsafe extern "C" fn(
+        x: GLint,
+        y: GLint,
+        width: GLsizei,
+        height: GLsizei,
+        format: GLenum,
+        _type: GLenum,
+        data: *mut GLvoid,
+    ) = unsafe { std::mem::transmute(getProcAddressARB("glReadPixels")) };
 }
 
 /// Returns true if libGL.so was loaded in this process,
@@ -130,5 +153,62 @@ pub fn initialize() {
     unsafe {
         lazy_static::initialize(&dlopen__hook);
         hookLibGLIfNeeded()
+    }
+}
+
+lazy_static! {
+    static ref frame_buffer: Vec<u8> = {
+        let num_bytes = (1920 * 1080 * 4) as usize;
+        let mut data = Vec::<u8>::with_capacity(num_bytes);
+        data.resize(num_bytes, 0);
+        data
+    };
+}
+
+static mut frame_index: i64 = 0;
+
+unsafe fn capture_gl_frame() {
+    let x: GLint = 0;
+    let y: GLint = 0;
+    let width: GLsizei = 400;
+    let height: GLsizei = 400;
+    let bytes_per_pixel: usize = 4;
+    let bytes_per_frame: usize = width as usize * height as usize * bytes_per_pixel;
+
+    glReadPixels(
+        x,
+        y,
+        width,
+        height,
+        GL_RGBA,
+        GL_UNSIGNED_BYTE,
+        std::mem::transmute(frame_buffer.as_ptr()),
+    );
+    let mut num_black = 0;
+    for y in 0..height {
+        for x in 0..width {
+            let i = (y * width + x) as usize;
+            let (r, g, b) = (
+                frame_buffer[i * 4],
+                frame_buffer[i * 4 + 1],
+                frame_buffer[i * 4 + 2],
+            );
+            if r == 0 && g == 0 && b == 0 {
+                num_black += 1;
+            }
+        }
+    }
+    libc_println!("[frame {}] {} black pixels", frame_index, num_black);
+    frame_index += 1;
+
+    if frame_index < 200 {
+        use std::fs::File;
+        use std::io::prelude::*;
+
+        let name = format!("frame-{}x{}-{}.raw", width, height, frame_index);
+        let mut file = File::create(&name).unwrap();
+        file.write_all(&frame_buffer.as_slice()[..bytes_per_frame])
+            .unwrap();
+        libc_println!("{} written", name)
     }
 }
