@@ -7,18 +7,39 @@ pub use self::types::*;
 
 type GetProcAddress = unsafe fn(gl_func_name: &str) -> *const ();
 
-pub struct GLFunctions {
-    pub glReadPixels: unsafe extern "C" fn(
-        x: GLint,
-        y: GLint,
-        width: GLsizei,
-        height: GLsizei,
-        format: GLenum,
-        _type: GLenum,
-        data: *mut GLvoid,
-    ),
-    pub glGetIntegerv: unsafe extern "C" fn(pname: GLenum, data: *mut GLint),
+macro_rules! define_gl_functions {
+    ($(fn $name:ident($($v: ident : $t:ty),*) -> $r:ty);+) => {
+        pub struct GLFunctions {
+            $(pub $name: unsafe extern "C" fn($($v: $t),*) -> $r,)+
+        }
+    };
 }
+
+define_gl_functions! {
+     fn glReadPixels(
+         x: GLint,
+         y: GLint,
+         width: GLsizei,
+         height: GLsizei,
+         format: GLenum,
+         _type: GLenum,
+         data: *mut GLvoid
+     ) -> ();
+     fn glGetIntegerv(pname: GLenum, data: *mut GLint) -> ()
+}
+
+// pub struct GLFunctions {
+//     pub glReadPixels: unsafe extern "C" fn(
+//         x: GLint,
+//         y: GLint,
+//         width: GLsizei,
+//         height: GLsizei,
+//         format: GLenum,
+//         _type: GLenum,
+//         data: *mut GLvoid,
+//     ),
+//     pub glGetIntegerv: unsafe extern "C" fn(pname: GLenum, data: *mut GLint),
+// }
 
 pub struct CaptureContext<'a> {
     width: GLint,
