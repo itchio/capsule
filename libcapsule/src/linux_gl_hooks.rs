@@ -160,9 +160,15 @@ unsafe fn capture_gl_frame() {
 
     let mut viewport = Vec::<gl::GLint>::with_capacity(4);
     viewport.resize(4, 0);
-    (cc.funcs.glGetIntegerv)(gl::GL_VIEWPORT, std::mem::transmute(viewport.as_ptr()));
+    // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    // call with methods
+    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    cc.glGetIntegerv(gl::GL_VIEWPORT, std::mem::transmute(viewport.as_ptr()));
     libc_println!("viewport: {:?}", viewport);
 
+    // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+    // call without methods (ugly)
+    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     (cc.funcs.glReadPixels)(
         x,
         y,

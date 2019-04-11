@@ -26,6 +26,13 @@ pub struct CaptureContext<'a> {
     pub funcs: &'a GLFunctions,
 }
 
+impl<'a> CaptureContext<'a> {
+    // manually written for now, should be auto-generated
+    pub unsafe fn glGetIntegerv(&self, pname: GLenum, data: *mut GLint) {
+        (self.funcs.glGetIntegerv)(pname, data)
+    }
+}
+
 static mut cached_gl_functions: Option<GLFunctions> = None;
 
 unsafe fn get_gl_functions<'a>(getProcAddress: GetProcAddress) -> &'a GLFunctions {
