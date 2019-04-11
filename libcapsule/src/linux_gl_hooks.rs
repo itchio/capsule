@@ -158,6 +158,11 @@ unsafe fn capture_gl_frame() {
     let bytes_per_pixel: usize = 4;
     let bytes_per_frame: usize = width as usize * height as usize * bytes_per_pixel;
 
+    let mut viewport = Vec::<gl::GLint>::with_capacity(4);
+    viewport.resize(4, 0);
+    (cc.funcs.glGetIntegerv)(gl::GL_VIEWPORT, std::mem::transmute(viewport.as_ptr()));
+    libc_println!("viewport: {:?}", viewport);
+
     (cc.funcs.glReadPixels)(
         x,
         y,

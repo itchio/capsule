@@ -1,17 +1,12 @@
-use libc::{c_int, c_uint, c_void};
 use std::mem::transmute;
 
-pub type GLint = c_int;
-pub type GLsizei = c_int;
-pub type GLenum = c_uint;
-pub type GLvoid = c_void;
-
-pub const GL_RGBA: GLenum = 0x1908;
-pub const GL_UNSIGNED_BYTE: GLenum = 0x1401;
+mod constants;
+mod types;
+pub use self::constants::*;
+pub use self::types::*;
 
 type GetProcAddress = unsafe fn(gl_func_name: &str) -> *const ();
 
-#[derive(Debug)]
 pub struct GLFunctions {
     pub glReadPixels: unsafe extern "C" fn(
         x: GLint,
@@ -22,23 +17,44 @@ pub struct GLFunctions {
         _type: GLenum,
         data: *mut GLvoid,
     ),
+    pub glGetIntegerv: unsafe extern "C" fn(pname: GLenum, data: *mut GLint),
 }
 
 pub struct CaptureContext<'a> {
-    width: i32,
-    height: i32,
+    width: GLint,
+    height: GLint,
     pub funcs: &'a GLFunctions,
 }
 
 static mut cached_gl_functions: Option<GLFunctions> = None;
 
 unsafe fn get_gl_functions<'a>(getProcAddress: GetProcAddress) -> &'a GLFunctions {
-    if cached_gl_functions.is_none() {
-        cached_gl_functions = Some(GLFunctions {
-            glReadPixels: transmute(getProcAddress("glReadPixels")),
-        })
+    macro_rules! lookup_sym {
+        ($name:ident) => {{
+            let ptr = getProcAddress(stringify!($name));
+            if ptr.is_null() {
+                panic!(format!(
+                    "{}: null pointer returned by getProcAddress",
+                    stringify!($name)
+                ))
+            }
+            transmute(ptr)
+        }};
+    }
+    macro_rules! bind {
+        ($($name:ident),+,) => {
+            Some(GLFunctions{
+                $($name: lookup_sym!($name)),*
+            })
+        };
     }
 
+    if cached_gl_functions.is_none() {
+        cached_gl_functions = bind! {
+            glReadPixels,
+            glGetIntegerv,
+        }
+    }
     cached_gl_functions.as_ref().unwrap()
 }
 
@@ -53,6 +69,5 @@ pub unsafe fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'a Cap
             funcs,
         });
     }
-
     cached_capture_context.as_ref().unwrap()
 }
