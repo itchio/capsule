@@ -1,19 +1,12 @@
 #![cfg(target_os = "linux")]
 #![link(name = "dl")]
 
+use crate::gl;
 use detour::RawDetour;
-use libc::{c_char, c_int, c_uint, c_void};
+use libc::{c_char, c_int, c_void};
 use std::ffi::CString;
 use std::sync::Once;
 use std::time::SystemTime;
-
-type GLint = c_int;
-type GLsizei = c_int;
-type GLenum = c_uint;
-type GLvoid = c_void;
-
-const GL_RGBA: GLenum = 0x1908;
-const GL_UNSIGNED_BYTE: GLenum = 0x1401;
 
 ///////////////////////////////////////////
 // libdl definition & link instructions
@@ -115,18 +108,6 @@ hook_dynamic! {
     }
 }
 
-lazy_static! {
-    static ref glReadPixels: unsafe extern "C" fn(
-        x: GLint,
-        y: GLint,
-        width: GLsizei,
-        height: GLsizei,
-        format: GLenum,
-        _type: GLenum,
-        data: *mut GLvoid,
-    ) = unsafe { std::mem::transmute(getProcAddressARB("glReadPixels")) };
-}
-
 /// Returns true if libGL.so was loaded in this process,
 /// either by ld-linux on startup (if linked with -lGL),
 /// or by dlopen() afterwards.
@@ -168,20 +149,22 @@ lazy_static! {
 static mut frame_index: i64 = 0;
 
 unsafe fn capture_gl_frame() {
-    let x: GLint = 0;
-    let y: GLint = 0;
-    let width: GLsizei = 400;
-    let height: GLsizei = 400;
+    let cc = gl::get_capture_context(getProcAddressARB);
+
+    let x: gl::GLint = 0;
+    let y: gl::GLint = 0;
+    let width: gl::GLsizei = 400;
+    let height: gl::GLsizei = 400;
     let bytes_per_pixel: usize = 4;
     let bytes_per_frame: usize = width as usize * height as usize * bytes_per_pixel;
 
-    glReadPixels(
+    (cc.funcs.glReadPixels)(
         x,
         y,
         width,
         height,
-        GL_RGBA,
-        GL_UNSIGNED_BYTE,
+        gl::GL_RGBA,
+        gl::GL_UNSIGNED_BYTE,
         std::mem::transmute(frame_buffer.as_ptr()),
     );
     let mut num_black = 0;

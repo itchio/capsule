@@ -14,6 +14,7 @@ use libc::c_char;
 
 #[macro_use]
 mod hook;
+mod gl;
 mod linux_gl_hooks;
 use detour::RawDetour;
 
