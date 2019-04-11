@@ -40,10 +40,10 @@ unsafe fn get_gl_functions<'a>(getProcAddress: GetProcAddress) -> &'a GLFunction
         ($name:ident) => {{
             let ptr = getProcAddress(stringify!($name));
             if ptr.is_null() {
-                panic!(format!(
+                panic!(
                     "{}: null pointer returned by getProcAddress",
                     stringify!($name)
-                ))
+                )
             }
             transmute(ptr)
         }};
