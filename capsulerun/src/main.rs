@@ -1,17 +1,94 @@
-#[macro_use(defer)]
-extern crate scopeguard;
+#[macro_use]
+extern crate wstr;
+#[macro_use]
+extern crate const_cstr;
 
 use clap::{App, Arg};
 use std::os::windows::process::CommandExt;
+use std::path::Path;
 use std::process::Command;
+use std::ptr;
 use winapi::shared::minwindef;
-use winapi::um::{handleapi, processthreadsapi, tlhelp32, winbase, winnt};
+use winapi::um::{
+    errhandlingapi, handleapi, libloaderapi, memoryapi, processthreadsapi, synchapi, tlhelp32,
+    winbase, winnt,
+};
+
+macro_rules! guard_handle {
+    ($x:ident) => {
+        scopeguard::guard($x, |h| {
+            handleapi::CloseHandle(h);
+        });
+    };
+}
+
+macro_rules! guard_library {
+    ($x: ident) => {
+        scopeguard::guard($x, |l| {
+            libloaderapi::FreeLibrary(l);
+        });
+    };
+}
+
+fn get_last_error_string() -> String {
+    unsafe {
+        const BUF_SIZE: usize = 1024;
+        let mut buf = [0u16; BUF_SIZE];
+
+        let n = winbase::FormatMessageW(
+            winbase::FORMAT_MESSAGE_IGNORE_INSERTS
+                | winbase::FORMAT_MESSAGE_FROM_SYSTEM
+                | winbase::FORMAT_MESSAGE_ARGUMENT_ARRAY,
+            ptr::null(),
+            errhandlingapi::GetLastError(),
+            0,
+            buf.as_mut_ptr(),
+            (BUF_SIZE + 1) as u32,
+            ptr::null_mut(),
+        );
+
+        let mut str = String::from_utf16(&buf).unwrap();
+        str.truncate(n as usize);
+        str
+    }
+}
+
+macro_rules! assert_non_null {
+    ($desc: literal, $ptr: ident) => {
+        if $ptr.is_null() {
+            panic!(
+                "[{}] Unexpected null pointer: {}",
+                $desc,
+                get_last_error_string()
+            );
+        }
+    };
+}
+
+macro_rules! assert_non_zero {
+    ($desc: literal, $num: ident) => {
+        if $num == 0 {
+            panic!(
+                "[{}] Expected non-zero value: {}",
+                $desc,
+                get_last_error_string()
+            );
+        }
+    };
+}
 
 fn main() {
     let matches = App::new("capsulerun")
         .version("master")
         .author("Amos Wenger <amos@itch.io>")
         .about("Your very own libcapsule injector")
+        .arg(
+            Arg::with_name("dll")
+                .long("dll")
+                .help("Path of the dll to inject")
+                .takes_value(true)
+                .required(true),
+        )
         .arg(
             Arg::with_name("exec")
                 .help("The executable to run")
@@ -27,6 +104,9 @@ fn main() {
         .get_matches();
 
     let exec = matches.value_of("exec").unwrap();
+    let dll = Path::new(matches.value_of("dll").unwrap());
+    let dll = std::fs::canonicalize(dll).expect("could not canonicalize DLL path");
+
     let args: Vec<&str> = matches.values_of("args").unwrap_or_default().collect();
 
     let mut cmd = Command::new(exec);
@@ -38,19 +118,15 @@ fn main() {
     let process_id: minwindef::DWORD = child.id();
     let mut thread_id: Option<minwindef::DWORD> = None;
     unsafe {
-        // TODO: figure better way to close handles
-        // TODO: error handling
         let snap = tlhelp32::CreateToolhelp32Snapshot(tlhelp32::TH32CS_SNAPTHREAD, 0);
         if snap == handleapi::INVALID_HANDLE_VALUE {
             panic!("Could not create toolhelp32 snapshot");
         }
-        defer!({
-            handleapi::CloseHandle(snap);
-        });
+        let snap = guard_handle!(snap);
 
         let mut te: tlhelp32::THREADENTRY32 = std::mem::uninitialized();
         te.dwSize = std::mem::size_of::<tlhelp32::THREADENTRY32>() as u32;
-        if tlhelp32::Thread32First(snap, &mut te) == 0 {
+        if tlhelp32::Thread32First(*snap, &mut te) == 0 {
             panic!("Could not grab Thread32First");
         }
 
@@ -62,7 +138,7 @@ fn main() {
                 num_threads += 1;
             }
 
-            if tlhelp32::Thread32Next(snap, &mut te) == 0 {
+            if tlhelp32::Thread32Next(*snap, &mut te) == 0 {
                 break;
             }
         }
@@ -70,18 +146,75 @@ fn main() {
     }
 
     unsafe {
-        let thread_handle = processthreadsapi::OpenThread(
+        let k32 = libloaderapi::LoadLibraryW(wstrz!("kernel32.dll").as_ptr());
+        assert_non_null!("LoadLibraryW(kernel32.dll)", k32);
+        let k32 = guard_library!(k32);
+
+        let loadlibrary = libloaderapi::GetProcAddress(*k32, const_cstr!("LoadLibraryW").as_ptr());
+        assert_non_null!("GetProcAddress(LoadLibraryW)", loadlibrary);
+
+        let h = processthreadsapi::OpenProcess(
             winnt::PROCESS_ALL_ACCESS,
+            0, /* inheritHandles */
+            process_id,
+        );
+        assert_non_null!("OpenProcess", loadlibrary);
+        let h = guard_handle!(h);
+
+        let dll_u16 = widestring::U16CString::from_os_str(dll.as_os_str()).unwrap();
+        // .len() returns the number of wchars, excluding the null terminator
+        let dll_u16_num_bytes = 2 * (dll_u16.len() + 1);
+
+        let addr = memoryapi::VirtualAllocEx(
+            *h,
+            ptr::null_mut(),
+            dll_u16_num_bytes,
+            winnt::MEM_COMMIT,
+            winnt::PAGE_READWRITE,
+        );
+        assert_non_null!("VirtualAllocEx", addr);
+        let addr = scopeguard::guard(addr, |addr| {
+            memoryapi::VirtualFreeEx(*h, addr, dll_u16_num_bytes, winnt::MEM_DECOMMIT);
+        });
+
+        let mut n = 0;
+        let ret = memoryapi::WriteProcessMemory(
+            *h,
+            *addr,
+            std::mem::transmute(dll_u16.as_ptr()),
+            dll_u16_num_bytes,
+            &mut n,
+        );
+        assert_non_zero!("WriteProcessMemory (return code)", ret);
+        assert_non_zero!("WriteProcessMemory (written bytes)", n);
+
+        let thread = processthreadsapi::CreateRemoteThread(
+            *h,
+            ptr::null_mut(),
+            0,
+            std::mem::transmute(loadlibrary),
+            *addr,
+            0,
+            ptr::null_mut(),
+        );
+        assert_non_null!("CreateRemoteThread", thread);
+        let thread = guard_handle!(thread);
+
+        synchapi::WaitForSingleObject(*thread, winbase::INFINITE);
+    }
+
+    unsafe {
+        let thread_handle = processthreadsapi::OpenThread(
+            winnt::THREAD_RESUME,
             0, /* inheritHandles */
             thread_id.expect("child process should have at least one thread"),
         );
-        defer!({
-            handleapi::CloseHandle(thread_handle);
-        });
+        let thread_handle = guard_handle!(thread_handle);
 
         println!("Resuming thread...");
-        processthreadsapi::ResumeThread(thread_handle);
+        processthreadsapi::ResumeThread(*thread_handle);
     }
 
+    println!("Now waiting for child...");
     child.wait().expect("Non-zero exit code");
 }

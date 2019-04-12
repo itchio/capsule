@@ -1,10 +1,16 @@
 [package]
 name = "capsulerun"
 version = "0.1.0"
-authors = ["Amos Wenger <amoswenger@gmail.com>"]
+authors = ["Amos Wenger <amos@itch.io>"]
 edition = "2018"
 
 [dependencies]
 "clap" = "2.33.0"
-"winapi" = { version = "0.3.7", features = ["tlhelp32", "handleapi"] }
 "scopeguard" = "1.0.0"
+"widestring" = "0.4.0"
+"wstr" = "0.2"
+"const-cstr" = "0.3.0"
+
+[dependencies.winapi]
+version = "0.3.7"
+features = ["tlhelp32", "handleapi", "memoryapi", "synchapi"]

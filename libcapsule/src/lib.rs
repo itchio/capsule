@@ -1,11 +1,7 @@
 #![allow(non_upper_case_globals, non_snake_case)]
 
 #[macro_use]
-extern crate cstr_macro;
-#[macro_use]
 extern crate ctor;
-#[macro_use]
-extern crate lazy_static;
 #[macro_use]
 extern crate libc_print;
 extern crate detour;
@@ -16,6 +12,7 @@ use libc::c_char;
 mod hook;
 mod gl;
 mod linux_gl_hooks;
+mod windows_gl_hooks;
 use detour::RawDetour;
 
 #[cfg(target_os = "macos")]
@@ -36,6 +33,10 @@ fn ctor() {
             #[cfg(target_os = "linux")]
             {
                 linux_gl_hooks::initialize()
+            }
+            #[cfg(target_os = "windows")]
+            {
+                windows_gl_hooks::initialize()
             }
         }
     }

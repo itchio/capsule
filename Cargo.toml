@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "capsulerun",
+    "libcapsule",
+]
