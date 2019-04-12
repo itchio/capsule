@@ -6,3 +6,5 @@ edition = "2018"
 
 [dependencies]
 "clap" = "2.33.0"
+"winapi" = { version = "0.3.7", features = ["tlhelp32", "handleapi"] }
+"scopeguard" = "1.0.0"
