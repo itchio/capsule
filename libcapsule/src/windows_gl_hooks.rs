@@ -6,7 +6,7 @@ pub fn initialize() {
         let mut i = 0;
         loop {
             std::thread::sleep(std::time::Duration::from_secs(1));
-            libc_println!("[capsule] just saying for the {}th time", i);
+            libc_println!("[capsule] saying hi (loop {})", i);
             i += 1;
         }
     });
