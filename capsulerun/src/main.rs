@@ -2,6 +2,8 @@
 extern crate wstr;
 #[macro_use]
 extern crate const_cstr;
+#[macro_use]
+extern crate wincap;
 
 use clap::{App, Arg};
 use std::os::windows::process::CommandExt;
@@ -10,72 +12,8 @@ use std::process::Command;
 use std::ptr;
 use winapi::shared::minwindef;
 use winapi::um::{
-    errhandlingapi, handleapi, libloaderapi, memoryapi, processthreadsapi, synchapi, tlhelp32,
-    winbase, winnt,
+    handleapi, libloaderapi, memoryapi, processthreadsapi, synchapi, tlhelp32, winbase, winnt,
 };
-
-macro_rules! guard_handle {
-    ($x:ident) => {
-        scopeguard::guard($x, |h| {
-            handleapi::CloseHandle(h);
-        });
-    };
-}
-
-macro_rules! guard_library {
-    ($x: ident) => {
-        scopeguard::guard($x, |l| {
-            libloaderapi::FreeLibrary(l);
-        });
-    };
-}
-
-fn get_last_error_string() -> String {
-    unsafe {
-        const BUF_SIZE: usize = 1024;
-        let mut buf = [0u16; BUF_SIZE];
-
-        let n = winbase::FormatMessageW(
-            winbase::FORMAT_MESSAGE_IGNORE_INSERTS
-                | winbase::FORMAT_MESSAGE_FROM_SYSTEM
-                | winbase::FORMAT_MESSAGE_ARGUMENT_ARRAY,
-            ptr::null(),
-            errhandlingapi::GetLastError(),
-            0,
-            buf.as_mut_ptr(),
-            (BUF_SIZE + 1) as u32,
-            ptr::null_mut(),
-        );
-
-        let mut str = String::from_utf16(&buf).unwrap();
-        str.truncate(n as usize);
-        str
-    }
-}
-
-macro_rules! assert_non_null {
-    ($desc: literal, $ptr: ident) => {
-        if $ptr.is_null() {
-            panic!(
-                "[{}] Unexpected null pointer: {}",
-                $desc,
-                get_last_error_string()
-            );
-        }
-    };
-}
-
-macro_rules! assert_non_zero {
-    ($desc: literal, $num: ident) => {
-        if $num == 0 {
-            panic!(
-                "[{}] Expected non-zero value: {}",
-                $desc,
-                get_last_error_string()
-            );
-        }
-    };
-}
 
 fn main() {
     let matches = App::new("capsulerun")

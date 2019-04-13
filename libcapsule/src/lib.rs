@@ -8,7 +8,8 @@ extern crate cstr_macro;
 extern crate ctor;
 #[macro_use]
 extern crate libc_print;
-extern crate detour;
+#[macro_use]
+extern crate wincap;
 
 use libc::c_char;
 

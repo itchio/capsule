@@ -2,45 +2,9 @@
 
 use libc::c_void;
 use std::ffi::CString;
-use std::ptr;
 use std::time::SystemTime;
 use winapi::shared::{minwindef, windef};
-use winapi::um::{errhandlingapi, libloaderapi, winbase, winnt};
-
-fn get_last_error_string() -> String {
-    unsafe {
-        const BUF_SIZE: usize = 1024;
-        let mut buf = [0u16; BUF_SIZE];
-
-        let n = winbase::FormatMessageW(
-            winbase::FORMAT_MESSAGE_IGNORE_INSERTS
-                | winbase::FORMAT_MESSAGE_FROM_SYSTEM
-                | winbase::FORMAT_MESSAGE_ARGUMENT_ARRAY,
-            ptr::null(),
-            errhandlingapi::GetLastError(),
-            0,
-            buf.as_mut_ptr(),
-            (BUF_SIZE + 1) as u32,
-            ptr::null_mut(),
-        );
-
-        let mut str = String::from_utf16(&buf).unwrap();
-        str.truncate(n as usize);
-        str
-    }
-}
-
-macro_rules! assert_non_null {
-    ($desc: literal, $ptr: ident) => {
-        if $ptr.is_null() {
-            panic!(
-                "[{}] Unexpected null pointer: {}",
-                $desc,
-                get_last_error_string()
-            );
-        }
-    };
-}
+use winapi::um::{libloaderapi, winnt};
 
 ///////////////////////////////////////////
 // lazily-opened opengl32.dll handle
@@ -84,7 +48,7 @@ lazy_static! {
     };
 }
 
-unsafe fn getProcAddress(rustName: &str) -> *const () {
+unsafe fn getWglProcAddress(rustName: &str) -> *const () {
     let name = CString::new(rustName).unwrap();
     let addr = wglGetProcAddress(name.as_ptr());
     libc_println!("wglGetProcAddress({}) = {:x}", rustName, addr as isize);

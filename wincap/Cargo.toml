@@ -1,0 +1,13 @@
+[package]
+name = "wincap"
+version = "0.1.0"
+authors = ["Amos Wenger <amos@itch.io>"]
+edition = "2018"
+
+[dependencies]
+# C types like c_char, c_void
+libc = "0.2.50"
+
+[dependencies.winapi]
+version = "0.3.7"
+features = ["handleapi"]

@@ -3,4 +3,5 @@
 members = [
     "capsulerun",
     "libcapsule",
+    "wincap"
 ]

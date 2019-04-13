@@ -1,10 +1,12 @@
 [package]
 name = "libcapsule"
 version = "0.1.0"
-authors = ["Amos Wenger <amoswenger@gmail.com>"]
+authors = ["Amos Wenger <amos@itch.io>"]
 edition = "2018"
 
 [dependencies]
+# windows utilities
+"wincap" = { path = "../wincap" }
 # hook any function, like glXSwapBuffers, etc.
 detour = { version = "0.6.0", default-features = false }
 # work around some of the rules for Rust lifetimes
