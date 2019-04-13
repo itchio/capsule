@@ -13,7 +13,7 @@ macro_rules! hook_extern {
             paste::item! {
                 lazy_static! {
                     static ref [<$real_fn __hook>]: std::sync::Mutex<detour::RawDetour> = unsafe {
-                        let mut detour = RawDetour::new(
+                        let mut detour = detour::RawDetour::new(
                             $real_fn as *const (),
                             [<$real_fn __hooked>] as *const()
                         ).unwrap();
@@ -45,7 +45,7 @@ macro_rules! hook_dynamic {
             paste::item! {
                 lazy_static! {
                     static ref [<$real_fn __hook>]: std::sync::Mutex<detour::RawDetour> = unsafe {
-                        let mut detour = RawDetour::new(
+                        let mut detour = detour::RawDetour::new(
                             $get_proc_address(stringify!($real_fn)) as *const (),
                             [<$real_fn __hooked>] as *const()
                         ).unwrap();

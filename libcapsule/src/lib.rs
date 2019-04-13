@@ -1,6 +1,10 @@
 #![allow(non_upper_case_globals, non_snake_case)]
 
 #[macro_use]
+extern crate wstr;
+#[macro_use]
+extern crate cstr_macro;
+#[macro_use]
 extern crate ctor;
 #[macro_use]
 extern crate libc_print;
@@ -13,7 +17,6 @@ mod hook;
 mod gl;
 mod linux_gl_hooks;
 mod windows_gl_hooks;
-use detour::RawDetour;
 
 #[cfg(target_os = "macos")]
 static CURRENT_PLATFORM: &str = "macOS";
