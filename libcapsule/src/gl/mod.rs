@@ -28,19 +28,6 @@ define_gl_functions! {
      fn glGetIntegerv(pname: GLenum, data: *mut GLint) -> ()
 }
 
-// pub struct GLFunctions {
-//     pub glReadPixels: unsafe extern "C" fn(
-//         x: GLint,
-//         y: GLint,
-//         width: GLsizei,
-//         height: GLsizei,
-//         format: GLenum,
-//         _type: GLenum,
-//         data: *mut GLvoid,
-//     ),
-//     pub glGetIntegerv: unsafe extern "C" fn(pname: GLenum, data: *mut GLint),
-// }
-
 pub struct CaptureContext<'a> {
     width: GLint,
     height: GLint,

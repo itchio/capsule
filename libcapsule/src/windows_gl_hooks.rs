@@ -2,6 +2,7 @@
 
 use libc::c_void;
 use std::ffi::CString;
+use std::sync::Once;
 use std::time::SystemTime;
 use winapi::shared::{minwindef, windef};
 use winapi::um::{libloaderapi, winnt};
@@ -71,22 +72,24 @@ hook_dynamic! {
     }
 }
 
+static HOOK_ONCE: Once = Once::new();
+
+fn is_using_opengl() -> bool {
+    let opengl_module = wincap::get_module_if_loaded("opengl32.dll");
+    !opengl_module.is_null()
+}
+
+unsafe fn hook_if_needed() {
+    if is_using_opengl() {
+        HOOK_ONCE.call_once(|| {
+            libc_println!("opengl32.dll usage detected, hooking OpenGL");
+            lazy_static::initialize(&wglSwapBuffers__hook);
+        })
+    }
+}
+
 pub fn initialize() {
     unsafe {
-        libc_println!("opengl32_handle = {:x}", opengl32_handle.module as usize);
-        libc_println!(
-            "wglSwapBuffers = {:x}",
-            getOpengl32ProcAddress("wglSwapBuffers") as usize
-        );
-        lazy_static::initialize(&wglSwapBuffers__hook);
+        hook_if_needed();
     }
-
-    std::thread::spawn(move || {
-        let mut i = 0;
-        loop {
-            std::thread::sleep(std::time::Duration::from_secs(1));
-            libc_println!("[capsule] saying hi (loop {})", i);
-            i += 1;
-        }
-    });
 }

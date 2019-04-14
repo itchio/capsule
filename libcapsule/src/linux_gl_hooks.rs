@@ -124,7 +124,7 @@ static HOOK_LIBGL_ONCE: Once = Once::new();
 unsafe fn hookLibGLIfNeeded() {
     if hasLibGL() {
         HOOK_LIBGL_ONCE.call_once(|| {
-            libc_println!("libGL usage detected, hooking libGL");
+            libc_println!("libGL usage detected, hooking OpenGL");
             lazy_static::initialize(&glXSwapBuffers__hook);
         })
     }
