@@ -2,6 +2,8 @@
 extern crate wstr;
 #[macro_use]
 extern crate const_cstr;
+
+#[cfg(windows)]
 #[macro_use]
 extern crate wincap;
 

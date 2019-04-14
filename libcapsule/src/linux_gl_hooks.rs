@@ -163,13 +163,14 @@ unsafe fn capture_gl_frame() {
     // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
     // call with methods
     // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    cc.glGetIntegerv(gl::GL_VIEWPORT, std::mem::transmute(viewport.as_ptr()));
+    cc.funcs
+        .glGetIntegerv(gl::GL_VIEWPORT, std::mem::transmute(viewport.as_ptr()));
     libc_println!("viewport: {:?}", viewport);
 
     // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
     // call without methods (ugly)
     // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    (cc.funcs.glReadPixels)(
+    cc.funcs.glReadPixels(
         x,
         y,
         width,

@@ -1,4 +1,4 @@
-#![cfg(target_os = "windows")]
+#![cfg(windows)]
 
 use std::mem;
 use std::os::windows::process::CommandExt;

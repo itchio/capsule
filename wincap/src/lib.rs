@@ -1,3 +1,5 @@
+#![cfg(windows)]
+
 #[macro_use]
 extern crate libc_print;
 
