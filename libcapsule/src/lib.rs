@@ -10,6 +10,8 @@ extern crate ctor;
 extern crate libc_print;
 #[macro_use]
 extern crate wincap;
+#[macro_use(lazy_static)]
+extern crate lazy_static;
 
 use libc::c_char;
 

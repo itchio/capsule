@@ -2,9 +2,6 @@
 macro_rules! hook_extern {
     ($(fn $real_fn:ident($($v:ident : $t:ty),*) -> $r:ty $body:block)+) => {
         $(
-            #[macro_use(lazy_static)]
-            extern crate lazy_static;
-
             extern "C" {
                 // it has the exact function signature we specified.
                 fn $real_fn ($($v: $t),*) -> $r;
