@@ -1,13 +1,14 @@
 #![cfg(target_os = "windows")]
 
+use std::mem;
 use std::os::windows::process::CommandExt;
 use std::path::PathBuf;
 use std::process::Command;
 use std::ptr;
 use winapi::shared::minwindef;
 use winapi::um::{
-  handleapi, libloaderapi, memoryapi, processthreadsapi, synchapi, tlhelp32, winbase, winnt,
-  wow64apiset,
+  handleapi, jobapi2, libloaderapi, memoryapi, processthreadsapi, synchapi, tlhelp32, winbase,
+  winnt, wow64apiset,
 };
 
 pub unsafe fn run<'a>(matches: clap::ArgMatches<'a>) {
@@ -22,20 +23,44 @@ pub unsafe fn run<'a>(matches: clap::ArgMatches<'a>) {
   println!("Created suspended process, pid = {}", child.id());
 
   let process_id: minwindef::DWORD = child.id();
-  let h = processthreadsapi::OpenProcess(
+  let process_handle = processthreadsapi::OpenProcess(
     winnt::PROCESS_ALL_ACCESS,
     0, /* inheritHandles */
     process_id,
   );
-  assert_non_null!("OpenProcess", h);
-  let h = guard_handle!(h);
+  assert_non_null!("OpenProcess", process_handle);
+  let process_handle = guard_handle!(process_handle);
 
   let host_is_32bit = cfg!(target_pointer_width = "32");
   let target_is_32bit = host_is_32bit || {
     let mut is_wow64: minwindef::BOOL = 0;
-    wow64apiset::IsWow64Process(*h, &mut is_wow64);
+    wow64apiset::IsWow64Process(*process_handle, &mut is_wow64);
     is_wow64 == 1
   };
+
+  let job_object = jobapi2::CreateJobObjectW(ptr::null_mut(), ptr::null_mut());
+  assert_non_null!("CreateJobObjectW", job_object);
+  let job_object = guard_handle!(job_object);
+
+  {
+    let mut job_object_info = mem::zeroed::<winnt::JOBOBJECT_EXTENDED_LIMIT_INFORMATION>();
+    job_object_info.BasicLimitInformation.LimitFlags = winnt::JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    let ret = jobapi2::SetInformationJobObject(
+      *job_object,
+      winnt::JobObjectExtendedLimitInformation,
+      mem::transmute(&job_object_info),
+      mem::size_of_val(&job_object_info) as u32,
+    );
+    assert_non_zero!("SetInformationJobObject", ret);
+
+    // TODO: io completion port
+  }
+
+  {
+    let ret = jobapi2::AssignProcessToJobObject(*job_object, *process_handle);
+    assert_non_zero!("AssignProcessToJobObject", ret);
+    println!("Assigned process to job object {:x}", *job_object as usize);
+  }
 
   println!(
     "Target process is {}",
@@ -56,8 +81,8 @@ pub unsafe fn run<'a>(matches: clap::ArgMatches<'a>) {
     }
     let snap = guard_handle!(snap);
 
-    let mut te: tlhelp32::THREADENTRY32 = std::mem::uninitialized();
-    te.dwSize = std::mem::size_of::<tlhelp32::THREADENTRY32>() as u32;
+    let mut te: tlhelp32::THREADENTRY32 = mem::zeroed();
+    te.dwSize = mem::size_of::<tlhelp32::THREADENTRY32>() as u32;
     if tlhelp32::Thread32First(*snap, &mut te) == 0 {
       panic!("Could not grab Thread32First");
     }
@@ -90,7 +115,7 @@ pub unsafe fn run<'a>(matches: clap::ArgMatches<'a>) {
     let dll_u16_num_bytes = 2 * (dll_u16.len() + 1);
 
     let addr = memoryapi::VirtualAllocEx(
-      *h,
+      *process_handle,
       ptr::null_mut(),
       dll_u16_num_bytes,
       winnt::MEM_COMMIT,
@@ -98,14 +123,19 @@ pub unsafe fn run<'a>(matches: clap::ArgMatches<'a>) {
     );
     assert_non_null!("VirtualAllocEx", addr);
     let addr = scopeguard::guard(addr, |addr| {
-      memoryapi::VirtualFreeEx(*h, addr, dll_u16_num_bytes, winnt::MEM_DECOMMIT);
+      memoryapi::VirtualFreeEx(
+        *process_handle,
+        addr,
+        dll_u16_num_bytes,
+        winnt::MEM_DECOMMIT,
+      );
     });
 
     let mut n = 0;
     let ret = memoryapi::WriteProcessMemory(
-      *h,
+      *process_handle,
       *addr,
-      std::mem::transmute(dll_u16.as_ptr()),
+      mem::transmute(dll_u16.as_ptr()),
       dll_u16_num_bytes,
       &mut n,
     );
@@ -113,10 +143,10 @@ pub unsafe fn run<'a>(matches: clap::ArgMatches<'a>) {
     assert_non_zero!("WriteProcessMemory (written bytes)", n);
 
     let thread = processthreadsapi::CreateRemoteThread(
-      *h,
+      *process_handle,
       ptr::null_mut(),
       0,
-      std::mem::transmute(loadlibrary),
+      mem::transmute(loadlibrary),
       *addr,
       0,
       ptr::null_mut(),

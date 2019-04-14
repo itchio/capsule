@@ -19,4 +19,4 @@ wincap = { path = "../wincap" }
 
 [dependencies.winapi]
 version = "0.3.7"
-features = ["tlhelp32", "handleapi", "memoryapi", "synchapi", "wow64apiset"]
+features = ["tlhelp32", "handleapi", "memoryapi", "synchapi", "wow64apiset", "jobapi2"]
