@@ -1,17 +1,32 @@
-use std::mem::transmute;
-
 mod constants;
-mod types;
 pub use self::constants::*;
+
+mod types;
 pub use self::types::*;
+
+use std::mem;
+use std::mem::transmute;
 use std::time::SystemTime;
 
 type GetProcAddress = unsafe fn(gl_func_name: &str) -> *const ();
 
 macro_rules! define_gl_functions {
     ($(fn $name:ident($($v: ident : $t:ty),*) -> $r:ty);+) => {
-        pub struct GLFunctions {
+        pub struct Functions {
             $(pub $name: unsafe extern "C" fn($($v: $t),*) -> $r,)+
+        }
+
+        pub struct CaptureContext<'a> {
+            width: GLint,
+            height: GLint,
+            start_time: SystemTime,
+            pub funcs: &'a Functions,
+        }
+
+        impl Functions {
+            $(pub unsafe fn $name(&self, $($v: $t),*) -> $r {
+                (self.$name)($($v),*)
+            })+
         }
     };
 }
@@ -29,23 +44,9 @@ define_gl_functions! {
      fn glGetIntegerv(pname: GLenum, data: *mut GLint) -> ()
 }
 
-pub struct CaptureContext<'a> {
-    width: GLint,
-    height: GLint,
-    start_time: SystemTime,
-    pub funcs: &'a GLFunctions,
-}
+static mut cached_gl_functions: Option<Functions> = None;
 
-impl<'a> CaptureContext<'a> {
-    // manually written for now, should be auto-generated
-    pub unsafe fn glGetIntegerv(&self, pname: GLenum, data: *mut GLint) {
-        (self.funcs.glGetIntegerv)(pname, data)
-    }
-}
-
-static mut cached_gl_functions: Option<GLFunctions> = None;
-
-unsafe fn get_gl_functions<'a>(getProcAddress: GetProcAddress) -> &'a GLFunctions {
+unsafe fn get_gl_functions<'a>(getProcAddress: GetProcAddress) -> &'a Functions {
     macro_rules! lookup_sym {
         ($name:ident) => {{
             let ptr = getProcAddress(stringify!($name));
@@ -60,7 +61,7 @@ unsafe fn get_gl_functions<'a>(getProcAddress: GetProcAddress) -> &'a GLFunction
     }
     macro_rules! bind {
         ($($name:ident),+,) => {
-            Some(GLFunctions{
+            Some(Functions{
                 $($name: lookup_sym!($name)),*
             })
         };
@@ -80,9 +81,21 @@ static mut cached_capture_context: Option<CaptureContext> = None;
 pub unsafe fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'a CaptureContext<'a> {
     if cached_capture_context.is_none() {
         let funcs = get_gl_functions(getProcAddress);
+        #[repr(C)]
+        #[derive(Debug)]
+        struct Viewport {
+            x: GLint,
+            y: GLint,
+            width: GLint,
+            height: GLint,
+        };
+        let viewport = mem::zeroed::<Viewport>();
+        funcs.glGetIntegerv(GL_VIEWPORT, mem::transmute(&viewport));
+        println!("Viewport: {:?}", viewport);
+
         cached_capture_context = Some(CaptureContext {
-            width: 400,
-            height: 400,
+            width: viewport.width,
+            height: viewport.height,
             start_time: SystemTime::now(),
             funcs,
         });
