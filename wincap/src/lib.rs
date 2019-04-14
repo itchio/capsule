@@ -38,12 +38,7 @@ pub fn get_module_if_loaded(name: &str) -> minwindef::HMODULE {
         let mut modules = {
             let mut bytes_needed: minwindef::DWORD = 0;
             psapi::EnumProcessModules(p, ptr::null_mut(), 0, &mut bytes_needed);
-            libc_println!("need {} bytes to enum process modules", bytes_needed);
             let num_entries_needed = bytes_needed as usize / sizeof_hmodule;
-            libc_println!(
-                "need {} entries to enum process modules",
-                num_entries_needed
-            );
             let mut modules = Vec::<minwindef::HMODULE>::with_capacity(num_entries_needed);
             modules.resize(num_entries_needed, ptr::null_mut());
             modules
@@ -72,7 +67,6 @@ pub fn get_module_if_loaded(name: &str) -> minwindef::HMODULE {
 
                 let mut str = String::from_utf16_lossy(&buf);
                 str.truncate(n as usize);
-                libc_println!(" -> {}", str);
                 if str.to_lowercase() == name {
                     return module;
                 }
