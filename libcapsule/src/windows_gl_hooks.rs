@@ -1,5 +1,6 @@
 #![cfg(target_os = "windows")]
 
+use crate::gl;
 use libc::c_void;
 use std::ffi::CString;
 use std::sync::Once;
@@ -50,20 +51,21 @@ lazy_static! {
     };
 }
 
-unsafe fn get_wgl_proc_address(rustName: &str) -> *const () {
-    let name = CString::new(rustName).unwrap();
+unsafe fn get_wgl_proc_address(rust_name: &str) -> *const () {
+    let name = CString::new(rust_name).unwrap();
     let addr = wglGetProcAddress(name.as_ptr());
-    libc_println!("wglGetProcAddress({}) = {:x}", rustName, addr as isize);
+    libc_println!("wglGetProcAddress({}) = {:x}", rust_name, addr as isize);
+
+    if addr.is_null() {
+        return get_opengl32_proc_address(rust_name);
+    }
     addr as *const ()
 }
 
 hook_dynamic! {
     get_opengl32_proc_address => {
         fn wglSwapBuffers(hdc: windef::HDC) -> () {
-            libc_println!(
-                "[{:08}] swapping buffers! ()",
-                startTime.elapsed().unwrap().as_millis(),
-            );
+            capture_gl_frame();
             wglSwapBuffers__next(hdc)
         }
     }
@@ -91,10 +93,6 @@ unsafe fn get_kernel32_proc_address(rust_name: &str) -> *const () {
     );
 
     addr as *const ()
-}
-
-lazy_static! {
-    static ref startTime: SystemTime = SystemTime::now();
 }
 
 ///////////////////////////////////////////
@@ -147,4 +145,9 @@ pub fn initialize() {
         lazy_static::initialize(&LoadLibraryW__hook);
         hook_if_needed();
     }
+}
+
+unsafe fn capture_gl_frame() {
+    let cc = gl::get_capture_context(get_wgl_proc_address);
+    cc.capture_frame();
 }

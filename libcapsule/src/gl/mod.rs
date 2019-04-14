@@ -4,6 +4,7 @@ mod constants;
 mod types;
 pub use self::constants::*;
 pub use self::types::*;
+use std::time::SystemTime;
 
 type GetProcAddress = unsafe fn(gl_func_name: &str) -> *const ();
 
@@ -31,6 +32,7 @@ define_gl_functions! {
 pub struct CaptureContext<'a> {
     width: GLint,
     height: GLint,
+    start_time: SystemTime,
     pub funcs: &'a GLFunctions,
 }
 
@@ -81,8 +83,16 @@ pub unsafe fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'a Cap
         cached_capture_context = Some(CaptureContext {
             width: 400,
             height: 400,
+            start_time: SystemTime::now(),
             funcs,
         });
     }
     cached_capture_context.as_ref().unwrap()
+}
+
+impl<'a> CaptureContext<'a> {
+    pub fn capture_frame(&self) {
+        let elapsed = self.start_time.elapsed().unwrap_or_default();
+        libc_println!("[{:?}] Should capture frame...", elapsed);
+    }
 }
