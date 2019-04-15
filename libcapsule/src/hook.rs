@@ -52,6 +52,8 @@ unsafe impl Sync for Interposition {}
 #[macro_export]
 macro_rules! hook_extern {
     ($(fn $real_fn:ident($($v:ident : $t:ty),*) -> $r:ty $body:block)+) => {
+        use lazy_static::lazy_static;
+
         $(
             extern "C" {
                 // it has the exact function signature we specified.
