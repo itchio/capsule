@@ -1,15 +1,20 @@
 #![allow(non_upper_case_globals, non_snake_case)]
 
+#[cfg(target_os = "windows")]
 #[macro_use]
 extern crate wstr;
+#[cfg(target_os = "windows")]
 #[macro_use]
 extern crate cstr_macro;
+#[cfg(target_os = "windows")]
+#[macro_use]
+extern crate wincap;
+
 #[macro_use]
 extern crate ctor;
 #[macro_use]
 extern crate libc_print;
-#[macro_use]
-extern crate wincap;
+
 #[macro_use(lazy_static)]
 extern crate lazy_static;
 

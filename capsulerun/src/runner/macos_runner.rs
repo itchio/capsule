@@ -1,5 +1,6 @@
 #![cfg(target_os = "macos")]
 
+use std::os::unix::process::ExitStatusExt;
 use std::path::PathBuf;
 use std::process::Command;
 
@@ -27,7 +28,17 @@ pub unsafe fn run<'a>(matches: clap::ArgMatches<'a>) {
   println!("Created process, pid = {}", child.id());
 
   println!("Now waiting for child...");
-  child.wait().expect("Non-zero exit code");
+  let exit_status = child.wait().expect("Non-zero exit code");
+  std::process::exit(match exit_status.code() {
+    Some(code) => code,
+    None => {
+      println!(
+        "Child killed with signal {}",
+        exit_status.signal().unwrap_or_default()
+      );
+      127
+    }
+  })
 }
 
 fn determine_lib_path<'a>(
