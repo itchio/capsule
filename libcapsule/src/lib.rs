@@ -3,15 +3,18 @@
 #[cfg(target_os = "windows")]
 #[macro_use]
 extern crate wstr;
-#[cfg(target_os = "windows")]
+
+#[cfg(any(target_os = "windows", target_os = "linux"))]
 #[macro_use]
 extern crate cstr_macro;
+
 #[cfg(target_os = "windows")]
 #[macro_use]
 extern crate wincap;
 
 #[macro_use]
 extern crate ctor;
+
 #[macro_use]
 extern crate libc_print;
 
@@ -22,6 +25,7 @@ use libc::c_char;
 
 #[macro_use]
 mod hook;
+
 mod gl;
 mod linux_gl_hooks;
 mod windows_gl_hooks;

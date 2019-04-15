@@ -2,7 +2,6 @@
 #![link(name = "dl")]
 
 use crate::gl;
-use detour::RawDetour;
 use libc::{c_char, c_int, c_void};
 use std::ffi::CString;
 use std::sync::Once;
