@@ -14,22 +14,9 @@
 *.swp
 *log.txt
 .DS_Store
-/build
-/build32
-/build64
 /compile-artifacts
 /deps
 /github.com
-
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Makefile
-cmake_install.cmake
-install_manifest.txt
-CTestTestfile.cmake
-CMakeLists.txt.user
-
 
 #Added by cargo
 #
