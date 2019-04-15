@@ -1,3 +1,4 @@
 /puts
+/rtld
 /*.exe
 /out.txt

@@ -9,6 +9,7 @@ mod hook;
 
 mod gl;
 mod linux_gl_hooks;
+mod macos_gl_hooks;
 mod windows_gl_hooks;
 
 #[cfg(target_os = "macos")]
@@ -33,6 +34,10 @@ fn ctor() {
             #[cfg(target_os = "windows")]
             {
                 windows_gl_hooks::initialize()
+            }
+            #[cfg(target_os = "macos")]
+            {
+                macos_gl_hooks::initialize()
             }
         }
     }

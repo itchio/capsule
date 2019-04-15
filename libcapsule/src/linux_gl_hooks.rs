@@ -1,5 +1,7 @@
 #![cfg(target_os = "linux")]
-#![link(name = "dl")]
+
+#[link(name = "dl")]
+extern "C" {}
 
 use crate::gl;
 use const_cstr::const_cstr;
