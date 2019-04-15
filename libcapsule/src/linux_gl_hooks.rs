@@ -66,7 +66,7 @@ lazy_static! {
     };
 }
 
-unsafe fn getProcAddressARB(rustName: &str) -> *const () {
+unsafe fn get_glx_proc_address(rustName: &str) -> *const () {
     let name = CString::new(rustName).unwrap();
     let addr = glXGetProcAddressARB(name.as_ptr());
     libc_println!("glXGetProcAddressARB({}) = {:x}", rustName, addr as isize);
@@ -84,7 +84,7 @@ lazy_static! {
 hook_extern! {
     fn dlopen(filename: *const c_char, flags: c_int) -> *const c_void {
         let res = dlopen__next(filename, flags);
-        hookLibGLIfNeeded();
+        hook_if_needed();
         res
     }
 }
@@ -94,7 +94,7 @@ hook_extern! {
 ///////////////////////////////////////////
 
 hook_dynamic! {
-    getProcAddressARB => {
+    get_glx_proc_address => {
         fn glXSwapBuffers(display: *const c_void, drawable: *const c_void) -> () {
             libc_println!(
                 "[{:08}] swapping buffers! (display=0x{:X}, drawable=0x{:X})",
@@ -117,19 +117,19 @@ hook_dynamic! {
 /// Returns true if libGL.so was loaded in this process,
 /// either by ld-linux on startup (if linked with -lGL),
 /// or by dlopen() afterwards.
-unsafe fn hasLibGL() -> bool {
+unsafe fn is_using_opengl() -> bool {
     // RTLD_NOLOAD lets us check if a library is already loaded.
     // we never need to dlclose() it, because we don't own it.
     !dlopen__next(const_cstr!("libGL.so").as_ptr(), RTLD_NOLOAD | RTLD_LAZY).is_null()
 }
 
-static HOOK_LIBGL_ONCE: Once = Once::new();
+static HOOK_SWAPBUFFERS_ONCE: Once = Once::new();
 
 /// If libGL.so was loaded, and only once in the lifetime
 /// of this process, hook libGL functions for libcapsule usage.
-unsafe fn hookLibGLIfNeeded() {
-    if hasLibGL() {
-        HOOK_LIBGL_ONCE.call_once(|| {
+unsafe fn hook_if_needed() {
+    if is_using_opengl() {
+        HOOK_SWAPBUFFERS_ONCE.call_once(|| {
             libc_println!("libGL usage detected, hooking OpenGL");
             lazy_static::initialize(&glXSwapBuffers__hook);
         })
@@ -139,7 +139,7 @@ unsafe fn hookLibGLIfNeeded() {
 pub fn initialize() {
     unsafe {
         lazy_static::initialize(&dlopen__hook);
-        hookLibGLIfNeeded()
+        hook_if_needed()
     }
 }
 
@@ -155,7 +155,7 @@ lazy_static! {
 static mut frame_index: i64 = 0;
 
 unsafe fn capture_gl_frame() {
-    let cc = gl::get_capture_context(getProcAddressARB);
+    let cc = gl::get_capture_context(get_glx_proc_address);
 
     let x: gl::GLint = 0;
     let y: gl::GLint = 0;
