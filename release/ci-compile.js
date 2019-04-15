@@ -80,14 +80,7 @@ async function install_rust({ name, platform }) {
   $(await $.sh(`"./${name}" --no-modify-path -y`));
 }
 
-async function build_libcapsule({
-  libName,
-  runName,
-  osarch,
-  platform,
-  strip,
-  test
-}) {
+async function build_libcapsule({ libName, runName, osarch, platform, strip }) {
   if (!libName) {
     throw new Error("missing libName");
   }
@@ -119,32 +112,30 @@ async function build_libcapsule({
   $(await $.sh(`cp -rf "${libFile}" "${dest}"`));
   $(await $.sh(`cp -rf "${runFile}" "${dest}"`));
 
-  if (test) {
-    await $.cd("test", async () => {
-      $(await $.sh(`gcc puts.c -o puts`));
-      let e;
-      try {
-        $(await $.sh(`./puts`));
-      } catch (e2) {
-        e = e2;
-      }
-      if (e) {
-        $.say(`Control test passed (${e.message})`);
-      } else {
-        throw new Error(`Expected crash, got none`);
-      }
-      $(await $.sh(`CAPSULE_TEST=1 ${runFile} ./puts > out.txt`));
-      let expectedOutput = "caught dead beef";
-      let actualOutput = (await $.readFile("out.txt")).trim();
-      if (actualOutput == expectedOutput) {
-        $.say(`Injection test passed!`);
-      } else {
-        throw new Error(
-          `Injection test failed:\nexpected\n${expectedOutput}\ngot:${actualOutput}`
-        );
-      }
-    });
-  }
+  await $.cd("test", async () => {
+    $(await $.sh(`gcc puts.c -o puts`));
+    let e;
+    try {
+      $(await $.sh(`./puts`));
+    } catch (e2) {
+      e = e2;
+    }
+    if (e) {
+      $.say(`Control test passed (${e.message})`);
+    } else {
+      throw new Error(`Expected crash, got none`);
+    }
+    $(await $.sh(`CAPSULE_TEST=1 ${runFile} ./puts > out.txt`));
+    let expectedOutput = "caught dead beef";
+    let actualOutput = (await $.readFile("out.txt")).trim();
+    if (actualOutput == expectedOutput) {
+      $.say(`Injection test passed!`);
+    } else {
+      throw new Error(
+        `Injection test failed:\nexpected\n${expectedOutput}\ngot:${actualOutput}`
+      );
+    }
+  });
 }
 
 async function ci_compile_windows() {
