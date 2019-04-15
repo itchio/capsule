@@ -4,9 +4,13 @@ use crate::gl;
 use libc::c_void;
 use std::ffi::CString;
 use std::sync::Once;
-use std::time::SystemTime;
 use winapi::shared::{minwindef, windef};
 use winapi::um::{libloaderapi, winnt};
+use lazy_static::lazy_static;
+use libc_print::libc_println;
+use wstr::{wstrz,wstrz_impl};
+use wincap::{assert_non_null};
+use const_cstr::const_cstr;
 
 ///////////////////////////////////////////
 // lazily-opened opengl32.dll handle
@@ -18,7 +22,7 @@ struct LibHandle {
 unsafe impl std::marker::Sync for LibHandle {}
 
 lazy_static! {
-    static ref opengl32_handle: LibHandle = unsafe {
+    static ref opengl32_handle: LibHandle = {
         // it's *NOT* safe to call libloadingapi::LoadLibraryW here
         let module = LoadLibraryW__next(wstrz!("opengl32.dll").as_ptr());
         assert_non_null!("LoadLibraryW(opengl32.dll)", module);
@@ -43,7 +47,7 @@ unsafe fn get_opengl32_proc_address(rust_name: &str) -> *const () {
 
 lazy_static! {
     static ref wglGetProcAddress: unsafe extern "C" fn(name: winnt::LPCSTR) -> *const c_void = unsafe {
-        let addr = libloaderapi::GetProcAddress(opengl32_handle.module, cstr!("wglGetProcAddress"));
+        let addr = libloaderapi::GetProcAddress(opengl32_handle.module, const_cstr!("wglGetProcAddress").as_ptr());
         if addr.is_null() {
             panic!("opengl32.dll does not contain wglGetProcAddress. That seems unlikely.")
         }

@@ -16,3 +16,10 @@ linux64:
 linux32:
 	rustup run "stable-i686-unknown-linux-gnu" cargo build ${CARGO_FLAGS} --target "i686-unknown-linux-gnu"
 
+windows: windows64 windows32
+
+windows64:
+	rustup run "stable-x86_64-pc-windows-msvc" cargo build ${CARGO_FLAGS} --target "x86_64-pc-windows-msvc"
+
+windows32:
+	rustup run "stable-i686-pc-windows-msvc" cargo build ${CARGO_FLAGS} --target "i686-pc-windows-msvc"
