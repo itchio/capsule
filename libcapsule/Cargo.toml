@@ -19,8 +19,8 @@ ctor = "0.1.7"
 libc-print = "0.1.7"
 # C types like c_char, c_void
 libc = "0.2.50"
-# allocation-free CString literals
-cstr-macro = "0.1.0"
+# C string literals
+const-cstr = "0.3.0"
 # allocation-free UTF-16 literals
 "wstr" = "0.2"
 # terribly naughty identifier manipulation

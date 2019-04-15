@@ -4,6 +4,7 @@ pub use self::constants::*;
 mod types;
 pub use self::types::*;
 
+use libc_print::libc_println;
 use std::mem;
 use std::mem::transmute;
 use std::time::SystemTime;

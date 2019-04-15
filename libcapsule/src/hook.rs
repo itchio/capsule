@@ -1,8 +1,9 @@
-
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 #[macro_export]
 macro_rules! hook_extern {
     ($(fn $real_fn:ident($($v:ident : $t:ty),*) -> $r:ty $body:block)+) => {
+        use lazy_static::lazy_static;
+
         $(
             extern "C" {
                 // it has the exact function signature we specified.
@@ -56,7 +57,7 @@ macro_rules! hook_extern {
                 // it has the exact function signature we specified.
                 fn $real_fn ($($v: $t),*) -> $r;
             }
-            
+
             paste::item! {
                 static [<$real_fn __enabled>]: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
             }

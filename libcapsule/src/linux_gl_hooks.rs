@@ -2,7 +2,9 @@
 #![link(name = "dl")]
 
 use crate::gl;
+use const_cstr::const_cstr;
 use libc::{c_char, c_int, c_void};
+use libc_print::libc_println;
 use std::ffi::CString;
 use std::sync::Once;
 use std::time::SystemTime;
@@ -37,7 +39,8 @@ unsafe impl std::marker::Sync for LibHandle {}
 
 lazy_static! {
     static ref libGLHandle: LibHandle = {
-        let handle = dlopen__next(cstr!("libGL.so"), RTLD_LAZY);
+        use const_cstr::*;
+        let handle = dlopen__next(const_cstr!("libGL.so").as_ptr(), RTLD_LAZY);
         if handle.is_null() {
             panic!("could not dlopen libGL.so")
         }
@@ -51,7 +54,10 @@ lazy_static! {
 
 lazy_static! {
     static ref glXGetProcAddressARB: unsafe extern "C" fn(name: *const c_char) -> *const c_void = unsafe {
-        let addr = dlsym(libGLHandle.addr, cstr!("glXGetProcAddressARB"));
+        let addr = dlsym(
+            libGLHandle.addr,
+            const_cstr!("glXGetProcAddressARB").as_ptr(),
+        );
         if addr.is_null() {
             panic!("libGL.so does not contain glXGetProcAddressARB")
         }
@@ -113,7 +119,7 @@ hook_dynamic! {
 unsafe fn hasLibGL() -> bool {
     // RTLD_NOLOAD lets us check if a library is already loaded.
     // we never need to dlclose() it, because we don't own it.
-    !dlopen__next(cstr!("libGL.so"), RTLD_NOLOAD | RTLD_LAZY).is_null()
+    !dlopen__next(const_cstr!("libGL.so").as_ptr(), RTLD_NOLOAD | RTLD_LAZY).is_null()
 }
 
 static HOOK_LIBGL_ONCE: Once = Once::new();

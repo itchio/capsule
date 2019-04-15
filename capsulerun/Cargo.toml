@@ -9,6 +9,7 @@ edition = "2018"
 wincap = { path = "../wincap" }
 # command-line arguments
 "clap" = "2.33.0"
+# RAII utilities
 "scopeguard" = "1.0.0"
 # utf-16 string handling
 "widestring" = "0.4.0"
@@ -16,6 +17,10 @@ wincap = { path = "../wincap" }
 "wstr" = "0.2"
 # utf-8 string literals
 "const-cstr" = "0.3.0"
+# logging
+"log" = "0.4.6"
+# logging handler
+"simplelog" = "0.5.3"
 
 [dependencies.winapi]
 version = "0.3.7"
