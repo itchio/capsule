@@ -3,6 +3,7 @@
 
 use crate::gl;
 use const_cstr::const_cstr;
+use lazy_static::lazy_static;
 use libc::{c_char, c_int, c_void};
 use libc_print::libc_println;
 use std::ffi::CString;

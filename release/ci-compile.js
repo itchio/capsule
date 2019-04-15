@@ -125,7 +125,11 @@ async function build_libcapsule({ libName, runName, osarch, platform, strip }) {
     } else {
       throw new Error(`Expected crash, got none`);
     }
-    $(await $.sh(`CAPSULE_TEST=1 "${runFile}" ./puts > out.txt`));
+    $(
+      await $.sh(
+        `CAPSULE_TEST=1 RUST_BACKTRACE=1 "${runFile}" ./puts > out.txt`
+      )
+    );
     let expectedOutput = "caught dead beef";
     let actualOutput = (await $.readFile("out.txt")).trim();
     if (actualOutput == expectedOutput) {
