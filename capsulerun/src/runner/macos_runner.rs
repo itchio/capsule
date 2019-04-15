@@ -1,4 +1,4 @@
-#![cfg(target_os = "linux")]
+#![cfg(target_os = "macos")]
 
 use std::path::PathBuf;
 use std::process::Command;
@@ -21,7 +21,7 @@ pub unsafe fn run<'a>(matches: clap::ArgMatches<'a>) {
   };
 
   println!("Will inject ({:?})", lib);
-  cmd.env("LD_PRELOAD", lib);
+  cmd.env("DYLD_INSERT_LIBRARIES", lib);
 
   let mut child = cmd.spawn().expect("Command failed to start");
   println!("Created process, pid = {}", child.id());
@@ -39,7 +39,7 @@ fn determine_lib_path<'a>(
     Some(lib) => Ok(PathBuf::from(lib)),
     _ => {
       let exe_dir = PathBuf::from(std::env::current_exe()?.parent().unwrap());
-      let lib_name = PathBuf::from("libcapsule.so");
+      let lib_name = PathBuf::from("libcapsule.dylib");
 
       match target_is_32bit {
         true => match host_is_32bit {
@@ -55,7 +55,7 @@ fn determine_lib_path<'a>(
                 .unwrap()
                 .parent()
                 .unwrap()
-                .join("i686-unknown-linux-gnu")
+                .join("i686-apple-darwin")
                 .join("debug")
                 .join(lib_name),
             )
@@ -74,7 +74,7 @@ fn determine_lib_path<'a>(
                 .unwrap()
                 .parent()
                 .unwrap()
-                .join("x86_64-unknown-linux-gnu")
+                .join("x86_64-apple-darwin")
                 .join("debug")
                 .join(lib_name),
             )
