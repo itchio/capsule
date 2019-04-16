@@ -6,7 +6,6 @@ const $ = require("./common");
 const path = require("path");
 
 let workspacePath = path.join(process.cwd());
-let workspaceCargoPath = path.join(workspacePath, "Cargo.toml");
 
 async function ci_compile(args) {
   if (args.length < 1) {
@@ -60,6 +59,14 @@ function rustArch(arch) {
   throw new Error(`Unsupported arch: ${arch}`);
 }
 
+async function download_file_if_needed(url, dest) {
+  $.say(`Downloading (${url}) to (${dest})`);
+  // see https://superuser.com/a/908523
+  $(
+    await $.sh(`curl --fail --output "${dest}" --time-cond "${dest}" "${url}"`)
+  );
+}
+
 async function install_rust({ name, platform }) {
   if (!name) {
     throw new Error("missing name");
@@ -73,16 +80,14 @@ async function install_rust({ name, platform }) {
   let cargoBinPath = path.join(process.cwd(), ".cargo", "bin");
   process.env.PATH = `${cargoBinPath}${path.delimiter}${process.env.PATH}`;
   $.say(`Modified $PATH: ${process.env.PATH}`);
-  $(
-    await $.sh(
-      `curl --fail --output "${name}" "https://static.rust-lang.org/rustup/dist/${platform}/${name}"`
-    )
-  );
+  let rustupURL = `https://static.rust-lang.org/rustup/dist/${platform}/${name}`;
+  await download_file_if_needed(rustupURL, name);
   $(await $.sh(`chmod +x "${name}"`));
   $(await $.sh(`"./${name}" --no-modify-path -y`));
 }
 
-async function build_libcapsule({ test, testFlags, libName, runName, osarch, platform, strip }) {
+async function build_libcapsule(opts) {
+  let { tests, libName, runName, osarch, platform, strip } = opts;
   if (!libName) {
     throw new Error("missing libName");
   }
@@ -96,36 +101,46 @@ async function build_libcapsule({ test, testFlags, libName, runName, osarch, pla
     throw new Error("missing osarch");
   }
 
-  $(await $.sh(`rustup toolchain install "stable-${platform}"`));
-  $(
-    await $.sh(
-      `rustup run "stable-${platform}" cargo build --target "${platform}" --release --manifest-path "${workspaceCargoPath}"`
-    )
-  );
+  let chain = `stable-${platform}`;
+  $(await $.sh(`rustup toolchain install ${chain}`));
+  let cargoCmd = `cargo build --target "${platform}" --release`;
+  $(await $.sh(`rustup run ${chain} ${cargoCmd}`));
 
   let dest = path.join("compile-artifacts", osarch);
   $(await $.sh(`mkdir -p "compile-artifacts/${osarch}"`));
   let libFile = `${workspacePath}/target/${platform}/release/${libName}`;
   let runFile = `${workspacePath}/target/${platform}/release/${runName}`;
 
-  if (test) {
-    await $.cd("test", async () => {
-      $(await $.sh(`gcc ${test}.c -o ${test} ${testFlags || ""}`));
-      $(
-        await $.sh(
-          `CAPSULE_TEST=1 RUST_BACKTRACE=1 "${runFile}" ./${test} > out.txt`
-        )
-      );
-      let expectedOutput = "caught dead beef";
-      let actualOutput = (await $.readFile("out.txt")).trim();
-      if (actualOutput == expectedOutput) {
-        $.say(`Injection test passed!`);
-      } else {
-        throw new Error(
-          `Injection test failed:\nexpected\n${expectedOutput}\ngot:${actualOutput}`
-        );
+  if (tests && tests.length > 0) {
+    for (const test of tests) {
+      if (typeof test.name !== "string") {
+        throw new Error(`missing test name`);
       }
-    });
+      if (typeof test.platform !== "string") {
+        throw new Error(`missing test platform`);
+      }
+      $.say(`Running test ${test.name}`);
+
+      let testDir = path.join("test", test.name);
+      await $.cd(testDir, async () => {
+        let chain = `stable-${test.platform}`;
+        let cargoCmd = `cargo build --target ${test.platform}`;
+        $(await $.sh(`rustup run ${chain} ${cargoCmd}`));
+        let testFile = path.join("./target", test.platform, "debug", test.name);
+        let runCmd = `CAPSULE_TEST=1 RUST_BACKTRACE=1 "${runFile}" "${testFile}"`;
+        let actualOutput = (await $.getOutput(runCmd)).trim();
+        let expectedOutput = "caught dead beef";
+        if (actualOutput == expectedOutput) {
+          $.say(`Injection test passed!`);
+        } else {
+          throw new Error(
+            `Injection test failed:\nexpected\n${expectedOutput}\ngot:${actualOutput}`
+          );
+        }
+      });
+    }
+  } else {
+    $.say(`No tests!`);
   }
 
   $(await $.sh(`cp -f "${libFile}" "${dest}"`));
@@ -149,7 +164,7 @@ async function ci_compile_windows() {
       runName: `capsulerun.exe`,
       osarch: `windows-${arch}`,
       platform,
-      test: arch == "amd64" ? "win-test" : undefined,
+      test: arch == "amd64" ? "win-test" : undefined
     });
   }
 }
@@ -179,11 +194,17 @@ async function ci_compile_linux(arch) {
     runName: `capsulerun`,
     osarch: `linux-${arch}`,
     platform,
-    strip: true
+    strip: true,
+    tests: [
+      {
+        name: "linux-opengl-dlopen",
+        platform
+      }
+    ]
   });
 }
 
 ci_compile(process.argv.slice(2)).catch(e => {
-  console.error(e);
+  $.say(e.stack || `${e}`);
   process.exit(1);
 });
