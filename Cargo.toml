@@ -5,3 +5,7 @@ members = [
     "libcapsule",
     "wincap"
 ]
+
+exclude = [
+    "test"
+]

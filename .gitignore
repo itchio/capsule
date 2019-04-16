@@ -2,6 +2,7 @@
 /.multirust
 /.cargo
 /rustup-init*
+*.raw
 *.a
 *.o
 *.so

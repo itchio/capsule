@@ -6,7 +6,7 @@ extern "C" {}
 use crate::gl;
 use const_cstr::const_cstr;
 use lazy_static::lazy_static;
-use libc::{c_char, c_int, c_void};
+use libc::{c_char, c_int, c_ulong, c_void};
 use libc_print::libc_println;
 use std::ffi::CString;
 use std::sync::Once;
@@ -97,7 +97,12 @@ hook_extern! {
 
 hook_dynamic! {
     get_glx_proc_address => {
-        fn glXSwapBuffers(display: *const c_void, drawable: *const c_void) -> () {
+        fn glXSwapBuffers(display: *const c_void, drawable: c_ulong) -> () {
+            if super::SETTINGS.in_test && display == 0xDEADBEEF as *const c_void {
+                libc_println!("caught dead beef");
+                std::process::exit(0);
+            }
+
             libc_println!(
                 "[{:08}] swapping buffers! (display=0x{:X}, drawable=0x{:X})",
                 startTime.elapsed().unwrap().as_millis(),

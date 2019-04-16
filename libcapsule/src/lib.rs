@@ -19,27 +19,33 @@ static CURRENT_PLATFORM: &str = "Linux";
 #[cfg(target_os = "windows")]
 static CURRENT_PLATFORM: &str = "Windows";
 
+struct Settings {
+    in_test: bool,
+}
+unsafe impl Sync for Settings {}
+
+lazy_static::lazy_static! {
+    static ref SETTINGS: Settings = {
+        Settings{
+            in_test: std::env::var("CAPSULE_TEST").unwrap_or_default() == "1",
+        }
+    };
+}
+
 #[ctor]
 fn ctor() {
-    match std::env::var("CAPSULE_TEST") {
-        Ok(_) => {
-            lazy_static::initialize(&puts__hook);
-        }
-        Err(_) => {
-            libc_println!("thanks for flying capsule on {}", CURRENT_PLATFORM);
-            #[cfg(target_os = "linux")]
-            {
-                linux_gl_hooks::initialize()
-            }
-            #[cfg(target_os = "windows")]
-            {
-                windows_gl_hooks::initialize()
-            }
-            #[cfg(target_os = "macos")]
-            {
-                macos_gl_hooks::initialize()
-            }
-        }
+    libc_println!("thanks for flying capsule on {}", CURRENT_PLATFORM);
+    #[cfg(target_os = "linux")]
+    {
+        linux_gl_hooks::initialize()
+    }
+    #[cfg(target_os = "windows")]
+    {
+        windows_gl_hooks::initialize()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        macos_gl_hooks::initialize()
     }
 }
 
