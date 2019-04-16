@@ -5,6 +5,7 @@ mod types;
 pub use self::types::*;
 
 use libc_print::libc_println;
+use log::*;
 use std::mem;
 use std::mem::transmute;
 use std::time::SystemTime;
@@ -92,7 +93,7 @@ pub unsafe fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'a Cap
         };
         let viewport = mem::zeroed::<Viewport>();
         funcs.glGetIntegerv(GL_VIEWPORT, mem::transmute(&viewport));
-        println!("Viewport: {:?}", viewport);
+        info!("Viewport: {:?}", viewport);
 
         cached_capture_context = Some(CaptureContext {
             width: viewport.width,

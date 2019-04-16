@@ -6,6 +6,7 @@ extern "C" {}
 use lazy_static::lazy_static;
 use libc::{c_char, c_int, c_void};
 use libc_print::libc_println;
+use log::*;
 use std::ffi::{CStr, CString};
 use std::sync::Once;
 
@@ -38,7 +39,7 @@ unsafe impl std::marker::Sync for LibHandle {}
 
 lazy_static! {
     static ref gl_handle: LibHandle = {
-        libc_println!("in gl_handle initialization");
+        info!("in gl_handle initialization");
         let handle = dlopen__next(gl_dylib_path_cstr.as_ptr(), RTLD_LAZY);
         if handle.is_null() {
             panic!("could not dlopen libGL.dylib")
@@ -60,7 +61,7 @@ hook_extern! {
             } else {
                 CStr::from_ptr(filename).to_string_lossy().into_owned()
             };
-            libc_println!("dlopen({:?}, {}) = {:x}", name, flags, res as usize);
+            info!("dlopen({:?}, {}) = {:x}", name, flags, res as usize);
         }
         hook_if_needed();
         res
@@ -72,7 +73,7 @@ hook_extern! {
 ///////////////////////////////////////////
 hook_extern! {
     fn CGLFlushDrawable(ctx: *const c_void) -> *const c_void {
-        libc_println!("Swapping buffers!");
+        info!("Swapping buffers!");
         CGLFlushDrawable__next(ctx)
     }
 }
@@ -87,7 +88,7 @@ static HOOK_SWAPBUFFERS_ONCE: Once = Once::new();
 unsafe fn hook_if_needed() {
     if is_using_opengl() {
         HOOK_SWAPBUFFERS_ONCE.call_once(|| {
-            libc_println!("libGL usage detected, hooking OpenGL");
+            info!("libGL usage detected, hooking OpenGL");
             lazy_static::initialize(&CGLFlushDrawable__hook);
         })
     }

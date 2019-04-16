@@ -67,7 +67,14 @@ fn setup_logging<'a>(matches: &clap::ArgMatches<'a>) {
     use simplelog::*;
 
     let mut loggers = Vec::<Box<SharedLogger>>::new();
-    let term_level = if matches.is_present("verbose") {
+    let verbose = matches.is_present("verbose");
+    if verbose {
+        // TODO: this enables libcapsule logging, but it's not
+        // a great way to do it because it's mixed with the target
+        // program's stdout.
+        std::env::set_var("RUST_LOG", "info");
+    }
+    let term_level = if verbose {
         LevelFilter::Info
     } else {
         LevelFilter::Warn

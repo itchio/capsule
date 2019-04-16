@@ -3,6 +3,7 @@
 use ctor::ctor;
 use libc::c_char;
 use libc_print::libc_println;
+use log::*;
 
 #[macro_use]
 mod hook;
@@ -34,7 +35,9 @@ lazy_static::lazy_static! {
 
 #[ctor]
 fn ctor() {
-    libc_println!("thanks for flying capsule on {}", CURRENT_PLATFORM);
+    env_logger::init();
+
+    info!("thanks for flying capsule on {}", CURRENT_PLATFORM);
     #[cfg(target_os = "linux")]
     {
         linux_gl_hooks::initialize()
@@ -46,15 +49,5 @@ fn ctor() {
     #[cfg(target_os = "macos")]
     {
         macos_gl_hooks::initialize()
-    }
-}
-
-hook_extern! {
-    fn puts(ptr: *const c_char) -> () {
-        if ptr == 0xDEADBEEF as *const c_char {
-            libc_println!("caught dead beef");
-            return;
-        }
-        puts__next(ptr)
     }
 }

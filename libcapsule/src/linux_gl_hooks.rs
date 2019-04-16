@@ -8,6 +8,7 @@ use const_cstr::const_cstr;
 use lazy_static::lazy_static;
 use libc::{c_char, c_int, c_ulong, c_void};
 use libc_print::libc_println;
+use log::*;
 use std::ffi::CString;
 use std::sync::Once;
 use std::time::SystemTime;
@@ -71,7 +72,7 @@ lazy_static! {
 unsafe fn get_glx_proc_address(rustName: &str) -> *const () {
     let name = CString::new(rustName).unwrap();
     let addr = glXGetProcAddressARB(name.as_ptr());
-    libc_println!("glXGetProcAddressARB({}) = {:x}", rustName, addr as isize);
+    info!("glXGetProcAddressARB({}) = {:x}", rustName, addr as isize);
     addr as *const ()
 }
 
@@ -103,7 +104,7 @@ hook_dynamic! {
                 std::process::exit(0);
             }
 
-            libc_println!(
+            info!(
                 "[{:08}] swapping buffers! (display=0x{:X}, drawable=0x{:X})",
                 startTime.elapsed().unwrap().as_millis(),
                 display as isize,
@@ -137,7 +138,7 @@ static HOOK_SWAPBUFFERS_ONCE: Once = Once::new();
 unsafe fn hook_if_needed() {
     if is_using_opengl() {
         HOOK_SWAPBUFFERS_ONCE.call_once(|| {
-            libc_println!("libGL usage detected, hooking OpenGL");
+            info!("libGL usage detected, hooking OpenGL");
             lazy_static::initialize(&glXSwapBuffers__hook);
         })
     }
@@ -178,7 +179,7 @@ unsafe fn capture_gl_frame() {
     // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     cc.funcs
         .glGetIntegerv(gl::GL_VIEWPORT, std::mem::transmute(viewport.as_ptr()));
-    libc_println!("viewport: {:?}", viewport);
+    info!("viewport: {:?}", viewport);
 
     // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
     // call without methods (ugly)
@@ -206,7 +207,7 @@ unsafe fn capture_gl_frame() {
             }
         }
     }
-    libc_println!("[frame {}] {} black pixels", frame_index, num_black);
+    info!("[frame {}] {} black pixels", frame_index, num_black);
     frame_index += 1;
 
     if frame_index < 200 {
@@ -217,6 +218,6 @@ unsafe fn capture_gl_frame() {
         let mut file = File::create(&name).unwrap();
         file.write_all(&frame_buffer.as_slice()[..bytes_per_frame])
             .unwrap();
-        libc_println!("{} written", name)
+        info!("{} written", name)
     }
 }
