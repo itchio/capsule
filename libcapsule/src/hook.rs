@@ -82,8 +82,10 @@ macro_rules! hook_extern {
             }
 
             ::paste::item! {
-                unsafe extern "C" fn [<$real_fn __next>] ($($v: $t),*) -> $r {
-                    $real_fn($($v),*)
+                extern "C" fn [<$real_fn __next>] ($($v: $t),*) -> $r {
+                    unsafe {
+                        $real_fn($($v),*)
+                    }
                 }
             }
 
