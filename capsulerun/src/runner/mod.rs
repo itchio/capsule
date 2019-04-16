@@ -18,6 +18,7 @@ pub struct Options {
   pub args: Vec<String>,
   pub arch: Arch,
   pub os: OS,
+  pub suspend: bool,
 }
 
 pub struct Context {
@@ -28,6 +29,7 @@ pub fn new_context(options: Options) -> Context {
   Context { options: options }
 }
 
+#[derive(PartialEq)]
 pub enum Arch {
   I686,
   X86_64,

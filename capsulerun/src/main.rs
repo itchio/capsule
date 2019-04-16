@@ -20,6 +20,11 @@ fn main() {
                 .short("v"),
         )
         .arg(
+            Arg::with_name("suspend")
+                .long("suspend")
+                .help("Suspend process, wait for keyboard input to continue"),
+        )
+        .arg(
             Arg::with_name("log-file")
                 .long("log-file")
                 .help("Log to this file")
@@ -50,16 +55,17 @@ fn build_options<'a>(matches: clap::ArgMatches<'a>) -> runner::Options {
             .unwrap_or_default()
             .map(|x| x.to_string())
             .collect(),
-        arch: if cfg!(target_pointer_width = "32") {
-            runner::Arch::I686
-        } else {
+        arch: if cfg!(target_pointer_width = "64") {
             runner::Arch::X86_64
+        } else {
+            runner::Arch::I686
         },
         os: match true {
             cfg!(target_os = "windows") => runner::OS::Windows,
             cfg!(target_os = "linux") => runner::OS::Linux,
             cfg!(target_os = "macos") => runner::OS::MacOS,
         },
+        suspend: matches.is_present("suspend"),
     }
 }
 

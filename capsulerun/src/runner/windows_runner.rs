@@ -25,6 +25,13 @@ impl Context {
       let mut child = cmd.spawn().expect("Command failed to start");
       info!("Created suspended process, pid = {}", child.id());
 
+      if self.options.suspend {
+        warn!("Suspended, press enter to continue... (target PID = {})", child.id());
+        let mut line = String::new();
+        use std::io::BufRead;
+        std::io::stdin().lock().read_line(&mut line).unwrap();
+      }
+
       let process_id: minwindef::DWORD = child.id();
       let process_handle = processthreadsapi::OpenProcess(
         winnt::PROCESS_ALL_ACCESS,
@@ -34,13 +41,12 @@ impl Context {
       assert_non_null!("OpenProcess", process_handle);
       let process_handle = guard_handle!(process_handle);
 
-      let host_is_32bit = cfg!(target_pointer_width = "32");
-      let target_is_32bit = host_is_32bit || {
+      let target_is_32bit = *WINDOWS_ARCH == Arch::I686 || {
         let mut is_wow64: minwindef::BOOL = 0;
         wow64apiset::IsWow64Process(*process_handle, &mut is_wow64);
         is_wow64 == 1
       };
-      let target_arch = if target_is_32bit { Arch::I686 }else {Arch::X86_64};
+      let target_arch = if target_is_32bit { Arch::I686 } else { Arch::X86_64 };
 
       let job_object = jobapi2::CreateJobObjectW(ptr::null_mut(), ptr::null_mut());
       assert_non_null!("CreateJobObjectW", job_object);
@@ -66,7 +72,14 @@ impl Context {
         info!("Assigned process to job object {:x}", *job_object as usize);
       }
 
-      info!("Target arch is {}", target_arch.as_str());
+      info!("   windows arch is {}", WINDOWS_ARCH.as_str());
+      info!("capsulerun arch is {}", self.options.arch.as_str());
+      info!("    target arch is {}", target_arch.as_str());
+      if self.options.arch != target_arch {
+        // should use inject helper here,
+        // see https://github.com/itchio/capsule/issues/59
+        panic!("capsulerun {} cannot inject into {} target", self.options.arch.as_str(), target_arch.as_str());
+      }
     
       let lib = self.locate_lib("capsule.dll", target_arch).unwrap();
 
@@ -171,3 +184,20 @@ impl Context {
   }
 }
 
+lazy_static::lazy_static! {
+  static ref WINDOWS_ARCH: Arch = {
+    macro_rules! env {
+      ($name: literal) => {
+        std::env::var($name).unwrap_or_default()
+      }
+    }
+
+    if env!("PROCESSOR_ARCHITECTURE") == "AMD64" {
+      return Arch::X86_64;
+    }
+    if env!("PROCESSOR_ARCHITEW6432") == "AMD64" {
+      return Arch::X86_64;
+    }
+    Arch::I686
+  };
+}

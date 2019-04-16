@@ -34,8 +34,9 @@ lazy_static! {
 unsafe fn get_opengl32_proc_address(rust_name: &str) -> *const () {
     let name = CString::new(rust_name).unwrap();
     let addr = libloaderapi::GetProcAddress(opengl32_handle.module, name.as_ptr());
+
     info!(
-        "GetProcAddress(opengl32.dll, {}) = {:x}",
+        "get_opengl32_proc_address({}) = {:x}",
         rust_name, addr as isize
     );
     addr as *const ()
@@ -61,7 +62,7 @@ lazy_static! {
 unsafe fn get_wgl_proc_address(rust_name: &str) -> *const () {
     let name = CString::new(rust_name).unwrap();
     let addr = wglGetProcAddress(name.as_ptr());
-    info!("wglGetProcAddress({}) = {:x}", rust_name, addr as isize);
+    info!("get_wgl_proc_address({}) = {:x}", rust_name, addr as isize);
 
     if addr.is_null() {
         return get_opengl32_proc_address(rust_name);
@@ -72,9 +73,9 @@ unsafe fn get_wgl_proc_address(rust_name: &str) -> *const () {
 hook_dynamic! {
     get_opengl32_proc_address => {
         fn wglSwapBuffers(hdc: windef::HDC) -> minwindef::BOOL {
-            if hdc as usize == 0xDEADBEEF as usize {
+            if super::SETTINGS.in_test && hdc as usize == 0xDEADBEEF as usize {
                 libc_println!("caught dead beef");
-                return 0 as minwindef::BOOL
+                std::process::exit(0);
             }
 
             capture_gl_frame();
@@ -90,7 +91,7 @@ lazy_static! {
         // this is the ONLY safe place to call libloaderapi::LoadLibraryW
         // after that, it's hooked.
         let module = libloaderapi::LoadLibraryW(wstrz!("kernel32.dll").as_ptr());
-        assert_non_null!("LoadLibraryW(kernel3232.dll)", module);
+        assert_non_null!("LoadLibraryW(kernel32.dll)", module);
         LibHandle { module: module }
     };
 }
@@ -99,7 +100,7 @@ unsafe fn get_kernel32_proc_address(rust_name: &str) -> *const () {
     let name = CString::new(rust_name).unwrap();
     let addr = libloaderapi::GetProcAddress(kernel32_handle.module, name.as_ptr());
     info!(
-        "GetProcAddress(kernel32.dll, {}) = {:x}",
+        "get_kernel32_proc_address({}) = {:x}",
         rust_name, addr as isize
     );
 
@@ -107,14 +108,14 @@ unsafe fn get_kernel32_proc_address(rust_name: &str) -> *const () {
 }
 
 ///////////////////////////////////////////
-// LoadLibraryW hook
+// LoadLibrary hooks
 ///////////////////////////////////////////
 
 hook_dynamic! {
-    get_kernel32_proc_address => {
+    extern "system" use get_kernel32_proc_address => {
         fn LoadLibraryA(filename: winnt::LPSTR) -> minwindef::HMODULE {
             let res = LoadLibraryA__next(filename);
-            {
+            if !filename.is_null() {
                 let s = std::ffi::CStr::from_ptr(filename).to_string_lossy();
                 info!("LoadLibraryA({}) = {:x}", s, res as usize);
             }
@@ -124,7 +125,7 @@ hook_dynamic! {
 
         fn LoadLibraryW(filename: winnt::LPCWSTR) -> minwindef::HMODULE {
             let res = LoadLibraryW__next(filename);
-            {
+            if !filename.is_null() {
                 let s = widestring::U16CStr::from_ptr_str(filename).to_string_lossy();
                 info!("LoadLibraryW({}) = {:x}", s, res as usize);
             }

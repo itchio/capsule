@@ -164,7 +164,12 @@ async function ci_compile_windows() {
       runName: `capsulerun.exe`,
       osarch: `windows-${arch}`,
       platform,
-      test: arch == "amd64" ? "win-test" : undefined
+      tests: [
+        {
+          name: "windows-opengl-loadlibrary",
+          platform
+        }
+      ]
     });
   }
 }
