@@ -3,6 +3,7 @@
 use ctor::ctor;
 use libc::c_char;
 use libc_print::libc_println;
+use log::*;
 
 #[macro_use]
 mod hook;
@@ -21,34 +22,19 @@ static CURRENT_PLATFORM: &str = "Windows";
 
 #[ctor]
 fn ctor() {
-    match std::env::var("CAPSULE_TEST") {
-        Ok(_) => {
-            lazy_static::initialize(&puts__hook);
-        }
-        Err(_) => {
-            libc_println!("thanks for flying capsule on {}", CURRENT_PLATFORM);
-            #[cfg(target_os = "linux")]
-            {
-                linux_gl_hooks::initialize()
-            }
-            #[cfg(target_os = "windows")]
-            {
-                windows_gl_hooks::initialize()
-            }
-            #[cfg(target_os = "macos")]
-            {
-                macos_gl_hooks::initialize()
-            }
-        }
-    }
-}
+    env_logger::init();
 
-hook_extern! {
-    fn puts(ptr: *const c_char) -> () {
-        if ptr == 0xDEADBEEF as *const c_char {
-            libc_println!("caught dead beef");
-            return;
-        }
-        puts__next(ptr)
+    info!("thanks for flying capsule on {}", CURRENT_PLATFORM);
+    #[cfg(target_os = "linux")]
+    {
+        linux_gl_hooks::initialize()
+    }
+    #[cfg(target_os = "windows")]
+    {
+        windows_gl_hooks::initialize()
+    }
+    #[cfg(target_os = "macos")]
+    {
+        macos_gl_hooks::initialize()
     }
 }

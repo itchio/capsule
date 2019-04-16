@@ -25,6 +25,10 @@ const-cstr = "0.3.0"
 "wstr" = "0.2"
 # terribly naughty identifier manipulation
 paste = "0.1.5"
+# logging
+"log" = "0.4.6"
+# logging handler
+"env_logger" = "0.6.1"
 
 [dependencies.winapi]
 version = "0.3.7"

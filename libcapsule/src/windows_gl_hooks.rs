@@ -1,16 +1,17 @@
 #![cfg(target_os = "windows")]
 
 use crate::gl;
+use const_cstr::const_cstr;
+use lazy_static::lazy_static;
 use libc::c_void;
+use libc_print::libc_println;
+use log::*;
 use std::ffi::CString;
 use std::sync::Once;
 use winapi::shared::{minwindef, windef};
 use winapi::um::{libloaderapi, winnt};
-use lazy_static::lazy_static;
-use libc_print::libc_println;
-use wstr::{wstrz,wstrz_impl};
-use wincap::{assert_non_null};
-use const_cstr::const_cstr;
+use wincap::assert_non_null;
+use wstr::{wstrz, wstrz_impl};
 
 ///////////////////////////////////////////
 // lazily-opened opengl32.dll handle
@@ -33,10 +34,9 @@ lazy_static! {
 unsafe fn get_opengl32_proc_address(rust_name: &str) -> *const () {
     let name = CString::new(rust_name).unwrap();
     let addr = libloaderapi::GetProcAddress(opengl32_handle.module, name.as_ptr());
-    libc_println!(
+    info!(
         "GetProcAddress(opengl32.dll, {}) = {:x}",
-        rust_name,
-        addr as isize
+        rust_name, addr as isize
     );
     addr as *const ()
 }
@@ -47,7 +47,10 @@ unsafe fn get_opengl32_proc_address(rust_name: &str) -> *const () {
 
 lazy_static! {
     static ref wglGetProcAddress: unsafe extern "C" fn(name: winnt::LPCSTR) -> *const c_void = unsafe {
-        let addr = libloaderapi::GetProcAddress(opengl32_handle.module, const_cstr!("wglGetProcAddress").as_ptr());
+        let addr = libloaderapi::GetProcAddress(
+            opengl32_handle.module,
+            const_cstr!("wglGetProcAddress").as_ptr(),
+        );
         if addr.is_null() {
             panic!("opengl32.dll does not contain wglGetProcAddress. That seems unlikely.")
         }
@@ -58,7 +61,7 @@ lazy_static! {
 unsafe fn get_wgl_proc_address(rust_name: &str) -> *const () {
     let name = CString::new(rust_name).unwrap();
     let addr = wglGetProcAddress(name.as_ptr());
-    libc_println!("wglGetProcAddress({}) = {:x}", rust_name, addr as isize);
+    info!("wglGetProcAddress({}) = {:x}", rust_name, addr as isize);
 
     if addr.is_null() {
         return get_opengl32_proc_address(rust_name);
@@ -68,7 +71,12 @@ unsafe fn get_wgl_proc_address(rust_name: &str) -> *const () {
 
 hook_dynamic! {
     get_opengl32_proc_address => {
-        fn wglSwapBuffers(hdc: windef::HDC) -> () {
+        fn wglSwapBuffers(hdc: windef::HDC) -> minwindef::BOOL {
+            if hdc as usize == 0xDEADBEEF as usize {
+                libc_println!("caught dead beef");
+                return 0 as minwindef::BOOL
+            }
+
             capture_gl_frame();
             wglSwapBuffers__next(hdc)
         }
@@ -90,10 +98,9 @@ lazy_static! {
 unsafe fn get_kernel32_proc_address(rust_name: &str) -> *const () {
     let name = CString::new(rust_name).unwrap();
     let addr = libloaderapi::GetProcAddress(kernel32_handle.module, name.as_ptr());
-    libc_println!(
+    info!(
         "GetProcAddress(kernel32.dll, {}) = {:x}",
-        rust_name,
-        addr as isize
+        rust_name, addr as isize
     );
 
     addr as *const ()
@@ -109,7 +116,7 @@ hook_dynamic! {
             let res = LoadLibraryA__next(filename);
             {
                 let s = std::ffi::CStr::from_ptr(filename).to_string_lossy();
-                libc_println!("LoadLibraryA({}) = {:x}", s, res as usize);
+                info!("LoadLibraryA({}) = {:x}", s, res as usize);
             }
             hook_if_needed();
             res
@@ -119,7 +126,7 @@ hook_dynamic! {
             let res = LoadLibraryW__next(filename);
             {
                 let s = widestring::U16CStr::from_ptr_str(filename).to_string_lossy();
-                libc_println!("LoadLibraryW({}) = {:x}", s, res as usize);
+                info!("LoadLibraryW({}) = {:x}", s, res as usize);
             }
             hook_if_needed();
             res
@@ -137,7 +144,7 @@ fn is_using_opengl() -> bool {
 unsafe fn hook_if_needed() {
     if is_using_opengl() {
         HOOK_SWAPBUFFERS_ONCE.call_once(|| {
-            libc_println!("opengl32.dll usage detected, hooking OpenGL");
+            info!("opengl32.dll usage detected, hooking OpenGL");
             lazy_static::initialize(&wglSwapBuffers__hook);
         })
     }

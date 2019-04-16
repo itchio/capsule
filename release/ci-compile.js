@@ -70,7 +70,9 @@ async function install_rust({ name, platform }) {
 
   process.env.CARGO_HOME = path.join(process.cwd(), ".cargo");
   process.env.RUSTUP_HOME = path.join(process.cwd(), ".multirust");
-  process.env.PATH = `${process.cwd()}/.cargo/bin:${process.env.PATH}`;
+  let cargoBinPath = path.join(process.cwd(), ".cargo", "bin");
+  process.env.PATH = `${cargoBinPath}${path.delimiter}${process.env.PATH}`;
+  $.say(`Modified $PATH: ${process.env.PATH}`);
   $(
     await $.sh(
       `curl --fail --output "${name}" "https://static.rust-lang.org/rustup/dist/${platform}/${name}"`
@@ -80,7 +82,7 @@ async function install_rust({ name, platform }) {
   $(await $.sh(`"./${name}" --no-modify-path -y`));
 }
 
-async function build_libcapsule({ libName, runName, osarch, platform, strip }) {
+async function build_libcapsule({ test, testFlags, libName, runName, osarch, platform, strip }) {
   if (!libName) {
     throw new Error("missing libName");
   }
@@ -112,34 +114,25 @@ async function build_libcapsule({ libName, runName, osarch, platform, strip }) {
   $(await $.sh(`cp -rf "${libFile}" "${dest}"`));
   $(await $.sh(`cp -rf "${runFile}" "${dest}"`));
 
-  await $.cd("test", async () => {
-    $(await $.sh(`gcc puts.c -o puts`));
-    let e;
-    try {
-      $(await $.sh(`./puts`));
-    } catch (e2) {
-      e = e2;
-    }
-    if (e) {
-      $.say(`Control test passed (${e.message})`);
-    } else {
-      throw new Error(`Expected crash, got none`);
-    }
-    $(
-      await $.sh(
-        `CAPSULE_TEST=1 RUST_BACKTRACE=1 "${runFile}" ./puts > out.txt`
-      )
-    );
-    let expectedOutput = "caught dead beef";
-    let actualOutput = (await $.readFile("out.txt")).trim();
-    if (actualOutput == expectedOutput) {
-      $.say(`Injection test passed!`);
-    } else {
-      throw new Error(
-        `Injection test failed:\nexpected\n${expectedOutput}\ngot:${actualOutput}`
+  if (test) {
+    await $.cd("test", async () => {
+      $(await $.sh(`gcc ${test}.c -o ${test} ${testFlags || ""}`));
+      $(
+        await $.sh(
+          `CAPSULE_TEST=1 RUST_BACKTRACE=1 "${runFile}" ./${test} > out.txt`
+        )
       );
-    }
-  });
+      let expectedOutput = "caught dead beef";
+      let actualOutput = (await $.readFile("out.txt")).trim();
+      if (actualOutput == expectedOutput) {
+        $.say(`Injection test passed!`);
+      } else {
+        throw new Error(
+          `Injection test failed:\nexpected\n${expectedOutput}\ngot:${actualOutput}`
+        );
+      }
+    });
+  }
 }
 
 async function ci_compile_windows() {
@@ -154,7 +147,8 @@ async function ci_compile_windows() {
       libName: `capsule.dll`,
       runName: `capsulerun.exe`,
       osarch: `windows-${arch}`,
-      platform
+      platform,
+      test: arch == "amd64" ? "win-test" : undefined,
     });
   }
 }
