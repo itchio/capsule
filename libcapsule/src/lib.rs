@@ -1,8 +1,6 @@
 #![allow(non_upper_case_globals, non_snake_case)]
 
 use ctor::ctor;
-use libc::c_char;
-use libc_print::libc_println;
 use log::*;
 
 #[macro_use]
