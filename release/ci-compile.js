@@ -107,12 +107,6 @@ async function build_libcapsule({ test, testFlags, libName, runName, osarch, pla
   $(await $.sh(`mkdir -p "compile-artifacts/${osarch}"`));
   let libFile = `${workspacePath}/target/${platform}/release/${libName}`;
   let runFile = `${workspacePath}/target/${platform}/release/${runName}`;
-  if (strip) {
-    $(await $.sh(`strip "${libFile}"`));
-    $(await $.sh(`strip "${runFile}"`));
-  }
-  $(await $.sh(`cp -rf "${libFile}" "${dest}"`));
-  $(await $.sh(`cp -rf "${runFile}" "${dest}"`));
 
   if (test) {
     await $.cd("test", async () => {
@@ -132,6 +126,13 @@ async function build_libcapsule({ test, testFlags, libName, runName, osarch, pla
         );
       }
     });
+  }
+
+  $(await $.sh(`cp -rf "${libFile}" "${dest}"`));
+  $(await $.sh(`cp -rf "${runFile}" "${dest}"`));
+  if (strip) {
+    $(await $.sh(`strip "${dest}/${libName}"`));
+    $(await $.sh(`strip "${dest}/${runName}"`));
   }
 }
 
