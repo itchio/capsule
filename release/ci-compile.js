@@ -135,11 +135,11 @@ async function build_libcapsule({ libName, runName, osarch, platform, strip }) {
     }
   });
 
-  $(await $.sh(`cp -rf "${libFile}" "${dest}"`));
-  $(await $.sh(`cp -rf "${runFile}" "${dest}"`));
+  $(await $.sh(`cp -f "${libFile}" "${dest}"`));
+  $(await $.sh(`cp -f "${runFile}" "${dest}"`));
   if (strip) {
-    $(await $.sh(`strip "${dest}/${libFile}"`));
-    $(await $.sh(`strip "${dest}/${runFile}"`));
+    $(await $.sh(`strip "${dest}/${libName}"`));
+    $(await $.sh(`strip "${dest}/${runName}"`));
   }
 }
 
