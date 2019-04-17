@@ -30,6 +30,7 @@ pub const RTLD_NEXT: *const c_void = (-1 as isize) as *const c_void;
 
 extern "C" {
     pub fn dlsym(handle: *const c_void, symbol: *const c_char) -> *const c_void;
+    pub fn dlclose(handle: *const c_void);
 }
 
 ///////////////////////////////////////////
@@ -84,8 +85,8 @@ lazy_static! {
 // dlopen hook
 ///////////////////////////////////////////
 
-hook_extern! {
-    fn dlopen(filename: *const c_char, flags: c_int) -> *const c_void {
+hook_dlsym! {
+    "dl" => fn dlopen(filename: *const c_char, flags: c_int) -> *const c_void {
         let res = dlopen__next(filename, flags);
         hook_if_needed();
         res
@@ -127,8 +128,14 @@ hook_dynamic! {
 /// or by dlopen() afterwards.
 unsafe fn is_using_opengl() -> bool {
     // RTLD_NOLOAD lets us check if a library is already loaded.
-    // we never need to dlclose() it, because we don't own it.
-    !dlopen__next(const_cstr!("libGL.so.1").as_ptr(), RTLD_NOLOAD | RTLD_LAZY).is_null()
+    // FIXME: we actually do need to call dlclose here, apparently
+    // modules are reference-counted.
+    let handle = dlopen__next(const_cstr!("libGL.so.1").as_ptr(), RTLD_NOLOAD | RTLD_LAZY);
+    let using = !handle.is_null();
+    if using {
+        dlclose(handle);
+    }
+    using
 }
 
 static HOOK_SWAPBUFFERS_ONCE: Once = Once::new();
@@ -145,10 +152,7 @@ unsafe fn hook_if_needed() {
 }
 
 pub fn initialize() {
-    unsafe {
-        lazy_static::initialize(&dlopen__hook);
-        hook_if_needed()
-    }
+    unsafe { hook_if_needed() }
 }
 
 lazy_static! {
@@ -174,16 +178,11 @@ unsafe fn capture_gl_frame() {
 
     let mut viewport = Vec::<gl::GLint>::with_capacity(4);
     viewport.resize(4, 0);
-    // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-    // call with methods
-    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
     cc.funcs
         .glGetIntegerv(gl::GL_VIEWPORT, std::mem::transmute(viewport.as_ptr()));
     info!("viewport: {:?}", viewport);
 
-    // vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-    // call without methods (ugly)
-    // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
     cc.funcs.glReadPixels(
         x,
         y,

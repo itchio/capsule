@@ -1,3 +1,7 @@
+#[macro_use]
+pub mod dlsym;
+pub use dlsym::*;
+
 #[cfg(any(target_os = "windows", target_os = "linux"))]
 #[macro_export]
 macro_rules! hook_extern {
