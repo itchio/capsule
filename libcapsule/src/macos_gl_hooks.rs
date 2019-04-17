@@ -50,18 +50,20 @@ lazy_static! {
 ///////////////////////////////////////////
 
 hook_dyld! {
-    ("ld", "library") => fn dlopen(filename: *const c_char, flags: c_int) -> *const c_void {
-        let res = dlopen__next(filename, flags);
-        {
-            let name = if filename.is_null() {
-                String::from("NULL")
-            } else {
-                CStr::from_ptr(filename).to_string_lossy().into_owned()
-            };
-            info!("dlopen({:?}, {}) = {:x}", name, flags, res as usize);
+    ("dl" as "dylib") => {
+        fn dlopen(filename: *const c_char, flags: c_int) -> *const c_void {
+            let res = dlopen__next(filename, flags);
+            {
+                let name = if filename.is_null() {
+                    String::from("NULL")
+                } else {
+                    CStr::from_ptr(filename).to_string_lossy().into_owned()
+                };
+                info!("dlopen({:?}, {}) = {:x}", name, flags, res as usize);
+            }
+            hook_if_needed();
+            res
         }
-        hook_if_needed();
-        res
     }
 }
 
@@ -69,14 +71,16 @@ hook_dyld! {
 // CGLFlushDrawable
 ///////////////////////////////////////////
 hook_dyld! {
-    ("OpenGL", "framework") => fn CGLFlushDrawable(ctx: *const c_void) -> *const c_void {
-        if super::SETTINGS.in_test && ctx == 0xDEADBEEF as *const c_void {
-            libc_println!("caught dead beef");
-            std::process::exit(0);
-        }
+    ("OpenGL" as "framework") => {
+        fn CGLFlushDrawable(ctx: *const c_void) -> *const c_void {
+            if super::SETTINGS.in_test && ctx == 0xDEADBEEF as *const c_void {
+                libc_println!("caught dead beef");
+                std::process::exit(0);
+            }
 
-        info!("Swapping buffers!");
-        CGLFlushDrawable__next(ctx)
+            info!("Swapping buffers!");
+            CGLFlushDrawable__next(ctx)
+        }
     }
 }
 

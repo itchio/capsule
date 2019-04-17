@@ -2,10 +2,7 @@
 pub mod dlsym;
 
 #[macro_use]
-pub mod extern_detour;
-
-#[macro_use]
-pub mod extern_dyld;
+pub mod dyld;
 
 #[macro_use]
 pub mod dynamic;

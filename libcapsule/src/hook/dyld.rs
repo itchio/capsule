@@ -10,7 +10,7 @@ unsafe impl Sync for Interposition {}
 
 #[macro_export]
 macro_rules! hook_dyld {
-    (($link_name:literal, $link_kind:literal) => $(fn $real_fn:ident($($v:ident : $t:ty),*) -> $r:ty $body:block)+) => {
+    (($link_name:literal as $link_kind:literal) => { $(fn $real_fn:ident($($v:ident : $t:ty),*) -> $r:ty $body:block)+ }) => {
         $(
             #[link(name=$link_name, kind=$link_kind)]
             extern "C" {
