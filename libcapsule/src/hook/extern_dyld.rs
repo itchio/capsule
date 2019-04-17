@@ -2,8 +2,8 @@
 
 #[repr(C)]
 pub struct Interposition {
-  pub replacement: *const (),
-  pub replacee: *const (),
+    pub replacement: *const (),
+    pub replacee: *const (),
 }
 
 unsafe impl Sync for Interposition {}
@@ -54,7 +54,7 @@ macro_rules! hook_extern {
                 #[used]
                 #[no_mangle]
                 #[link_section = "__DATA,__interpose"]
-                static [<interpose__ $real_fn __replacee>]: $crate::hook::Interposition = $crate::hook::Interposition {
+                static [<interpose__ $real_fn __replacee>]: $crate::hook::extern_dyld::Interposition = $crate::hook::extern_dyld::Interposition {
                     replacement: [<$real_fn __hooked>] as *const (),
                     replacee: $real_fn as *const (),
                 };
