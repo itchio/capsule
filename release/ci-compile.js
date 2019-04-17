@@ -127,7 +127,7 @@ async function build_libcapsule(opts) {
         let cargoCmd = `cargo build --target ${test.platform}`;
         $(await $.sh(`rustup run ${chain} ${cargoCmd}`));
         let testFile = path.join("./target", test.platform, "debug", test.name);
-        let runCmd = `CAPSULE_TEST=1 RUST_BACKTRACE=1 "${runFile}" "${testFile}"`;
+        let runCmd = `CAPSULE_TEST=1 RUST_BACKTRACE=full "${runFile}" "${testFile}"`;
         let actualOutput = (await $.getOutput(runCmd)).trim();
         let expectedOutput = "caught dead beef";
         if (actualOutput == expectedOutput) {
