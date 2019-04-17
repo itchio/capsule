@@ -4,21 +4,21 @@ use libc::{c_char, c_void};
 
 #[link(name = "dl")]
 extern "C" {
-    fn __libc_dlsym(handle: *const c_void, symbol: *const c_char) -> *const c_void;
-    fn dlsym(handle: *const c_void, symbol: *const c_char) -> *const c_void;
+  fn __libc_dlsym(handle: *const c_void, symbol: *const c_char) -> *const c_void;
+  fn dlsym(handle: *const c_void, symbol: *const c_char) -> *const c_void;
 }
 
 const RTLD_NEXT: *const c_void = -1isize as *const c_void;
 
 pub unsafe fn dlsym_next(nul_terminated_symbol: &'static str) -> *const u8 {
-    let ptr = dlsym(RTLD_NEXT, nul_terminated_symbol.as_ptr() as *const c_char);
-    if ptr.is_null() {
-        panic!(
-            "Unable to find underlying function for {}",
-            nul_terminated_symbol
-        );
-    }
-    ptr as *const u8
+  let ptr = dlsym(RTLD_NEXT, nul_terminated_symbol.as_ptr() as *const c_char);
+  if ptr.is_null() {
+    panic!(
+      "Unable to find underlying function for {}",
+      nul_terminated_symbol
+    );
+  }
+  ptr as *const u8
 }
 
 #[macro_export]

@@ -152,10 +152,7 @@ unsafe fn hook_if_needed() {
 }
 
 pub fn initialize() {
-    unsafe {
-        dlopen::hook();
-        hook_if_needed()
-    }
+    unsafe { hook_if_needed() }
 }
 
 lazy_static! {
