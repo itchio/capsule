@@ -9,11 +9,14 @@ impl Context {
     let mut cmd = Command::new(self.options.exec.clone());
     cmd.args(self.options.args.clone());
 
-    // TODO: 32-on-64 bit support, or maybe don't bother.
-    let target_arch = Arch::X86_64;
-    let lib = self.locate_lib("libcapsule.so", target_arch).unwrap();
-
-    cmd.env("LD_PRELOAD", lib);
+    let lib32 = self
+      .locate_lib("libcapsule.so", Arch::I686)
+      .unwrap_or_default();
+    let lib64 = self
+      .locate_lib("libcapsule.so", Arch::X86_64)
+      .unwrap_or_default();
+    let both_libs = format!("{} {}", lib32.to_string_lossy(), lib64.to_string_lossy());
+    cmd.env("LD_PRELOAD", both_libs);
 
     let mut child = cmd.spawn().expect("Command failed to start");
     info!("Created process, pid {}", child.id());
