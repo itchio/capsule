@@ -5,9 +5,8 @@ extern crate wstr;
 extern crate wincap;
 
 use clap::{App, Arg};
+use log::*;
 mod runner;
-
-use simplelog;
 
 fn main() {
     std::env::set_var("RUST_BACKTRACE", "1");
@@ -72,27 +71,19 @@ fn build_options<'a>(matches: clap::ArgMatches<'a>) -> runner::Options {
 }
 
 fn setup_logging<'a>(matches: &clap::ArgMatches<'a>) {
-    use simplelog::*;
-
-    let mut loggers = Vec::<Box<SharedLogger>>::new();
     let verbose = matches.is_present("verbose");
     if verbose {
         // TODO: this enables libcapsule logging, but it's not
         // a great way to do it because it's mixed with the target
         // program's stdout.
         std::env::set_var("RUST_LOG", "info");
-    }
-    let term_level = if verbose {
-        LevelFilter::Info
     } else {
-        LevelFilter::Warn
-    };
-    loggers.push(TermLogger::new(term_level, Config::default()).unwrap());
-
-    if let Some(log_file) = matches.value_of("log-file") {
-        use std::fs::File;
-        let f = File::create(log_file).unwrap();
-        loggers.push(WriteLogger::new(LevelFilter::Info, Config::default(), f))
+        std::env::set_var("RUST_LOG", "warn");
     }
-    CombinedLogger::init(loggers).unwrap();
+    env_logger::init();
+
+    if let Some(_) = matches.value_of("log-file") {
+        // TODO: unstub
+        warn!("--log-file is currently a stub");
+    }
 }
