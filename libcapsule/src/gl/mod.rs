@@ -13,11 +13,29 @@ use std::time::SystemTime;
 type GetProcAddress = unsafe fn(gl_func_name: &str) -> *const ();
 
 macro_rules! define_gl_functions {
-    ($(fn $name:ident($($v: ident : $t:ty),*) -> $r:ty);+) => {
+    ($(fn $name:ident($($v:ident : $t:ty),*) -> $r:ty);+) => {
+        #[cfg(target_os = "windows")]
+        define_gl_functions_with_convention! {
+            extern "system" => {
+                $(fn $name($($v : $t),*) -> $r);+
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        define_gl_functions_with_convention! {
+            extern "C" => {
+                $(fn $name($($v : $t),*) -> $r);+
+            }
+        }
+    };
+}
+
+macro_rules! define_gl_functions_with_convention {
+    (extern $convention:tt => { $(fn $name:ident($($v:ident : $t:ty),*) -> $r:ty);+ }) => {
         pub struct Functions {
-            $(pub $name: unsafe extern "C" fn($($v: $t),*) -> $r,)+
+            $(pub $name: unsafe extern $convention fn($($v: $t),*) -> $r,)+
         }
 
+        #[allow(unused)]
         pub struct CaptureContext<'a> {
             width: GLint,
             height: GLint,
@@ -26,8 +44,9 @@ macro_rules! define_gl_functions {
         }
 
         impl Functions {
-            $(pub unsafe fn $name(&self, $($v: $t),*) -> $r {
-                (self.$name)($($v),*)
+            #[allow(unused)]
+            $(pub fn $name(&self, $($v: $t),*) -> $r {
+                unsafe { (self.$name)($($v),*) }
             })+
         }
     };

@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use super::types::*;
 
 pub const GL_RGBA: GLenum = 0x1908;

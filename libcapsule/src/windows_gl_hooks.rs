@@ -47,7 +47,7 @@ unsafe fn get_opengl32_proc_address(rust_name: &str) -> *const () {
 ///////////////////////////////////////////
 
 lazy_static! {
-    static ref wglGetProcAddress: unsafe extern "C" fn(name: winnt::LPCSTR) -> *const c_void = unsafe {
+    static ref wglGetProcAddress: unsafe extern "system" fn(name: winnt::LPCSTR) -> *const c_void = unsafe {
         let addr = libloaderapi::GetProcAddress(
             opengl32_handle.module,
             const_cstr!("wglGetProcAddress").as_ptr(),
@@ -71,7 +71,7 @@ unsafe fn get_wgl_proc_address(rust_name: &str) -> *const () {
 }
 
 hook_dynamic! {
-    get_opengl32_proc_address => {
+    extern "system" use get_opengl32_proc_address => {
         fn wglSwapBuffers(hdc: windef::HDC) -> minwindef::BOOL {
             if super::SETTINGS.in_test && hdc as usize == 0xDEADBEEF as usize {
                 libc_println!("caught dead beef");
