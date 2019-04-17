@@ -9,9 +9,10 @@ pub struct Interposition {
 unsafe impl Sync for Interposition {}
 
 #[macro_export]
-macro_rules! hook_extern {
-    ($(fn $real_fn:ident($($v:ident : $t:ty),*) -> $r:ty $body:block)+) => {
+macro_rules! hook_dyld {
+    (($link_name:literal, $link_kind:literal) => $(fn $real_fn:ident($($v:ident : $t:ty),*) -> $r:ty $body:block)+) => {
         $(
+            #[link(name=$link_name, kind=$link_kind)]
             extern "C" {
                 // it has the exact function signature we specified.
                 fn $real_fn ($($v: $t),*) -> $r;
@@ -54,7 +55,7 @@ macro_rules! hook_extern {
                 #[used]
                 #[no_mangle]
                 #[link_section = "__DATA,__interpose"]
-                static [<interpose__ $real_fn __replacee>]: $crate::hook::extern_dyld::Interposition = $crate::hook::extern_dyld::Interposition {
+                static [<interpose__ $real_fn __replacee>]: $crate::hook::dyld::Interposition = $crate::hook::dyld::Interposition {
                     replacement: [<$real_fn __hooked>] as *const (),
                     replacee: $real_fn as *const (),
                 };

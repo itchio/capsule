@@ -1,8 +1,5 @@
 #![cfg(target_os = "macos")]
 
-#[link(name = "OpenGL", kind = "framework")]
-extern "C" {}
-
 use lazy_static::lazy_static;
 use libc::{c_char, c_int, c_void};
 use libc_print::libc_println;
@@ -52,8 +49,8 @@ lazy_static! {
 // dlopen hook
 ///////////////////////////////////////////
 
-hook_extern! {
-    fn dlopen(filename: *const c_char, flags: c_int) -> *const c_void {
+hook_dyld! {
+    ("ld", "library") => fn dlopen(filename: *const c_char, flags: c_int) -> *const c_void {
         let res = dlopen__next(filename, flags);
         {
             let name = if filename.is_null() {
@@ -71,8 +68,8 @@ hook_extern! {
 ///////////////////////////////////////////
 // CGLFlushDrawable
 ///////////////////////////////////////////
-hook_extern! {
-    fn CGLFlushDrawable(ctx: *const c_void) -> *const c_void {
+hook_dyld! {
+    ("OpenGL", "framework") => fn CGLFlushDrawable(ctx: *const c_void) -> *const c_void {
         if super::SETTINGS.in_test && ctx == 0xDEADBEEF as *const c_void {
             libc_println!("caught dead beef");
             std::process::exit(0);
