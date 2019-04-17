@@ -83,7 +83,11 @@ async function install_rust({ name, platform }) {
   let rustupURL = `https://static.rust-lang.org/rustup/dist/${platform}/${name}`;
   await download_file_if_needed(rustupURL, name);
   $(await $.sh(`chmod +x "${name}"`));
-  $(await $.sh(`"./${name}" --no-modify-path -y`));
+  $(
+    await $.sh(
+      `"./${name}" --no-modify-path -y --default-toolchain stable-${platform}`
+    )
+  );
 }
 
 async function build_libcapsule(opts) {
@@ -134,7 +138,9 @@ async function build_libcapsule(opts) {
           $.say(`Injection test (${test.name}) passed!`);
         } else {
           throw new Error(
-            `Injection test (${test.name}) failed:\nexpected\n${expectedOutput}\ngot:${actualOutput}`
+            `Injection test (${
+              test.name
+            }) failed:\nexpected\n${expectedOutput}\ngot:${actualOutput}`
           );
         }
       });
@@ -193,7 +199,7 @@ async function ci_compile_darwin() {
       {
         name: "macos-opengl-dlopen",
         platform
-      },
+      }
     ]
   });
 }
