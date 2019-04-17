@@ -131,10 +131,10 @@ async function build_libcapsule(opts) {
         let actualOutput = (await $.getOutput(runCmd)).trim();
         let expectedOutput = "caught dead beef";
         if (actualOutput == expectedOutput) {
-          $.say(`Injection test passed!`);
+          $.say(`Injection test (${test.name}) passed!`);
         } else {
           throw new Error(
-            `Injection test failed:\nexpected\n${expectedOutput}\ngot:${actualOutput}`
+            `Injection test (${test.name}) failed:\nexpected\n${expectedOutput}\ngot:${actualOutput}`
           );
         }
       });
@@ -187,9 +187,13 @@ async function ci_compile_darwin() {
     platform,
     tests: [
       {
+        name: "macos-opengl-dyld",
+        platform
+      },
+      {
         name: "macos-opengl-dlopen",
         platform
-      }
+      },
     ]
   });
 }

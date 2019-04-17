@@ -26,7 +26,7 @@ extern "C" {
 // lazily-opened libGL handle
 ///////////////////////////////////////////
 
-static gl_dylib_path: &str = "/System/Library/Frameworks/OpenGL.framework/Libraries/libGL.dylib";
+static gl_dylib_path: &str = "/System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL";
 
 lazy_static! {
     static ref gl_dylib_path_cstr: CString = { CString::new(gl_dylib_path).unwrap() };
