@@ -1,64 +1,46 @@
 #![cfg(target_os = "macos")]
 
-#[repr(C)]
-pub struct Interposition {
-    pub replacement: *const (),
-    pub replacee: *const (),
-}
-
-unsafe impl Sync for Interposition {}
-
 #[macro_export]
 macro_rules! hook_dyld {
     (($link_name:literal as $link_kind:literal) => { $(fn $real_fn:ident($($v:ident : $t:ty),*) -> $r:ty $body:block)+ }) => {
         $(
-            #[link(name=$link_name, kind=$link_kind)]
-            extern "C" {
-                // it has the exact function signature we specified.
-                fn $real_fn ($($v: $t),*) -> $r;
-            }
-
-            ::paste::item! {
-                static [<$real_fn __enabled>]: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-            }
-
-            ::paste::item_with_macros! {
-                ::lazy_static::lazy_static! {
-                    static ref [<$real_fn __hook>]: () = {
-                        [<$real_fn __enabled>].store(true, std::sync::atomic::Ordering::Relaxed);
-                        ()
-                    };
+            pub mod $real_fn {
+                #[link(name=$link_name, kind=$link_kind)]
+                extern "C" {
+                    // dummy function signature so we don't have to import the types
+                    pub fn $real_fn () -> ();
                 }
+
+                #[allow(non_camel_case_types)]
+                pub struct S {
+                    pub replacement: *const (),
+                    pub replacee: *const (),
+                }
+                unsafe impl std::marker::Sync for S {}
             }
 
-            ::paste::item_with_macros! {
-                // finally, this is the definition of *our* version of the function.
-                // you probably don't want to forget to call `XXX__next`
-                unsafe extern "C" fn [<$real_fn __hooked>] ($($v: $t),*) -> $r {
-                    if ![<$real_fn __enabled>].load(std::sync::atomic::Ordering::Relaxed) {
-                        return [<$real_fn __next>]($($v),*);
-                    }
+            #[used]
+            #[allow(non_upper_case_globals)]
+            #[link_section="__DATA,__interpose"]
+            static $real_fn: $real_fn::S = $real_fn::S {
+                replacement: $real_fn::S::hook  as *const (),
+                replacee: $real_fn::$real_fn as *const (),
+            };
 
+            impl $real_fn::S {
+                pub fn next(&self, $($v:$t),*) -> $r {
+                    unsafe {
+                        // avert your gaze for a second
+                        let addr: *const u8 = $real_fn::$real_fn as *const u8;
+                        let real: unsafe extern "C" fn ($($v:$t),*) -> $r = ::std::mem::transmute(addr);
+                        // theeeere we go
+                        real($($v),*)
+                    }
+                }
+
+                unsafe extern "C" fn hook($($v: $t),*) -> $r {
                     $body
                 }
-            }
-
-            ::paste::item! {
-                extern "C" fn [<$real_fn __next>] ($($v: $t),*) -> $r {
-                    unsafe {
-                        $real_fn($($v),*)
-                    }
-                }
-            }
-
-            ::paste::item! {
-                #[used]
-                #[no_mangle]
-                #[link_section = "__DATA,__interpose"]
-                static [<interpose__ $real_fn __replacee>]: $crate::hook::dyld::Interposition = $crate::hook::dyld::Interposition {
-                    replacement: [<$real_fn __hooked>] as *const (),
-                    replacee: $real_fn as *const (),
-                };
             }
         )+
     };

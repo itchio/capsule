@@ -37,7 +37,7 @@ unsafe impl std::marker::Sync for LibHandle {}
 lazy_static! {
     static ref gl_handle: LibHandle = {
         info!("in gl_handle initialization");
-        let handle = dlopen__next(gl_dylib_path_cstr.as_ptr(), RTLD_LAZY);
+        let handle = dlopen.next(gl_dylib_path_cstr.as_ptr(), RTLD_LAZY);
         if handle.is_null() {
             panic!("could not dlopen libGL.dylib")
         }
@@ -52,7 +52,7 @@ lazy_static! {
 hook_dyld! {
     ("dl" as "dylib") => {
         fn dlopen(filename: *const c_char, flags: c_int) -> *const c_void {
-            let res = dlopen__next(filename, flags);
+            let res = dlopen.next(filename, flags);
             {
                 let name = if filename.is_null() {
                     String::from("NULL")
@@ -79,13 +79,13 @@ hook_dyld! {
             }
 
             info!("Swapping buffers!");
-            CGLFlushDrawable__next(ctx)
+            CGLFlushDrawable.next(ctx)
         }
     }
 }
 
 unsafe fn is_using_opengl() -> bool {
-    let handle = dlopen__next(gl_dylib_path_cstr.as_ptr(), RTLD_NOLOAD | RTLD_LAZY);
+    let handle = dlopen.next(gl_dylib_path_cstr.as_ptr(), RTLD_NOLOAD | RTLD_LAZY);
     !handle.is_null()
 }
 
@@ -95,14 +95,10 @@ unsafe fn hook_if_needed() {
     if is_using_opengl() {
         HOOK_SWAPBUFFERS_ONCE.call_once(|| {
             info!("libGL usage detected, hooking OpenGL");
-            lazy_static::initialize(&CGLFlushDrawable__hook);
         })
     }
 }
 
 pub fn initialize() {
-    unsafe {
-        lazy_static::initialize(&dlopen__hook);
-        hook_if_needed()
-    }
+    unsafe { hook_if_needed() }
 }
