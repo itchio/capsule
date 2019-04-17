@@ -52,5 +52,9 @@
       "build*": true
     },
     "C_Cpp.clang_format_style": "LLVM",
-    "editor.tabSize": 2
+    "editor.tabSize": 2,
+    "files.watcherExclude": {
+      "**/.cargo/**": true,
+      "**/.multirust/**": true
+    }
   }

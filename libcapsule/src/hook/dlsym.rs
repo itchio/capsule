@@ -56,7 +56,7 @@ macro_rules! hook_dlsym {
               fn hook() { Self::state(Some(true)); }
 
               #[allow(dead_code)]
-              fn unhook() { Self::state(Some(true)); }
+              fn unhook() { Self::state(Some(false)); }
 
               #[allow(dead_code)]
               fn state(new_value: Option<bool>) -> bool {
