@@ -184,7 +184,13 @@ async function ci_compile_darwin() {
     libName: `libcapsule.dylib`,
     runName: `capsulerun`,
     osarch: `darwin-amd64`,
-    platform
+    platform,
+    tests: [
+      {
+        name: "macos-opengl-dlopen",
+        platform
+      }
+    ]
   });
 }
 

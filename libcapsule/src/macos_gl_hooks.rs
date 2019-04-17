@@ -73,6 +73,11 @@ hook_extern! {
 ///////////////////////////////////////////
 hook_extern! {
     fn CGLFlushDrawable(ctx: *const c_void) -> *const c_void {
+        if super::SETTINGS.in_test && ctx == 0xDEADBEEF as *const c_void {
+            libc_println!("caught dead beef");
+            std::process::exit(0);
+        }
+
         info!("Swapping buffers!");
         CGLFlushDrawable__next(ctx)
     }
