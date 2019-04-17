@@ -33,6 +33,7 @@ lazy_static::lazy_static! {
 
 #[ctor]
 fn ctor() {
+    std::env::set_var("RUST_BACKTRACE", "1");
     env_logger::init();
 
     info!("thanks for flying capsule on {}", CURRENT_PLATFORM);

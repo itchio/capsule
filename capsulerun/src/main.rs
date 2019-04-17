@@ -10,6 +10,8 @@ mod runner;
 use simplelog;
 
 fn main() {
+    std::env::set_var("RUST_BACKTRACE", "1");
+
     let matches = App::new("capsulerun")
         .version("master")
         .author("Amos Wenger <amos@itch.io>")
