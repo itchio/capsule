@@ -44,9 +44,9 @@ unsafe impl std::marker::Sync for LibHandle {}
 lazy_static! {
     static ref libGLHandle: LibHandle = {
         use const_cstr::*;
-        let handle = dlopen__next(const_cstr!("libGL.so").as_ptr(), RTLD_LAZY);
+        let handle = dlopen__next(const_cstr!("libGL.so.1").as_ptr(), RTLD_LAZY);
         if handle.is_null() {
-            panic!("could not dlopen libGL.so")
+            panic!("could not dlopen libGL.so.1")
         }
         LibHandle { addr: handle }
     };
@@ -63,7 +63,7 @@ lazy_static! {
             const_cstr!("glXGetProcAddressARB").as_ptr(),
         );
         if addr.is_null() {
-            panic!("libGL.so does not contain glXGetProcAddressARB")
+            panic!("libGL.so.1 does not contain glXGetProcAddressARB")
         }
         std::mem::transmute(addr)
     };
@@ -122,18 +122,18 @@ hook_dynamic! {
     }
 }
 
-/// Returns true if libGL.so was loaded in this process,
+/// Returns true if libGL.so.1 was loaded in this process,
 /// either by ld-linux on startup (if linked with -lGL),
 /// or by dlopen() afterwards.
 unsafe fn is_using_opengl() -> bool {
     // RTLD_NOLOAD lets us check if a library is already loaded.
     // we never need to dlclose() it, because we don't own it.
-    !dlopen__next(const_cstr!("libGL.so").as_ptr(), RTLD_NOLOAD | RTLD_LAZY).is_null()
+    !dlopen__next(const_cstr!("libGL.so.1").as_ptr(), RTLD_NOLOAD | RTLD_LAZY).is_null()
 }
 
 static HOOK_SWAPBUFFERS_ONCE: Once = Once::new();
 
-/// If libGL.so was loaded, and only once in the lifetime
+/// If libGL.so.1 was loaded, and only once in the lifetime
 /// of this process, hook libGL functions for libcapsule usage.
 unsafe fn hook_if_needed() {
     if is_using_opengl() {
