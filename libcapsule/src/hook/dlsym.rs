@@ -28,20 +28,52 @@ macro_rules! hook_dlsym {
             #[link(name = $link_name)]
             extern "C" {}
 
-            ::paste::item! {
-                ::lazy_static::lazy_static! {
-                    static ref [<$real_fn __next>]:
-                            extern "C" fn ($($v: $t),*) -> $r = unsafe {
-                        ::std::mem::transmute($crate::hook::dlsym::dlsym_next(concat!(stringify!($real_fn), "\0")))
-                    };
+            #[allow(non_camel_case_types)]
+            pub struct $real_fn {}
+
+            impl $real_fn {
+              fn next($($v : $t),*) -> $r {
+                use ::std::sync::{Once, ONCE_INIT};
+                use ::std::mem::transmute;
+                use $crate::hook::dlsym::dlsym_next;
+
+                static mut NEXT: *const u8 = 0 as *const u8;
+                static mut ONCE: Once = ONCE_INIT;
+
+                unsafe {
+                  ONCE.call_once(|| {
+                    NEXT = dlsym_next(concat!(stringify!($real_fn), "\0"));
+                  });
+                  let next: unsafe extern fn ($($v : $t),*) -> $r = transmute(NEXT);
+                  next($($v),+)
                 }
+              }
+
+              #[allow(dead_code)]
+              fn is_hooked() -> bool { Self::state(None) }
+
+              #[allow(dead_code)]
+              fn hook() { Self::state(Some(true)); }
+
+              #[allow(dead_code)]
+              fn unhook() { Self::state(Some(true)); }
+
+              #[allow(dead_code)]
+              fn state(new_value: Option<bool>) -> bool {
+                static mut ENABLED: bool = false;
+                unsafe {
+                  if let Some(value) = new_value { ENABLED = value; }
+                  ENABLED
+                }
+              }
             }
 
-            ::paste::item_with_macros! {
-                #[no_mangle]
-                pub unsafe extern fn $real_fn ($($v: $t),*) -> $r {
-                    $body
-                }
+            #[no_mangle]
+            pub unsafe extern "C" fn $real_fn ($($v: $t),*) -> $r {
+              if !$real_fn::state(None) {
+                return $real_fn::next($($v),*)
+              }
+              $body
             }
         )+
     };

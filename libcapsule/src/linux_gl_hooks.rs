@@ -45,7 +45,7 @@ unsafe impl std::marker::Sync for LibHandle {}
 lazy_static! {
     static ref libGLHandle: LibHandle = {
         use const_cstr::*;
-        let handle = dlopen__next(const_cstr!("libGL.so.1").as_ptr(), RTLD_LAZY);
+        let handle = dlopen::next(const_cstr!("libGL.so.1").as_ptr(), RTLD_LAZY);
         if handle.is_null() {
             panic!("could not dlopen libGL.so.1")
         }
@@ -87,7 +87,7 @@ lazy_static! {
 
 hook_dlsym! {
     "dl" => fn dlopen(filename: *const c_char, flags: c_int) -> *const c_void {
-        let res = dlopen__next(filename, flags);
+        let res = dlopen::next(filename, flags);
         hook_if_needed();
         res
     }
@@ -130,7 +130,7 @@ unsafe fn is_using_opengl() -> bool {
     // RTLD_NOLOAD lets us check if a library is already loaded.
     // FIXME: we actually do need to call dlclose here, apparently
     // modules are reference-counted.
-    let handle = dlopen__next(const_cstr!("libGL.so.1").as_ptr(), RTLD_NOLOAD | RTLD_LAZY);
+    let handle = dlopen::next(const_cstr!("libGL.so.1").as_ptr(), RTLD_NOLOAD | RTLD_LAZY);
     let using = !handle.is_null();
     if using {
         dlclose(handle);
@@ -152,7 +152,10 @@ unsafe fn hook_if_needed() {
 }
 
 pub fn initialize() {
-    unsafe { hook_if_needed() }
+    unsafe {
+        dlopen::hook();
+        hook_if_needed()
+    }
 }
 
 lazy_static! {
