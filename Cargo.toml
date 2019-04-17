@@ -9,3 +9,6 @@ members = [
 exclude = [
     "test"
 ]
+
+[profile.release]
+debug = true

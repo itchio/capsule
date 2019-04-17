@@ -152,8 +152,11 @@ async function build_libcapsule(opts) {
   $(await $.sh(`cp -f "${libFile}" "${dest}"`));
   $(await $.sh(`cp -f "${runFile}" "${dest}"`));
   if (strip) {
-    $(await $.sh(`strip "${dest}/${libName}"`));
-    $(await $.sh(`strip "${dest}/${runName}"`));
+    // -S is SOMEHOW understood by both GNU strip and BSD strip
+    // and it's the short form of "--strip-debug". That way
+    // our stack traces still show symbol names, but not line info
+    $(await $.sh(`strip -S "${dest}/${libName}"`));
+    $(await $.sh(`strip -S "${dest}/${runName}"`));
   }
 }
 
