@@ -2,11 +2,6 @@
 stages:
   - build
 
-cache:
-  key: single-cache
-  paths:
-    - .cargo
-
 compile-windows:
   stage: build
   tags:
