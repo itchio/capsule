@@ -1,5 +1,4 @@
 extern crate const_cstr;
-extern crate wstr;
 
 #[cfg(windows)]
 extern crate wincap;

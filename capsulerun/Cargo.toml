@@ -13,8 +13,6 @@ wincap = { path = "../wincap" }
 "scopeguard" = "1.0.0"
 # utf-16 string handling
 "widestring" = "0.4.0"
-# utf-16 string literals
-"wstr" = "0.2"
 # utf-8 string literals
 "const-cstr" = "0.3.0"
 # logging

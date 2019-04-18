@@ -1,7 +1,6 @@
 #![cfg(target_os = "windows")]
 
 use const_cstr::const_cstr;
-use wstr::{wstrz,wstrz_impl};
 use wincap::{assert_non_null,assert_non_zero,guard_handle,guard_library};
 use log::*;
 use std::mem;
@@ -113,7 +112,7 @@ impl Context {
       }
 
       {
-        let k32 = libloaderapi::LoadLibraryW(wstrz!("kernel32.dll").as_ptr());
+        let k32 = libloaderapi::LoadLibraryA(const_cstr!("kernel32.dll").as_ptr());
         assert_non_null!("LoadLibraryW(kernel32.dll)", k32);
         let k32 = guard_library!(k32);
 

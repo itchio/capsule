@@ -11,7 +11,6 @@ use std::sync::Once;
 use winapi::shared::{minwindef, windef};
 use winapi::um::{libloaderapi, winnt};
 use wincap::assert_non_null;
-use wstr::{wstrz, wstrz_impl};
 
 ///////////////////////////////////////////
 // lazily-opened opengl32.dll handle
@@ -24,8 +23,9 @@ unsafe impl std::marker::Sync for LibHandle {}
 
 lazy_static! {
     static ref opengl32_handle: LibHandle = {
-        // it's *NOT* safe to call libloadingapi::LoadLibraryW here
-        let module = LoadLibraryW::next(wstrz!("opengl32.dll").as_ptr());
+        // it's *NOT* safe to call libloadingapi::LoadLibraryA here,
+        // because it's already hooked.
+        let module = LoadLibraryA::next(const_cstr!("opengl32.dll").as_ptr());
         assert_non_null!("LoadLibraryW(opengl32.dll)", module);
         LibHandle { module: module }
     };
@@ -90,7 +90,7 @@ lazy_static! {
     static ref kernel32_handle: LibHandle = unsafe {
         // this is the ONLY safe place to call libloaderapi::LoadLibraryW
         // after that, it's hooked.
-        let module = libloaderapi::LoadLibraryW(wstrz!("kernel32.dll").as_ptr());
+        let module = libloaderapi::LoadLibraryA(const_cstr!("kernel32.dll").as_ptr());
         assert_non_null!("LoadLibraryW(kernel32.dll)", module);
         LibHandle { module: module }
     };
@@ -113,7 +113,7 @@ unsafe fn get_kernel32_proc_address(rust_name: &str) -> *const () {
 
 hook_dynamic! {
     extern "system" use get_kernel32_proc_address => {
-        fn LoadLibraryA(filename: winnt::LPSTR) -> minwindef::HMODULE {
+        fn LoadLibraryA(filename: winnt::LPCSTR) -> minwindef::HMODULE {
             let res = LoadLibraryA::next(filename);
             if !filename.is_null() {
                 let s = std::ffi::CStr::from_ptr(filename).to_string_lossy();
