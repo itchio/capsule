@@ -1,5 +1,5 @@
 #[macro_use]
-pub mod dlsym;
+pub mod ld;
 
 #[macro_use]
 pub mod dyld;

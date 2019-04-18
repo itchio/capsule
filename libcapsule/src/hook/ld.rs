@@ -21,7 +21,7 @@ pub unsafe fn dlsym_next(nul_terminated_symbol: &'static str) -> *const u8 {
 }
 
 #[macro_export]
-macro_rules! hook_dlsym {
+macro_rules! hook_ld {
     ($link_name:literal => $(fn $real_fn:ident($($v:ident : $t:ty),*) -> $r:ty $body:block)+) => {
         $(
             #[link(name = $link_name)]
@@ -34,7 +34,7 @@ macro_rules! hook_dlsym {
               fn next($($v : $t),*) -> $r {
                 use ::std::sync::{Once, ONCE_INIT};
                 use ::std::mem::transmute;
-                use $crate::hook::dlsym::dlsym_next;
+                use $crate::hook::ld::dlsym_next;
 
                 static mut NEXT: *const u8 = 0 as *const u8;
                 static mut ONCE: Once = ONCE_INIT;

@@ -85,7 +85,7 @@ lazy_static! {
 // dlopen hook
 ///////////////////////////////////////////
 
-hook_dlsym! {
+hook_ld! {
     "dl" => fn dlopen(filename: *const c_char, flags: c_int) -> *const c_void {
         let res = dlopen::next(filename, flags);
         hook_if_needed();
