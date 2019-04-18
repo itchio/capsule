@@ -1,21 +1,29 @@
-#![allow(non_snake_case)]
+use std::ffi::CString;
+use std::mem::transmute;
 
-#[macro_use]
-extern crate dlopen_derive;
+const RTLD_LAZY: i32 = 0x1;
 
-use dlopen::symbor::{Library, SymBorApi, Symbol};
-use libc::c_void;
-
-#[derive(SymBorApi)]
-struct LibGL<'a> {
-    pub CGLFlushDrawable: Symbol<'a, unsafe extern "C" fn(ctx: *const c_void)>,
+#[link(name = "dl")]
+extern "C" {
+    fn dlopen(name: *const i8, flags: i32) -> *const i8;
+    fn dlsym(handle: *const i8, name: *const i8) -> *const i8;
 }
 
 fn main() {
-    let lib =
-        Library::open("/System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL").unwrap();
-    let api = unsafe { LibGL::load(&lib) }.unwrap();
     unsafe {
-        (api.CGLFlushDrawable)(0xDEADBEEF as *const c_void);
+        let handle = dlopen(
+            CString::new("/System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL")
+                .unwrap()
+                .as_ptr(),
+            RTLD_LAZY,
+        );
+        #[allow(non_snake_case)]
+        let CGLFlushDrawable: unsafe extern "C" fn(ctx: *const i8) = {
+            transmute(dlsym(
+                handle,
+                CString::new("CGLFlushDrawable").unwrap().as_ptr(),
+            ))
+        };
+        CGLFlushDrawable(0xDEADBEEF as *const i8);
     }
 }
