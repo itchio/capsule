@@ -106,21 +106,8 @@ hook_dynamic! {
                 std::process::exit(0);
             }
 
-            info!(
-                "[{:08}] swapping buffers! (display=0x{:X}, drawable=0x{:X})",
-                startTime.elapsed().unwrap().as_millis(),
-                display as isize,
-                drawable as isize
-            );
-
-            capture_gl_frame();
-
-            {
-                let req = get_host().notify_frame_request();
-                if let Some(err) = hope(req.send().promise).err() {
-                    warn!("Could not notify frame: {:?}", err);
-                }
-            }
+            let cc = gl::get_capture_context(get_glx_proc_address);
+            cc.capture_frame();
 
             glXSwapBuffers::next(display, drawable)
         }
@@ -179,59 +166,59 @@ lazy_static! {
 
 static mut frame_index: i64 = 0;
 
-unsafe fn capture_gl_frame() {
-    let cc = gl::get_capture_context(get_glx_proc_address);
-    cc.capture_frame();
+// unsafe fn capture_gl_frame() {
+//     let cc = gl::get_capture_context(get_glx_proc_address);
+//     cc.capture_frame();
 
-    let x: gl::GLint = 0;
-    let y: gl::GLint = 0;
-    let width: gl::GLsizei = 400;
-    let height: gl::GLsizei = 400;
-    let bytes_per_pixel: usize = 4;
-    let bytes_per_frame: usize = width as usize * height as usize * bytes_per_pixel;
+//     let x: gl::GLint = 0;
+//     let y: gl::GLint = 0;
+//     let width: gl::GLsizei = 400;
+//     let height: gl::GLsizei = 400;
+//     let bytes_per_pixel: usize = 4;
+//     let bytes_per_frame: usize = width as usize * height as usize * bytes_per_pixel;
 
-    let mut viewport = Vec::<gl::GLint>::with_capacity(4);
-    viewport.resize(4, 0);
+//     let mut viewport = Vec::<gl::GLint>::with_capacity(4);
+//     viewport.resize(4, 0);
 
-    cc.funcs
-        .glGetIntegerv(gl::GL_VIEWPORT, std::mem::transmute(viewport.as_ptr()));
-    info!("viewport: {:?}", viewport);
+//     cc.funcs
+//         .glGetIntegerv(gl::GL_VIEWPORT, std::mem::transmute(viewport.as_ptr()));
+//     info!("viewport: {:?}", viewport);
 
-    cc.funcs.glReadPixels(
-        x,
-        y,
-        width,
-        height,
-        gl::GL_RGBA,
-        gl::GL_UNSIGNED_BYTE,
-        std::mem::transmute(frame_buffer.as_ptr()),
-    );
-    let mut num_black = 0;
-    for y in 0..height {
-        for x in 0..width {
-            let i = (y * width + x) as usize;
-            let (r, g, b) = (
-                frame_buffer[i * 4],
-                frame_buffer[i * 4 + 1],
-                frame_buffer[i * 4 + 2],
-            );
-            if r == 0 && g == 0 && b == 0 {
-                num_black += 1;
-            }
-        }
-    }
+//     cc.funcs.glReadPixels(
+//         x,
+//         y,
+//         width,
+//         height,
+//         gl::GL_RGBA,
+//         gl::GL_UNSIGNED_BYTE,
+//         std::mem::transmute(frame_buffer.as_ptr()),
+//     );
+//     let mut num_black = 0;
+//     for y in 0..height {
+//         for x in 0..width {
+//             let i = (y * width + x) as usize;
+//             let (r, g, b) = (
+//                 frame_buffer[i * 4],
+//                 frame_buffer[i * 4 + 1],
+//                 frame_buffer[i * 4 + 2],
+//             );
+//             if r == 0 && g == 0 && b == 0 {
+//                 num_black += 1;
+//             }
+//         }
+//     }
 
-    info!("[frame {}] {} black pixels", frame_index, num_black);
-    frame_index += 1;
+//     info!("[frame {}] {} black pixels", frame_index, num_black);
+//     frame_index += 1;
 
-    if frame_index < 200 {
-        use std::fs::File;
-        use std::io::prelude::*;
+//     if frame_index < 200 {
+//         use std::fs::File;
+//         use std::io::prelude::*;
 
-        let name = format!("frame-{}x{}-{}.raw", width, height, frame_index);
-        let mut file = File::create(&name).unwrap();
-        file.write_all(&frame_buffer.as_slice()[..bytes_per_frame])
-            .unwrap();
-        info!("{} written", name)
-    }
-}
+//         let name = format!("frame-{}x{}-{}.raw", width, height, frame_index);
+//         let mut file = File::create(&name).unwrap();
+//         file.write_all(&frame_buffer.as_slice()[..bytes_per_frame])
+//             .unwrap();
+//         info!("{} written", name)
+//     }
+// }

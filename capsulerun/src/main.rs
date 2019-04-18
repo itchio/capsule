@@ -3,9 +3,12 @@ extern crate const_cstr;
 #[cfg(windows)]
 extern crate wincap;
 
-use clap::{App, Arg};
-use log::*;
+mod comm;
 mod runner;
+
+use clap::{App, Arg};
+use comm::*;
+use log::*;
 
 fn main() {
     std::env::set_var("RUST_BACKTRACE", "1");
@@ -100,8 +103,6 @@ fn setup_logging<'a>(matches: &clap::ArgMatches<'a>) {
 }
 
 fn run_server(port_channel: futures::Complete<u16>) {
-    use capnp::capability::Promise;
-    use capnp::Error;
     use capnp_rpc::{rpc_twoparty_capnp, twoparty, RpcSystem};
     use futures::{Future, Stream};
     use proto::proto_capnp::host;
@@ -110,23 +111,10 @@ fn run_server(port_channel: futures::Complete<u16>) {
     use tokio::net::TcpListener;
     use tokio::runtime::current_thread;
 
-    struct HostImpl;
-
-    impl host::Server for HostImpl {
-        fn register_target(
-            &mut self,
-            params: host::RegisterTargetParams,
-            mut _results: host::RegisterTargetResults,
-        ) -> Promise<(), Error> {
-            info!("A client has registered a capture target!");
-            Promise::ok(())
-        }
-    }
-
     let addr = "127.0.0.1:0".parse::<SocketAddr>().unwrap();
     let socket = TcpListener::bind(&addr).unwrap();
 
-    let host = host::ToClient::new(HostImpl).into_client::<::capnp_rpc::Server>();
+    let host = host::ToClient::new(HostImpl::new()).into_client::<::capnp_rpc::Server>();
 
     let local_addr = socket.local_addr().unwrap();
     info!("Listening on {:?}", local_addr);

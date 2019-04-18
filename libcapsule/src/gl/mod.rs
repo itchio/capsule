@@ -4,7 +4,7 @@ pub use self::constants::*;
 mod types;
 pub use self::types::*;
 
-use libc_print::libc_println;
+use crate::comm::*;
 use log::*;
 use std::mem;
 use std::mem::transmute;
@@ -39,6 +39,7 @@ macro_rules! define_gl_functions_with_convention {
         pub struct CaptureContext<'a> {
             width: GLint,
             height: GLint,
+            frame_number: u64,
             start_time: SystemTime,
             pub funcs: &'a Functions,
         }
@@ -99,7 +100,7 @@ unsafe fn get_gl_functions<'a>(getProcAddress: GetProcAddress) -> &'a Functions 
 
 static mut cached_capture_context: Option<CaptureContext> = None;
 
-pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'a CaptureContext<'a> {
+pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'static mut CaptureContext<'a> {
     unsafe {
         if cached_capture_context.is_none() {
             let funcs = get_gl_functions(getProcAddress);
@@ -119,16 +120,22 @@ pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'a CaptureCon
                 width: viewport.width,
                 height: viewport.height,
                 start_time: SystemTime::now(),
+                frame_number: 0,
                 funcs,
             });
         }
-        cached_capture_context.as_ref().unwrap()
+        cached_capture_context.as_mut().unwrap()
     }
 }
 
 impl<'a> CaptureContext<'a> {
-    pub fn capture_frame(&self) {
-        let elapsed = self.start_time.elapsed().unwrap_or_default();
-        libc_println!("[{:?}] Should capture frame...", elapsed);
+    pub fn capture_frame(&mut self) {
+        {
+            let mut req = get_host().notify_frame_request();
+            req.get().set_frame_number(self.frame_number);
+            hope(req.send().promise).unwrap();
+        }
+
+        self.frame_number += 1;
     }
 }
