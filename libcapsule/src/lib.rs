@@ -9,26 +9,19 @@ mod comm;
 mod gl;
 mod linux_gl_hooks;
 mod macos_gl_hooks;
+mod safe_env;
 mod windows_gl_hooks;
 
 use comm::*;
 
-#[cfg(target_os = "macos")]
-static CURRENT_PLATFORM: &str = "macOS";
-#[cfg(target_os = "linux")]
-static CURRENT_PLATFORM: &str = "Linux";
-#[cfg(target_os = "windows")]
-static CURRENT_PLATFORM: &str = "Windows";
-
 use capnp::capability::Promise;
 use capnp::Error;
 use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
+use futures::Future;
 use proto::proto_capnp::host;
 use std::net::SocketAddr;
-use tokio::runtime::current_thread;
-
-use futures::Future;
 use tokio::io::AsyncRead;
+use tokio::runtime::current_thread;
 
 struct Settings {
     in_test: bool,
@@ -38,7 +31,7 @@ unsafe impl Sync for Settings {}
 lazy_static::lazy_static! {
     static ref SETTINGS: Settings = {
         Settings{
-            in_test: std::env::var("CAPSULE_TEST").unwrap_or_default() == "1",
+            in_test: safe_env::get("CAPSULE_TEST").unwrap_or_default() == "1",
         }
     };
 }
@@ -71,7 +64,6 @@ static ctor: extern "C" fn() = {
     extern "C" fn ctor() {
         std::env::set_var("RUST_BACKTRACE", "1");
         env_logger::init();
-        info!("Thanks for flying capsule on {}", CURRENT_PLATFORM);
 
         unsafe {
             global_runtime = Some({
@@ -80,7 +72,7 @@ static ctor: extern "C" fn() = {
             });
         }
 
-        let port = std::env::var("CAPSULE_PORT").expect("CAPSULE_PORT missing from environment");
+        let port = safe_env::get("CAPSULE_PORT").expect("CAPSULE_PORT missing from environment");
         let port = port.parse::<u16>().expect("could not parse port");
 
         {
@@ -88,8 +80,6 @@ static ctor: extern "C" fn() = {
             let addr = addr.parse::<SocketAddr>().unwrap();
 
             // TODO: timeouts
-            info!("Connecting to host {:?}...", addr);
-
             let stream = hope(::tokio::net::TcpStream::connect(&addr)).unwrap();
             stream.set_nodelay(true).unwrap();
             let (reader, writer) = stream.split();
@@ -105,7 +95,6 @@ static ctor: extern "C" fn() = {
                 global_host = Some(rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server));
             }
             spawn(rpc_system.map_err(|e| warn!("RPC error: {:?}", e)));
-            info!("Connected!");
         }
 
         #[cfg(target_os = "linux")]
@@ -132,7 +121,6 @@ static ctor: extern "C" fn() = {
                 Promise::ok(())
             }))
             .unwrap();
-            info!("Returned from register_target!",);
         }
     };
     ctor

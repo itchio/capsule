@@ -3,7 +3,6 @@
 #[link(name = "dl")]
 extern "C" {}
 
-use crate::comm::*;
 use crate::gl;
 use const_cstr::const_cstr;
 use lazy_static::lazy_static;
@@ -163,8 +162,6 @@ lazy_static! {
         data
     };
 }
-
-static mut frame_index: i64 = 0;
 
 // unsafe fn capture_gl_frame() {
 //     let cc = gl::get_capture_context(get_glx_proc_address);

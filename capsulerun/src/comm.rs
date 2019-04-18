@@ -1,6 +1,7 @@
 use capnp::capability::Promise;
 use capnp::Error;
 use capnp_rpc::pry;
+use futures::Future;
 use proto::proto_capnp::host;
 
 use log::*;
@@ -23,11 +24,17 @@ impl HostImpl {
 impl host::Server for HostImpl {
   fn register_target(
     &mut self,
-    _params: host::RegisterTargetParams,
+    params: host::RegisterTargetParams,
     mut _results: host::RegisterTargetResults,
   ) -> Promise<(), Error> {
-    info!("A client has registered a capture target!");
-    Promise::ok(())
+    let req = pry!(pry!(params.get()).get_target()).get_info_request();
+    Promise::from_future(req.send().promise.and_then(|v| {
+      let info = pry!(v.get()).get_info().unwrap();
+      let pid = info.get_pid();
+      let exe = info.get_exe().unwrap();
+      info!("Target registered: ({}) (PID = {})", exe, pid);
+      Promise::ok(())
+    }))
   }
 
   fn notify_frame(

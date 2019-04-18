@@ -121,7 +121,6 @@ fn run_server(port_channel: futures::Complete<u16>) {
     port_channel.send(local_addr.port()).unwrap();
 
     let done = socket.incoming().for_each(move |socket| {
-        info!("Accepted client connection");
         socket.set_nodelay(true).unwrap();
         let (reader, writer) = socket.split();
         let network = twoparty::VatNetwork::new(

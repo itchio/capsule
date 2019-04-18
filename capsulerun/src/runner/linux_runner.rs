@@ -18,7 +18,11 @@ impl Context {
     let both_libs = format!("{}:{}", lib32.to_string_lossy(), lib64.to_string_lossy());
     info!("Setting LD_PRELOAD = {}", both_libs);
     cmd.env("LD_PRELOAD", both_libs);
-    cmd.env("CAPSULE_PORT", format!("{}", self.options.port));
+
+    let capsule_port = format!("{}", self.options.port);
+    info!("Setting CAPSULE_PORT = {}", capsule_port);
+    std::env::set_var("CAPSULE_PORT", capsule_port.clone()); // needed for processes to inherit that?
+    cmd.env("CAPSULE_PORT", capsule_port);
 
     let mut child = cmd.spawn().expect("Command failed to start");
     info!("Created process, pid {}", child.id());
