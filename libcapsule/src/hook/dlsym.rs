@@ -4,7 +4,6 @@ use libc::{c_char, c_void};
 
 #[link(name = "dl")]
 extern "C" {
-  fn __libc_dlsym(handle: *const c_void, symbol: *const c_char) -> *const c_void;
   fn dlsym(handle: *const c_void, symbol: *const c_char) -> *const c_void;
 }
 

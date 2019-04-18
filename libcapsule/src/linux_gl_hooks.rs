@@ -114,11 +114,15 @@ hook_dynamic! {
 
             capture_gl_frame();
 
-            glXSwapBuffers__next(display, drawable)
+            glXSwapBuffers::next(display, drawable)
         }
         fn glXQueryVersion(display: *const c_void, major: *mut c_int, minor: *mut c_int) -> c_int {
             // useless hook, just here to demonstrate we can do multiple hooks if needed
-            glXQueryVersion__next(display, major, minor)
+            let ret = glXQueryVersion::next(display, major, minor);
+            if ret == 1 {
+                info!("GLX server version {}.{}", *major, *minor);
+            }
+            ret
         }
     }
 }
@@ -146,7 +150,8 @@ unsafe fn hook_if_needed() {
     if is_using_opengl() {
         HOOK_SWAPBUFFERS_ONCE.call_once(|| {
             info!("libGL usage detected, hooking OpenGL");
-            lazy_static::initialize(&glXSwapBuffers__hook);
+            glXSwapBuffers::enable_hook();
+            glXQueryVersion::enable_hook();
         })
     }
 }
@@ -168,6 +173,7 @@ static mut frame_index: i64 = 0;
 
 unsafe fn capture_gl_frame() {
     let cc = gl::get_capture_context(get_glx_proc_address);
+    cc.capture_frame();
 
     let x: gl::GLint = 0;
     let y: gl::GLint = 0;
@@ -206,6 +212,7 @@ unsafe fn capture_gl_frame() {
             }
         }
     }
+
     info!("[frame {}] {} black pixels", frame_index, num_black);
     frame_index += 1;
 

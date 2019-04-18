@@ -99,29 +99,31 @@ unsafe fn get_gl_functions<'a>(getProcAddress: GetProcAddress) -> &'a Functions 
 
 static mut cached_capture_context: Option<CaptureContext> = None;
 
-pub unsafe fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'a CaptureContext<'a> {
-    if cached_capture_context.is_none() {
-        let funcs = get_gl_functions(getProcAddress);
-        #[repr(C)]
-        #[derive(Debug)]
-        struct Viewport {
-            x: GLint,
-            y: GLint,
-            width: GLint,
-            height: GLint,
-        };
-        let viewport = mem::zeroed::<Viewport>();
-        funcs.glGetIntegerv(GL_VIEWPORT, mem::transmute(&viewport));
-        info!("Viewport: {:?}", viewport);
+pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'a CaptureContext<'a> {
+    unsafe {
+        if cached_capture_context.is_none() {
+            let funcs = get_gl_functions(getProcAddress);
+            #[repr(C)]
+            #[derive(Debug)]
+            struct Viewport {
+                x: GLint,
+                y: GLint,
+                width: GLint,
+                height: GLint,
+            };
+            let viewport = mem::zeroed::<Viewport>();
+            funcs.glGetIntegerv(GL_VIEWPORT, mem::transmute(&viewport));
+            info!("Viewport: {:?}", viewport);
 
-        cached_capture_context = Some(CaptureContext {
-            width: viewport.width,
-            height: viewport.height,
-            start_time: SystemTime::now(),
-            funcs,
-        });
+            cached_capture_context = Some(CaptureContext {
+                width: viewport.width,
+                height: viewport.height,
+                start_time: SystemTime::now(),
+                funcs,
+            });
+        }
+        cached_capture_context.as_ref().unwrap()
     }
-    cached_capture_context.as_ref().unwrap()
 }
 
 impl<'a> CaptureContext<'a> {
