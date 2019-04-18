@@ -5,4 +5,3 @@ authors = ["Amos Wenger <amoswenger@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-libc = "0.2.48"
