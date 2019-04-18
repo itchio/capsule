@@ -75,7 +75,8 @@ static ctor: extern "C" fn() = {
 
         unsafe {
             global_runtime = Some({
-                current_thread::Runtime::new().expect("could not construct tokio runtime")
+                let rt = current_thread::Runtime::new().expect("could not construct tokio runtime");
+                std::sync::Mutex::new(rt)
             });
         }
 
@@ -103,7 +104,7 @@ static ctor: extern "C" fn() = {
             unsafe {
                 global_host = Some(rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server));
             }
-            get_runtime().spawn(rpc_system.map_err(|e| warn!("RPC error: {:?}", e)));
+            spawn(rpc_system.map_err(|e| warn!("RPC error: {:?}", e)));
             info!("Connected!");
         }
 
