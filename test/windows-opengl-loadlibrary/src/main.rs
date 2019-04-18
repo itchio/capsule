@@ -1,20 +1,20 @@
 #![allow(non_snake_case)]
 
-#[macro_use]
-extern crate dlopen_derive;
+use std::ffi::CString;
+use std::mem::transmute;
 
-use dlopen::symbor::{Library, SymBorApi, Symbol};
-use libc::{c_void};
-
-#[derive(SymBorApi)]
-struct LibGL<'a> {
-    pub wglSwapBuffers: Symbol<'a, unsafe extern "C" fn(hdc: *const c_void)>,
+#[link(name = "kernel32")]
+extern "system" {
+    fn LoadLibraryA(name: *const i8) -> *const i8;
+    fn GetProcAddress(handle: *const i8, name: *const i8) -> *const i8;
 }
 
 fn main() {
-    let lib = Library::open("opengl32.dll").unwrap();
-    let api = unsafe { LibGL::load(&lib) }.unwrap();
     unsafe {
-        (api.wglSwapBuffers)(0xDEADBEEF as *const c_void);
+        let handle = LoadLibraryA(CString::new("opengl32.dll").unwrap().as_ptr());
+        let wglSwapBuffers: unsafe extern "C" fn(hdc: *const i8) = {
+            transmute(GetProcAddress(handle, CString::new("wglSwapBuffers").unwrap().as_ptr()))
+        };
+        wglSwapBuffers(0xDEADBEEF as *const i8);
     }
 }
