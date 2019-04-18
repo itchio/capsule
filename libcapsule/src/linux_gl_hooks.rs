@@ -3,6 +3,7 @@
 #[link(name = "dl")]
 extern "C" {}
 
+use crate::comm::*;
 use crate::gl;
 use const_cstr::const_cstr;
 use lazy_static::lazy_static;
@@ -113,6 +114,13 @@ hook_dynamic! {
             );
 
             capture_gl_frame();
+
+            {
+                let req = get_host().notify_frame_request();
+                if let Some(err) = hope(req.send().promise).err() {
+                    warn!("Could not notify frame: {:?}", err);
+                }
+            }
 
             glXSwapBuffers::next(display, drawable)
         }

@@ -4,6 +4,9 @@ interface Host {
   registerTarget @0 (target: Target);
   # Called when we first detect OpenGL/Direct3D usage 
 
+  notifyFrame @1 ();
+  # Just testing
+
   interface Target {
     struct Info {
       pid @0 :UInt64;
