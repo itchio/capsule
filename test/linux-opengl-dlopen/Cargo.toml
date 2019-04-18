@@ -5,5 +5,3 @@ authors = ["Amos Wenger <amoswenger@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-libc = "0.2.48"
-const-cstr = "0.3.0"
