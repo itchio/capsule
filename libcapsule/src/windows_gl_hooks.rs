@@ -25,7 +25,7 @@ unsafe impl std::marker::Sync for LibHandle {}
 lazy_static! {
     static ref opengl32_handle: LibHandle = {
         // it's *NOT* safe to call libloadingapi::LoadLibraryW here
-        let module = LoadLibraryW__next(wstrz!("opengl32.dll").as_ptr());
+        let module = LoadLibraryW::next(wstrz!("opengl32.dll").as_ptr());
         assert_non_null!("LoadLibraryW(opengl32.dll)", module);
         LibHandle { module: module }
     };
@@ -79,7 +79,7 @@ hook_dynamic! {
             }
 
             capture_gl_frame();
-            wglSwapBuffers__next(hdc)
+            wglSwapBuffers::next(hdc)
         }
     }
 }
@@ -114,7 +114,7 @@ unsafe fn get_kernel32_proc_address(rust_name: &str) -> *const () {
 hook_dynamic! {
     extern "system" use get_kernel32_proc_address => {
         fn LoadLibraryA(filename: winnt::LPSTR) -> minwindef::HMODULE {
-            let res = LoadLibraryA__next(filename);
+            let res = LoadLibraryA::next(filename);
             if !filename.is_null() {
                 let s = std::ffi::CStr::from_ptr(filename).to_string_lossy();
                 info!("LoadLibraryA({}) = {:x}", s, res as usize);
@@ -124,7 +124,7 @@ hook_dynamic! {
         }
 
         fn LoadLibraryW(filename: winnt::LPCWSTR) -> minwindef::HMODULE {
-            let res = LoadLibraryW__next(filename);
+            let res = LoadLibraryW::next(filename);
             if !filename.is_null() {
                 let s = widestring::U16CStr::from_ptr_str(filename).to_string_lossy();
                 info!("LoadLibraryW({}) = {:x}", s, res as usize);
@@ -146,15 +146,15 @@ unsafe fn hook_if_needed() {
     if is_using_opengl() {
         HOOK_SWAPBUFFERS_ONCE.call_once(|| {
             info!("opengl32.dll usage detected, hooking OpenGL");
-            lazy_static::initialize(&wglSwapBuffers__hook);
+            wglSwapBuffers::enable_hook();
         })
     }
 }
 
 pub fn initialize() {
     unsafe {
-        lazy_static::initialize(&LoadLibraryA__hook);
-        lazy_static::initialize(&LoadLibraryW__hook);
+        LoadLibraryA::enable_hook();
+        LoadLibraryW::enable_hook();
         hook_if_needed();
     }
 }
