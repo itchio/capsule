@@ -44,6 +44,58 @@ fn main() {
 
     setup_logging(&matches);
     let options = build_options(matches);
+
+    use futures::*;
+    let (c, p) = oneshot::<u16>();
+
+    // woo let's go
+    std::thread::spawn(move || {
+        use capnp_rpc::{rpc_twoparty_capnp, twoparty, RpcSystem};
+        use futures::{Future, Stream};
+        use proto::proto_capnp::host;
+        use std::net::SocketAddr;
+        use tokio::io::AsyncRead;
+        use tokio::net::TcpListener;
+        use tokio::runtime::current_thread;
+
+        struct HostImpl;
+
+        impl host::Server for HostImpl {}
+
+        let addr = "127.0.0.1:0".parse::<SocketAddr>().unwrap();
+        let socket = TcpListener::bind(&addr).unwrap();
+
+        let host = host::ToClient::new(HostImpl).into_client::<::capnp_rpc::Server>();
+
+        let local_addr = socket.local_addr().unwrap();
+        warn!("Listening on {:?}", local_addr);
+        c.send(local_addr.port()).unwrap();
+
+        let done = socket.incoming().for_each(move |socket| {
+            socket.set_nodelay(true).unwrap();
+            let (reader, writer) = socket.split();
+            let network = twoparty::VatNetwork::new(
+                reader,
+                std::io::BufWriter::new(writer),
+                rpc_twoparty_capnp::Side::Server,
+                Default::default(),
+            );
+            let rpc_system = RpcSystem::new(Box::new(network), Some(host.clone().client));
+            current_thread::spawn(rpc_system.map_err(|e| warn!("error: {:?}", e)));
+            Ok(())
+        });
+        match current_thread::block_on_all(done) {
+            Err(err) => warn!("RPC server crashed: {:#?}", err),
+            Ok(_) => warn!("RPC server wound down"),
+        }
+    });
+
+    info!("Waiting on RPC thread to start listening...");
+    let done = p.map(|port| {
+        info!("Cool, it's listening on port {}", port);
+    });
+    tokio::runtime::current_thread::block_on_all(done).unwrap();
+
     runner::new_context(options).run();
 }
 

@@ -22,6 +22,15 @@ wincap = { path = "../wincap" }
 # woo
 "lazy_static" = "1.3.0"
 
+# I/O probably
+"tokio" = "0.1.18"
+# capsule protocol
+"proto" = { path = "../proto" }
+# capnproto RPC
+"capnp-rpc" = "0.9.0"
+# async stuff
+"futures" = "0.1.26"
+
 [dependencies.winapi]
 version = "0.3.7"
 features = ["tlhelp32", "handleapi", "memoryapi", "synchapi", "wow64apiset", "jobapi2"]
