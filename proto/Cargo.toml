@@ -1,0 +1,13 @@
+[package]
+name = "proto"
+version = "0.1.0"
+authors = ["Amos Wenger <amoswenger@gmail.com>"]
+edition = "2018"
+build = "build.rs"
+
+[build-dependencies]
+"capnpc" = "0.9.3"
+
+[dependencies]
+"capnp" = "0.9.4"
+"capnp-rpc" = "0.9.0"
