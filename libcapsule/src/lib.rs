@@ -1,6 +1,5 @@
 #![allow(non_upper_case_globals, non_snake_case)]
 
-use ctor::ctor;
 use log::*;
 
 #[macro_use]
@@ -31,22 +30,29 @@ lazy_static::lazy_static! {
     };
 }
 
-#[ctor]
-fn ctor() {
-    std::env::set_var("RUST_BACKTRACE", "1");
-    env_logger::init();
+#[used]
+#[allow(non_upper_case_globals)]
+#[cfg_attr(target_os = "linux", link_section = ".ctors")]
+#[cfg_attr(target_os = "macos", link_section = "__DATA,__mod_init_func")]
+#[cfg_attr(windows, link_section = ".CRT$XCU")]
+static ctor: extern "C" fn() = {
+    extern "C" fn ctor() {
+        std::env::set_var("RUST_BACKTRACE", "1");
+        env_logger::init();
 
-    info!("thanks for flying capsule on {}", CURRENT_PLATFORM);
-    #[cfg(target_os = "linux")]
-    {
-        linux_gl_hooks::initialize()
-    }
-    #[cfg(target_os = "windows")]
-    {
-        windows_gl_hooks::initialize()
-    }
-    #[cfg(target_os = "macos")]
-    {
-        macos_gl_hooks::initialize()
-    }
-}
+        info!("thanks for flying capsule on {}", CURRENT_PLATFORM);
+        #[cfg(target_os = "linux")]
+        {
+            linux_gl_hooks::initialize()
+        }
+        #[cfg(target_os = "windows")]
+        {
+            windows_gl_hooks::initialize()
+        }
+        #[cfg(target_os = "macos")]
+        {
+            macos_gl_hooks::initialize()
+        }
+    };
+    ctor
+};
