@@ -1,20 +1,21 @@
 #![allow(non_snake_case)]
 
-#[macro_use]
-extern crate dlopen_derive;
+use const_cstr::*;
+use libc::*;
+use std::mem::transmute;
 
-use dlopen::symbor::{Library, SymBorApi, Symbol};
-use libc::{c_ulong, c_void};
+const RTLD_LAZY: c_int = 0x1;
 
-#[derive(SymBorApi)]
-struct LibGL<'a> {
-    pub glXSwapBuffers: Symbol<'a, unsafe extern "C" fn(dpy: *const c_void, drawable: c_ulong)>,
+extern "C" {
+    fn dlopen(name: *const c_char, flags: c_int) -> *const c_void;
+    fn dlsym(handle: *const c_void, name: *const c_char) -> *const c_void;
 }
 
 fn main() {
-    let lib = Library::open("libGL.so.1").unwrap();
-    let api = unsafe { LibGL::load(&lib) }.unwrap();
     unsafe {
-        (api.glXSwapBuffers)(0xDEADBEEF as *const c_void, 0);
+        let handle = dlopen(const_cstr!("libGL.so.1").as_ptr(), RTLD_LAZY);
+        let glXSwapBuffers: unsafe extern "C" fn(dpy: *const c_void, drawable: c_ulong) =
+            { transmute(dlsym(handle, const_cstr!("glXSwapBuffers").as_ptr())) };
+        glXSwapBuffers(0xDEADBEEF as *const c_void, 0);
     }
 }
