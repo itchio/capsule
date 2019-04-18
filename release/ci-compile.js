@@ -221,6 +221,10 @@ async function ci_compile_linux(arch) {
     strip: true,
     tests: [
       {
+        name: "linux-opengl-ld",
+        platform
+      },
+      {
         name: "linux-opengl-dlopen",
         platform
       }

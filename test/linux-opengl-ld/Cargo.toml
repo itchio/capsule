@@ -1,0 +1,7 @@
+[package]
+name = "linux-opengl-ld"
+version = "0.1.0"
+authors = ["Amos Wenger <amoswenger@gmail.com>"]
+edition = "2018"
+
+[dependencies]
