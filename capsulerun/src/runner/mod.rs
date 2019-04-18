@@ -19,6 +19,7 @@ pub struct Options {
   pub arch: Arch,
   pub os: OS,
   pub suspend: bool,
+  pub port: u16,
 }
 
 pub struct Context {
