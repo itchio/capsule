@@ -7,11 +7,14 @@ use proto::proto_capnp::host;
 use log::*;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
+use tokio::prelude::FutureExt;
 use uuid::Uuid;
 
 struct TargetEntry {
   id: Uuid,
+  pid: u64,
+  exe: String,
   target: host::target::Client,
 }
 
@@ -48,6 +51,8 @@ impl host::Server for HostImpl {
       let id = Uuid::new_v4();
       let entry = TargetEntry {
         id: id,
+        pid: pid,
+        exe: exe.to_owned(),
         target: target.clone(),
       };
       let entry = Arc::new(Mutex::new(entry));
@@ -81,14 +86,12 @@ impl host::Server for HostImpl {
           .map(|(&id, entry)| {
             let req = entry.lock().unwrap().target.get_info_request();
             let f = req.send().promise.and_then(|v| {
-              let info = pry!(v.get()).get_info().unwrap();
-              let pid = info.get_pid();
-              let exe = info.get_exe().unwrap();
-              info!("Target still alive: ({}) (PID = {})", exe, pid);
+              pry!(v.get()).get_info().unwrap();
               Promise::ok(None)
             });
-            let f = f.or_else(move |err| {
-              warn!("Uh oh: {:?}", err);
+            let f = f.timeout(Duration::from_millis(250));
+            let f = f.or_else(move |_| {
+              // TODO: check that it's a disconnect, not something else
               Promise::ok(Some(id))
             });
             Promise::from_future(f)
@@ -101,8 +104,11 @@ impl host::Server for HostImpl {
         let f = f.and_then(move |deads| {
           let mut targets = targets.lock().unwrap();
           for id in deads.iter().filter_map(|&x| x) {
-            if let Some(_) = targets.remove(&id) {
-              warn!("Removed target entry {:#?}", id);
+            if let Some(entry) = targets.remove(&id) {
+              let entry = entry.lock().unwrap();
+              let exe = &entry.exe;
+              let pid = &entry.pid;
+              warn!("Target disconnected: ({}) (PID = {})", exe, pid);
             }
           }
           Promise::ok(())

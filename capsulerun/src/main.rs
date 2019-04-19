@@ -130,7 +130,14 @@ fn run_server(port_channel: futures::Complete<u16>) {
             Default::default(),
         );
         let rpc_system = RpcSystem::new(Box::new(network), Some(host.clone().client));
-        current_thread::spawn(rpc_system.map_err(|e| warn!("RPC error: {:?}", e)));
+        current_thread::spawn(
+            rpc_system
+                .map_err(|e| warn!("RPC error: {:?}", e))
+                .and_then(|_| {
+                    info!("Reached the end of an RPC system");
+                    Ok(())
+                }),
+        );
         Ok(())
     });
     match current_thread::block_on_all(done) {
