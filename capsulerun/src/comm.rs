@@ -6,10 +6,13 @@ use proto::proto_capnp::host;
 
 use log::*;
 use std::fmt;
+use std::fs::File;
+use std::io::Write;
 use std::sync::{Arc, Mutex};
 
 struct SinkImpl {
   session: Arc<Mutex<Option<host::session::Client>>>,
+  file: File,
 }
 
 impl host::sink::Server for SinkImpl {
@@ -42,6 +45,7 @@ impl host::sink::Server for SinkImpl {
       num_black,
       num_pixels
     );
+    self.file.write(data).unwrap();
 
     if index > 60 {
       let guard = self.session.lock().unwrap();
@@ -105,6 +109,7 @@ impl host::Server for HostImpl {
       // creating a sink here, but it has a "None" session
       let sink = SinkImpl {
         session: Arc::new(Mutex::new(None)),
+        file: File::create("capture.raw").unwrap(),
       };
       let session_ref = sink.session.clone();
       let mut req = client.start_capture_request();
