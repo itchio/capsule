@@ -132,31 +132,25 @@ impl<'a> CaptureContext<'a> {
     pub fn capture_frame(&mut self) {
         unsafe {
             if let Some(session) = global_session.as_ref() {
-                let alive;
-                let mut req;
-                {
+                let mut req = {
                     let session = session.read().unwrap();
-                    let sink = &session.sink;
-                    req = sink.send_video_frame_request();
-                    alive = session.alive;
-                }
+                    if !session.alive {
+                        info!("Capture session was stopped");
+                        global_session = None;
+                        return;
+                    }
 
-                if !alive {
-                    info!("Capture session was stopped");
-                    global_session = None;
-                    return;
-                }
-
+                    session.sink.send_video_frame_request()
+                };
                 let mut frame = req.get().init_frame();
                 let mut timestamp = frame.reborrow().init_timestamp();
-                let elapsed = SystemTime::now().elapsed().unwrap();
+                let elapsed = self.start_time.elapsed().unwrap();
                 timestamp.set_millis(elapsed.as_millis() as f64);
                 frame.set_index(self.frame_number);
                 frame.set_data(&Vec::<u8>::new()[..]);
                 hope(req.send().promise).unwrap();
             }
         }
-
         self.frame_number += 1;
     }
 }

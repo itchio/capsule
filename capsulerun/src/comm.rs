@@ -22,7 +22,15 @@ impl host::sink::Server for SinkImpl {
     let frame = pry!(params.get_frame());
     let index = frame.get_index();
     let data = pry!(frame.get_data());
-    info!("Received frame {}, contains {} bytes", index, data.len());
+    let millis = pry!(frame.get_timestamp()).get_millis();
+    let timestamp =
+      std::time::Duration::from_millis(millis as u64);
+    info!(
+      "Received frame {} (@ {:?}), contains {} bytes",
+      index,
+      timestamp,
+      data.len()
+    );
 
     if index > 60 {
       let guard = self.session.lock().unwrap();
