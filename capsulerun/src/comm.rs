@@ -12,6 +12,8 @@ use std::sync::{Arc, Mutex};
 
 struct SinkImpl {
   session: Arc<Mutex<Option<host::session::Client>>>,
+  skip: u32,
+  count: u32,
   file: File,
 }
 
@@ -21,6 +23,12 @@ impl host::sink::Server for SinkImpl {
     params: host::sink::SendVideoFrameParams,
     _results: host::sink::SendVideoFrameResults,
   ) -> Promise<(), Error> {
+    if self.skip > 0 {
+      self.skip -= 1;
+      info!("Skipping ({} left)", self.skip);
+      return Promise::ok(());
+    }
+
     let params = pry!(params.get());
     let frame = pry!(params.get_frame());
     let index = frame.get_index();
@@ -47,7 +55,8 @@ impl host::sink::Server for SinkImpl {
     );
     self.file.write(data).unwrap();
 
-    if index > 60 {
+    self.count += 1;
+    if self.count > 60 * 4 {
       let guard = self.session.lock().unwrap();
       if let Some(session) = guard.as_ref() {
         let req = session.stop_request();
@@ -109,6 +118,8 @@ impl host::Server for HostImpl {
       // creating a sink here, but it has a "None" session
       let sink = SinkImpl {
         session: Arc::new(Mutex::new(None)),
+        skip: 300,
+        count: 0,
         file: File::create("capture.raw").unwrap(),
       };
       let session_ref = sink.session.clone();

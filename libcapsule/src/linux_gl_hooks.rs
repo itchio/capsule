@@ -110,14 +110,6 @@ hook_dynamic! {
 
             glXSwapBuffers::next(display, drawable)
         }
-        fn glXQueryVersion(display: *const c_void, major: *mut c_int, minor: *mut c_int) -> c_int {
-            // useless hook, just here to demonstrate we can do multiple hooks if needed
-            let ret = glXQueryVersion::next(display, major, minor);
-            if ret == 1 {
-                info!("GLX server version {}.{}", *major, *minor);
-            }
-            ret
-        }
     }
 }
 
@@ -145,7 +137,6 @@ unsafe fn hook_if_needed() {
         HOOK_SWAPBUFFERS_ONCE.call_once(|| {
             info!("libGL usage detected, hooking OpenGL");
             glXSwapBuffers::enable_hook();
-            glXQueryVersion::enable_hook();
         })
     }
 }
