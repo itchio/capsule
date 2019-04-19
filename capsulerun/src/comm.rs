@@ -5,13 +5,20 @@ use futures::Future;
 use proto::proto_capnp::host;
 
 use log::*;
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
+use uuid::Uuid;
+
+struct TargetEntry {
+  id: Uuid,
+  target: host::target::Client,
+}
 
 pub struct HostImpl {
   last_fps_print: SystemTime,
   frames_this_cycle: u64,
-  targets: Arc<Mutex<Vec<host::target::Client>>>,
+  targets: Arc<Mutex<HashMap<Uuid, Arc<Mutex<TargetEntry>>>>>,
 }
 
 impl HostImpl {
@@ -19,7 +26,7 @@ impl HostImpl {
     HostImpl {
       last_fps_print: SystemTime::now(),
       frames_this_cycle: 0,
-      targets: Arc::new(Mutex::new(Vec::new())),
+      targets: Arc::new(Mutex::new(HashMap::new())),
     }
   }
 }
@@ -31,13 +38,21 @@ impl host::Server for HostImpl {
     mut _results: host::RegisterTargetResults,
   ) -> Promise<(), Error> {
     let target = pry!(pry!(params.get()).get_target());
-    self.targets.lock().unwrap().push(target.clone());
     let req = target.get_info_request();
-    Promise::from_future(req.send().promise.and_then(|v| {
+    let targets = self.targets.to_owned();
+    Promise::from_future(req.send().promise.and_then(move |v| {
       let info = pry!(v.get()).get_info().unwrap();
       let pid = info.get_pid();
       let exe = info.get_exe().unwrap();
       info!("Target registered: ({}) (PID = {})", exe, pid);
+      let id = Uuid::new_v4();
+      let entry = TargetEntry {
+        id: id,
+        target: target.clone(),
+      };
+      let entry = Arc::new(Mutex::new(entry));
+      targets.lock().unwrap().insert(id, entry);
+
       Promise::ok(())
     }))
   }
@@ -58,14 +73,13 @@ impl host::Server for HostImpl {
         self.frames_this_cycle = 0;
 
         info!("Checking on all targets...");
-        let target_promises: Vec<Promise<Option<usize>, Error>> = self
+        let target_promises: Vec<Promise<Option<Uuid>, Error>> = self
           .targets
           .lock()
           .unwrap()
           .iter()
-          .enumerate()
-          .map(|(i, target)| {
-            let req = target.get_info_request();
+          .map(|(&id, entry)| {
+            let req = entry.lock().unwrap().target.get_info_request();
             let f = req.send().promise.and_then(|v| {
               let info = pry!(v.get()).get_info().unwrap();
               let pid = info.get_pid();
@@ -75,7 +89,7 @@ impl host::Server for HostImpl {
             });
             let f = f.or_else(move |err| {
               warn!("Uh oh: {:?}", err);
-              Promise::ok(Some(i))
+              Promise::ok(Some(id))
             });
             Promise::from_future(f)
           })
@@ -84,13 +98,11 @@ impl host::Server for HostImpl {
         let f = futures::future::join_all(target_promises);
 
         let targets = self.targets.to_owned();
-        let f = f.and_then(move |mut deads| {
-          deads.reverse();
+        let f = f.and_then(move |deads| {
           let mut targets = targets.lock().unwrap();
-          for dead in deads {
-            if let Some(i) = dead {
-              warn!("Removing target {:#?}", i);
-              targets.remove(i);
+          for id in deads.iter().filter_map(|&x| x) {
+            if let Some(_) = targets.remove(&id) {
+              warn!("Removed target entry {:#?}", id);
             }
           }
           Promise::ok(())
