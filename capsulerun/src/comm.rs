@@ -5,32 +5,58 @@ use futures::Future;
 use proto::proto_capnp::host;
 
 use log::*;
-use std::collections::HashMap;
+use std::fmt;
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, SystemTime};
-use tokio::prelude::FutureExt;
-use uuid::Uuid;
 
-struct TargetEntry {
-  id: Uuid,
+struct SinkImpl {
+  session: Arc<Mutex<Option<host::session::Client>>>,
+}
+
+impl host::sink::Server for SinkImpl {
+  fn send_video_frame(
+    &mut self,
+    params: host::sink::SendVideoFrameParams,
+    _results: host::sink::SendVideoFrameResults,
+  ) -> Promise<(), Error> {
+    let params = pry!(params.get());
+    let frame = pry!(params.get_frame());
+    let index = frame.get_index();
+    let data = pry!(frame.get_data());
+    info!("Received frame {}, contains {} bytes", index, data.len());
+
+    if index > 60 {
+      let guard = self.session.lock().unwrap();
+      if let Some(session) = guard.as_ref() {
+        let req = session.stop_request();
+        return Promise::from_future(req.send().promise.and_then(|_| {
+          info!("Stopped capture session!");
+          Promise::ok(())
+        }));
+      }
+    }
+    Promise::ok(())
+  }
+}
+
+struct Target {
+  client: host::target::Client,
   pid: u64,
   exe: String,
-  target: host::target::Client,
+}
+
+impl fmt::Display for Target {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}:{}", self.pid, self.exe)
+  }
 }
 
 pub struct HostImpl {
-  last_fps_print: SystemTime,
-  frames_this_cycle: u64,
-  targets: Arc<Mutex<HashMap<Uuid, Arc<Mutex<TargetEntry>>>>>,
+  target: Option<Target>,
 }
 
 impl HostImpl {
   pub fn new() -> Self {
-    HostImpl {
-      last_fps_print: SystemTime::now(),
-      frames_this_cycle: 0,
-      targets: Arc::new(Mutex::new(HashMap::new())),
-    }
+    HostImpl { target: None }
   }
 }
 
@@ -40,84 +66,41 @@ impl host::Server for HostImpl {
     params: host::RegisterTargetParams,
     mut _results: host::RegisterTargetResults,
   ) -> Promise<(), Error> {
-    let target = pry!(pry!(params.get()).get_target());
-    let req = target.get_info_request();
-    let targets = self.targets.to_owned();
-    Promise::from_future(req.send().promise.and_then(move |v| {
-      let info = pry!(v.get()).get_info().unwrap();
+    let params = pry!(params.get());
+    let client = pry!(params.get_target());
+    let info = pry!(params.get_info());
+    {
       let pid = info.get_pid();
       let exe = info.get_exe().unwrap();
-      info!("Target registered: ({}) (PID = {})", exe, pid);
-      let id = Uuid::new_v4();
-      let entry = TargetEntry {
-        id: id,
+      let target = Target {
         pid: pid,
         exe: exe.to_owned(),
-        target: target.clone(),
+        client: client.clone(),
       };
-      let entry = Arc::new(Mutex::new(entry));
-      targets.lock().unwrap().insert(id, entry);
-
-      Promise::ok(())
-    }))
-  }
-
-  fn notify_frame(
-    &mut self,
-    params: host::NotifyFrameParams,
-    _results: host::NotifyFrameResults,
-  ) -> Promise<(), Error> {
-    let frame_number = pry!(params.get()).get_frame_number();
-    self.frames_this_cycle += 1;
-
-    if let Ok(elapsed) = self.last_fps_print.elapsed() {
-      if elapsed.as_secs() >= 1 {
-        let fps = (self.frames_this_cycle as f64) / (elapsed.as_nanos() as f64 / 1e9f64);
-        info!("{:.0} FPS (frame #{})", fps, frame_number);
-        self.last_fps_print = SystemTime::now();
-        self.frames_this_cycle = 0;
-
-        info!("Checking on all targets...");
-        let target_promises: Vec<Promise<Option<Uuid>, Error>> = self
-          .targets
-          .lock()
-          .unwrap()
-          .iter()
-          .map(|(&id, entry)| {
-            let req = entry.lock().unwrap().target.get_info_request();
-            let f = req.send().promise.and_then(|v| {
-              pry!(v.get()).get_info().unwrap();
-              Promise::ok(None)
-            });
-            let f = f.timeout(Duration::from_millis(250));
-            let f = f.or_else(move |_| {
-              // TODO: check that it's a disconnect, not something else
-              Promise::ok(Some(id))
-            });
-            Promise::from_future(f)
-          })
-          .collect();
-
-        let f = futures::future::join_all(target_promises);
-
-        let targets = self.targets.to_owned();
-        let f = f.and_then(move |deads| {
-          let mut targets = targets.lock().unwrap();
-          for id in deads.iter().filter_map(|&x| x) {
-            if let Some(entry) = targets.remove(&id) {
-              let entry = entry.lock().unwrap();
-              let exe = &entry.exe;
-              let pid = &entry.pid;
-              warn!("Target disconnected: ({}) (PID = {})", exe, pid);
-            }
-          }
-          Promise::ok(())
-        });
-
-        return Promise::from_future(f);
-      }
+      info!("Target registered: {}", target);
+      self.target = Some(target);
     }
 
-    Promise::ok(())
+    {
+      info!("Asking to start capture...");
+      // creating a sink here, but it has a "None" session
+      let sink = SinkImpl {
+        session: Arc::new(Mutex::new(None)),
+      };
+      let session_ref = sink.session.clone();
+      let mut req = client.start_capture_request();
+      // moving the sink into an RPC client thingy
+      req
+        .get()
+        .set_sink(host::sink::ToClient::new(sink).into_client::<::capnp_rpc::Server>());
+      Promise::from_future(req.send().promise.and_then(move |res| {
+        info!("Started capture succesfully!");
+        let res = pry!(res.get());
+        let session = pry!(res.get_session());
+        // need to mutate the interior of the sink here, Arc/Mutex to the rescue
+        *session_ref.lock().unwrap() = Some(session);
+        Promise::ok(())
+      }))
+    }
   }
 }

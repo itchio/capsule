@@ -1,11 +1,8 @@
 @0xaebd06712ae3dc6d;
 
 interface Host {
-  registerTarget @0 (target: Target);
+  registerTarget @0 (info: Target.Info, target: Target);
   # Called when we first detect OpenGL/Direct3D usage 
-
-  notifyFrame @1 (frameNumber :UInt64);
-  # Just testing
 
   interface Target {
     struct Info {
@@ -16,10 +13,7 @@ interface Host {
       # Executable path of the target process
     }
 
-    getInfo @0 () -> (info :Info);
-    # Returns information about the target
-
-    startCapture @1 (sink :Sink) -> (session :Session);
+    startCapture @0 (sink :Sink) -> (info :Session.Info, session :Session);
     # Ask the target to start capturing into sink.
   }
 
@@ -41,25 +35,24 @@ interface Host {
       }
     }
 
-    info @0 () -> (info :Info);
-    # Get info about the session
-
-    stop @1 ();
+    stop @0 ();
     # Stop capturing this session
-  }
-
-  interface Sink {
-    sendVideoFrame @0 (frame: VideoFrame);
   }
 
   struct VideoFrame {
     timestamp @0 :Timestamp;
-    index @1 :UInt32;
+    index @1 :UInt64;
+    data @2 :Data;
   }
 
   struct Timestamp {
-    time @0 :Float64;
+    millis @0 :Float64;
     # Number of milliseconds since start of the session
     # This might be a terrible way to measure time.
+  }
+
+  interface Sink {
+    sendVideoFrame @0 (frame: VideoFrame);
+    # Send a video frame
   }
 }

@@ -20,6 +20,7 @@ use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 use futures::Future;
 use proto::proto_capnp::host;
 use std::net::SocketAddr;
+use std::sync::{Arc, RwLock};
 use tokio::io::AsyncRead;
 use tokio::runtime::current_thread;
 
@@ -42,15 +43,33 @@ impl TargetImpl {
         Self {}
     }
 }
+
 impl host::target::Server for TargetImpl {
-    fn get_info(
+    fn start_capture(
         &mut self,
-        _params: host::target::GetInfoParams,
-        mut results: host::target::GetInfoResults,
+        params: host::target::StartCaptureParams,
+        mut results: host::target::StartCaptureResults,
     ) -> Promise<(), Error> {
-        let mut info = results.get().init_info();
-        info.set_pid(std::process::id() as u64);
-        info.set_exe(std::env::current_exe().unwrap().to_string_lossy().as_ref());
+        let params = pry!(params.get());
+        let sink = pry!(params.get_sink());
+
+        info!("Starting capture into a sink!");
+        let session = Session {
+            sink: sink,
+            alive: true,
+        };
+        let session_ref = Arc::new(RwLock::new(session));
+        let session_impl = SessionImpl {
+            session: session_ref.clone(),
+        };
+
+        results.get().set_session(
+            host::session::ToClient::new(session_impl).into_client::<::capnp_rpc::Server>(),
+        );
+
+        unsafe {
+            global_session = Some(session_ref);
+        }
         Promise::ok(())
     }
 }
@@ -115,6 +134,9 @@ static ctor: extern "C" fn() = {
             let target =
                 host::target::ToClient::new(TargetImpl::new()).into_client::<::capnp_rpc::Server>();
             let mut req = get_host().register_target_request();
+            let mut info = req.get().init_info();
+            info.set_pid(std::process::id() as u64);
+            info.set_exe(std::env::current_exe().unwrap().to_string_lossy().as_ref());
             req.get().set_target(target);
             hope(req.send().promise.and_then(|response| {
                 pry!(response.get());

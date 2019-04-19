@@ -130,10 +130,31 @@ pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'static mut C
 
 impl<'a> CaptureContext<'a> {
     pub fn capture_frame(&mut self) {
-        {
-            let mut req = get_host().notify_frame_request();
-            req.get().set_frame_number(self.frame_number);
-            hope(req.send().promise).unwrap();
+        unsafe {
+            if let Some(session) = global_session.as_ref() {
+                let alive;
+                let mut req;
+                {
+                    let session = session.read().unwrap();
+                    let sink = &session.sink;
+                    req = sink.send_video_frame_request();
+                    alive = session.alive;
+                }
+
+                if !alive {
+                    info!("Capture session was stopped");
+                    global_session = None;
+                    return;
+                }
+
+                let mut frame = req.get().init_frame();
+                let mut timestamp = frame.reborrow().init_timestamp();
+                let elapsed = SystemTime::now().elapsed().unwrap();
+                timestamp.set_millis(elapsed.as_millis() as f64);
+                frame.set_index(self.frame_number);
+                frame.set_data(&Vec::<u8>::new()[..]);
+                hope(req.send().promise).unwrap();
+            }
         }
 
         self.frame_number += 1;
