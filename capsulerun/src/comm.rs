@@ -23,13 +23,24 @@ impl host::sink::Server for SinkImpl {
     let index = frame.get_index();
     let data = pry!(frame.get_data());
     let millis = pry!(frame.get_timestamp()).get_millis();
-    let timestamp =
-      std::time::Duration::from_millis(millis as u64);
+    let timestamp = std::time::Duration::from_millis(millis as u64);
+
+    let mut num_black = 0;
+    let num_pixels = data.len() / 4;
+    for i in 0..num_pixels {
+      let (r, g, b) = (data[i * 4], data[i * 4 + 1], data[i * 4 + 2]);
+      if r == 0 && g == 0 && b == 0 {
+        num_black += 1;
+      }
+    }
+
     info!(
-      "Received frame {} (@ {:?}), contains {} bytes",
+      "Received frame {} (@ {:?}), contains {} bytes, {}/{} black pixels",
       index,
       timestamp,
-      data.len()
+      data.len(),
+      num_black,
+      num_pixels
     );
 
     if index > 60 {

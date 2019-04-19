@@ -147,7 +147,34 @@ impl<'a> CaptureContext<'a> {
                 let elapsed = self.start_time.elapsed().unwrap();
                 timestamp.set_millis(elapsed.as_millis() as f64);
                 frame.set_index(self.frame_number);
-                frame.set_data(&Vec::<u8>::new()[..]);
+
+                let Self {
+                    funcs,
+                    width,
+                    height,
+                    ..
+                } = self;
+                let (width, height) = (*width, *height);
+
+                let x: GLint = 0;
+                let y: GLint = 0;
+                let bytes_per_pixel: usize = 4;
+                let bytes_per_frame: usize = width as usize * height as usize * bytes_per_pixel;
+
+                let mut frame_buffer = Vec::<u8>::new();
+                frame_buffer.resize(bytes_per_frame, 0);
+
+                funcs.glReadPixels(
+                    x,
+                    y,
+                    width,
+                    height,
+                    GL_RGBA,
+                    GL_UNSIGNED_BYTE,
+                    std::mem::transmute(frame_buffer.as_ptr()),
+                );
+
+                frame.set_data(&frame_buffer[..]);
                 hope(req.send().promise).unwrap();
             }
         }
