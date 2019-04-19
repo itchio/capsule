@@ -52,9 +52,9 @@ fn main() {
 
     // woo let's go
     std::thread::spawn(move || run_server(port_channel));
-    let mut rt = tokio::runtime::current_thread::Runtime::new().unwrap();
+    let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
     info!("Waiting on RPC thread to start listening...");
-    let port = rt.block_on(port_receive).unwrap();
+    let port = runtime.block_on(port_receive).unwrap();
     info!("Cool, it's listening on port {}", port);
 
     let options = build_options(matches, port);
