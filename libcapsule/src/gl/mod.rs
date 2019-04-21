@@ -41,6 +41,7 @@ macro_rules! define_gl_functions_with_convention {
             height: GLint,
             frame_number: u64,
             start_time: SystemTime,
+            frame_buffer: Vec<u8>,
             pub funcs: &'a Functions,
         }
 
@@ -116,11 +117,18 @@ pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'static mut C
             funcs.glGetIntegerv(GL_VIEWPORT, mem::transmute(&viewport));
             info!("Viewport: {:?}", viewport);
 
+            let bytes_per_pixel: usize = 4;
+            let bytes_per_frame: usize =
+                viewport.width as usize * viewport.height as usize * bytes_per_pixel;
+            let mut frame_buffer = Vec::<u8>::new();
+            frame_buffer.resize(bytes_per_frame, 0);
+
             cached_capture_context = Some(CaptureContext {
                 width: viewport.width,
                 height: viewport.height,
                 start_time: SystemTime::now(),
                 frame_number: 0,
+                frame_buffer,
                 funcs,
             });
         }
@@ -156,25 +164,17 @@ impl<'a> CaptureContext<'a> {
                 } = self;
                 let (width, height) = (*width, *height);
 
-                let x: GLint = 0;
-                let y: GLint = 0;
-                let bytes_per_pixel: usize = 4;
-                let bytes_per_frame: usize = width as usize * height as usize * bytes_per_pixel;
-
-                let mut frame_buffer = Vec::<u8>::new();
-                frame_buffer.resize(bytes_per_frame, 0);
-
                 funcs.glReadPixels(
-                    x,
-                    y,
+                    0,
+                    0,
                     width,
                     height,
                     GL_RGBA,
                     GL_UNSIGNED_BYTE,
-                    std::mem::transmute(frame_buffer.as_ptr()),
+                    std::mem::transmute(self.frame_buffer.as_ptr()),
                 );
 
-                frame.set_data(&frame_buffer[..]);
+                frame.set_data(&self.frame_buffer[..]);
                 hope(req.send().promise).unwrap();
             }
         }
