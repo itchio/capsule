@@ -27,6 +27,20 @@ interface Host {
         # 1920, etc.
         height @1 :UInt32;
         # 1080, etc.
+
+        pitch @2 :UInt32;
+        # number of bytes between each line
+
+        pixelFormat @3 :PixelFormat;
+        # pixel format (bgra, etc.)
+
+        verticalFlip @4 :Bool;
+        # if true, the lines are Y-flipped
+
+        enum PixelFormat {
+          bgra @0;
+          # 32-bit, B8G8R8A8
+        }
       }
 
       struct Audio {

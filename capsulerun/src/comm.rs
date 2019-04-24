@@ -96,15 +96,15 @@ impl host::Server for HostImpl {
         .set_sink(host::sink::ToClient::new(sink_impl).into_client::<::capnp_rpc::Server>());
       Promise::from_future(req.send().promise.and_then(move |res| {
         info!("Started capture succesfully!");
-        let res = pry!(res.get());
-        let session = pry!(res.get_session());
-
-        let info = pry!(res.get_info());
-        let video = pry!(info.get_video());
-        let (width, height) = (video.get_width(), video.get_height());
+        let res = Arc::new(res);
+        let session = {
+          let res = res.clone();
+          let res = pry!(res.get());
+          pry!(res.get_session())
+        };
 
         let encoder = {
-          match unsafe { encoder::Context::new("capture.h264", width, height) } {
+          match unsafe { encoder::Context::new("capture.h264", res.clone()) } {
             Ok(encoder) => Some(encoder),
             Err(e) => {
               return Promise::err(capnp::Error {
@@ -114,6 +114,14 @@ impl host::Server for HostImpl {
             }
           }
         };
+
+        {
+          let res = res.clone();
+          let info = pry!(pry!(res.get()).get_info());
+          let video = pry!(info.get_video());
+          info!("After arc: {}x{}", video.get_width(), video.get_height());
+        }
+
         let sink = Sink { session, encoder };
         *sink_ref.lock().unwrap() = Some(sink);
         Promise::ok(())

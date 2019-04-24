@@ -1,12 +1,15 @@
+use capnp::capability::Response;
 use const_cstr::const_cstr;
 use libc;
 use log::*;
+use proto::proto_capnp::host;
 use simple_error::SimpleError;
 use std::ffi::CStr;
 use std::ffi::CString;
 use std::fs::File;
 use std::io::Write;
 use std::ptr;
+use std::sync::Arc;
 
 pub struct Context {
   c: *mut ffrust::AVCodecContext,
@@ -14,6 +17,7 @@ pub struct Context {
   pkt: *mut ffrust::AVPacket,
   sws: *mut ffrust::SwsContext,
   file: File,
+  info: Arc<Response<host::target::start_capture_results::Owned>>,
 }
 
 impl Drop for Context {
@@ -40,9 +44,18 @@ macro_rules! fferr {
 impl Context {
   pub unsafe fn new(
     file_name: &str,
-    width: u32,
-    height: u32,
+    info: Arc<Response<host::target::start_capture_results::Owned>>,
   ) -> Result<Self, Box<std::error::Error>> {
+    let (width, height, pitch, pixel_format) = {
+      let v = info.get()?.get_info()?.get_video()?;
+      (
+        v.get_width(),
+        v.get_height(),
+        v.get_pitch(),
+        v.get_pixel_format(),
+      )
+    };
+
     let codec_name = "libx264";
     let codec = ffrust::avcodec_find_encoder_by_name(CString::new(codec_name)?.as_ptr());
     if codec.is_null() {
@@ -125,7 +138,12 @@ impl Context {
       pkt,
       sws,
       file,
+      info,
     })
+  }
+
+  fn video(&self) -> Result<host::session::info::video::Reader, Box<std::error::Error>> {
+    Ok(self.info.get()?.get_info()?.get_video()?)
   }
 
   pub unsafe fn write_frame(
@@ -142,8 +160,10 @@ impl Context {
 
       let mut sws_linesize: [libc::c_int; 1] = std::mem::zeroed();
       let mut sws_in: [*const u8; 1] = std::mem::zeroed();
-      let vflip = true;
-      let linesize = c.width * 4;
+      let (linesize, vflip) = {
+        let v = self.info.get()?.get_info()?.get_video()?;
+        (v.get_pitch() as i32, v.get_vertical_flip())
+      };
 
       if vflip {
         sws_in[0] = &data[(linesize * (c.height - 1)) as usize];
