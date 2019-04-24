@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 
 struct Sink {
   session: host::session::Client,
-  encoder: encoder::Context,
+  encoder: Option<encoder::Context>,
   count: u32,
 }
 
@@ -33,13 +33,16 @@ impl host::sink::Server for SinkImpl {
 
     let mut guard = self.sink.lock().unwrap();
     let sink = guard.as_mut().unwrap();
-
     unsafe {
-      sink.encoder.write_frame(data, timestamp).unwrap();
+      if let Some(encoder) = sink.encoder.as_mut() {
+        encoder.write_frame(data, timestamp).unwrap();
+      }
     }
 
     sink.count += 1;
     if sink.count > 60 * 4 {
+      sink.encoder = None;
+
       let req = sink.session.stop_request();
       return Promise::from_future(req.send().promise.and_then(|_| {
         info!("Stopped capture session!");
@@ -51,7 +54,6 @@ impl host::sink::Server for SinkImpl {
 }
 
 struct Target {
-  client: host::target::Client,
   pid: u64,
   exe: String,
 }
@@ -87,7 +89,6 @@ impl host::Server for HostImpl {
       let target = Target {
         pid: pid,
         exe: exe.to_owned(),
-        client: client.clone(),
       };
       info!("Target registered: {}", target);
       self.target = Some(target);
@@ -102,7 +103,6 @@ impl host::Server for HostImpl {
       };
       let sink_ref = sink_impl.sink.clone();
       let mut req = client.start_capture_request();
-      // moving the sink into an RPC client thingy
       req
         .get()
         .set_sink(host::sink::ToClient::new(sink_impl).into_client::<::capnp_rpc::Server>());
@@ -118,7 +118,7 @@ impl host::Server for HostImpl {
         // TODO: don't unwrap
         let sink = Sink {
           session,
-          encoder: unsafe { encoder::Context::new("capture.h264", width, height).unwrap() },
+          encoder: unsafe { Some(encoder::Context::new("capture.h264", width, height).unwrap()) },
           count: 0,
         };
         *sink_ref.lock().unwrap() = Some(sink);

@@ -204,7 +204,7 @@ impl<'a> CaptureContext<'a> {
                     0,
                     width,
                     height,
-                    GL_RGBA,
+                    GL_BGRA,
                     GL_UNSIGNED_BYTE,
                     std::mem::transmute(self.frame_buffer.as_ptr()),
                 );

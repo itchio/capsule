@@ -110,7 +110,7 @@ dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "const-cstr 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "env_logger 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "ffrust 0.1.0 (git+https://github.com/fasterthanlime/ffrust?rev=11ee2e56bb59907f8fe8b3ae95c89fbde222b38a)",
+ "ffrust 0.1.0 (git+https://github.com/fasterthanlime/ffrust?rev=0aba78e8099750d1322f447c7af65b424b1437ad)",
  "futures 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.51 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -229,7 +229,7 @@ dependencies = [
 [[package]]
 name = "ffrust"
 version = "0.1.0"
-source = "git+https://github.com/fasterthanlime/ffrust?rev=11ee2e56bb59907f8fe8b3ae95c89fbde222b38a#11ee2e56bb59907f8fe8b3ae95c89fbde222b38a"
+source = "git+https://github.com/fasterthanlime/ffrust?rev=0aba78e8099750d1322f447c7af65b424b1437ad#0aba78e8099750d1322f447c7af65b424b1437ad"
 dependencies = [
  "libc 0.2.51 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
@@ -1064,7 +1064,7 @@ dependencies = [
 "checksum crossbeam-utils 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)" = "f8306fcef4a7b563b76b7dd949ca48f52bc1141aa067d2ea09565f3e2652aa5c"
 "checksum detour 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "44346bcbd4ae24a5aeffedc2a200c111d5f66db1faf3673f28d736fea145d389"
 "checksum env_logger 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b61fa891024a945da30a9581546e8cfaf5602c7b3f4c137a2805cf388f92075a"
-"checksum ffrust 0.1.0 (git+https://github.com/fasterthanlime/ffrust?rev=11ee2e56bb59907f8fe8b3ae95c89fbde222b38a)" = "<none>"
+"checksum ffrust 0.1.0 (git+https://github.com/fasterthanlime/ffrust?rev=0aba78e8099750d1322f447c7af65b424b1437ad)" = "<none>"
 "checksum fnv 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "2fad85553e09a6f881f739c29f0b00b0f01357c743266d478b68951ce23285f3"
 "checksum fuchsia-cprng 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "a06f77d526c1a601b7c4cdd98f54b5eaabffc14d5f2f0296febdc7f357c6d3ba"
 "checksum fuchsia-zircon 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "2e9763c69ebaae630ba35f74888db465e49e259ba1bc0eda7d06f4a067615d82"

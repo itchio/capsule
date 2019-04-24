@@ -12,7 +12,17 @@ pub struct Context {
   c: *mut ffrust::AVCodecContext,
   frame: *mut ffrust::AVFrame,
   pkt: *mut ffrust::AVPacket,
+  sws: *mut ffrust::SwsContext,
   file: File,
+}
+
+impl Drop for Context {
+  fn drop(&mut self) {
+    info!("Dropping context");
+    unsafe {
+      self.close().unwrap();
+    }
+  }
 }
 
 macro_rules! fferr {
@@ -87,11 +97,33 @@ impl Context {
       return Err(Box::new(SimpleError::new("Could not allocate packet")));
     }
 
+    let sws = {
+      let c = &*c;
+      ffrust::sws_getContext(
+        c.width, // input
+        c.height,
+        ffrust::AVPixelFormat::AV_PIX_FMT_BGRA,
+        c.width, // output
+        c.height,
+        c.pix_fmt,
+        0,               // flags
+        ptr::null_mut(), // in filter
+        ptr::null_mut(), // out filter
+        ptr::null_mut(), // param
+      )
+    };
+    if sws.is_null() {
+      return Err(Box::new(SimpleError::new(
+        "Could not initialize scaling context",
+      )));
+    }
+
     let file = File::create(file_name)?;
     Ok(Self {
       c,
       frame,
       pkt,
+      sws,
       file,
     })
   }
@@ -108,21 +140,32 @@ impl Context {
       let ret = ffrust::av_frame_make_writable(frame);
       fferr!(ret, "Could not make frame writable");
 
+      let mut sws_linesize: [libc::c_int; 1] = std::mem::zeroed();
+      let mut sws_in: [*const u8; 1] = std::mem::zeroed();
+      let vflip = true;
       let linesize = c.width * 4;
-      for y in 0..c.height {
-        for x in 0..c.width {
-          let i = ((c.height - 1 - y) * linesize + x * 4) as usize;
-          let b = data[i];
-          let g = data[i + 1];
-          let r = data[i + 2];
-          let mean = (b as i32 + g as i32 + r as i32) / 3;
 
-          // Y
-          *frame.data[0].offset((y * frame.linesize[0] + x) as isize) = mean as u8;
-        }
+      if vflip {
+        sws_in[0] = &data[(linesize * (c.height - 1)) as usize];
+        sws_linesize[0] = -linesize;
+      } else {
+        sws_in[0] = &data[0];
+        sws_linesize[0] = linesize;
       }
 
+      // this returns the height of the output slice
+      ffrust::sws_scale(
+        self.sws,
+        &sws_in[0],
+        &sws_linesize[0],
+        0,
+        c.height,
+        &frame.data[0],
+        &frame.linesize[0],
+      );
+
       frame.pts = timestamp.as_millis() as i64;
+      info!("PTS = {}", frame.pts);
     }
 
     self.encode(self.frame)?;
@@ -153,6 +196,20 @@ impl Context {
         file.write(data)?;
       }
     }
+
+    Ok(())
+  }
+
+  unsafe fn close(&mut self) -> Result<(), Box<std::error::Error>> {
+    info!("Flushing...");
+    self.encode(ptr::null_mut())?;
+
+    info!("Freeing FFmpeg resources...");
+    ffrust::sws_freeContext(self.sws);
+    self.sws = ptr::null_mut();
+    ffrust::avcodec_free_context(&mut self.c);
+    ffrust::av_frame_free(&mut self.frame);
+    ffrust::av_packet_free(&mut self.pkt);
 
     Ok(())
   }
