@@ -4,6 +4,7 @@ extern crate const_cstr;
 extern crate wincap;
 
 mod comm;
+mod encoder;
 mod runner;
 
 use clap::{App, Arg};

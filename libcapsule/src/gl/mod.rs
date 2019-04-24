@@ -67,6 +67,15 @@ define_gl_functions! {
      fn glGetIntegerv(pname: GLenum, data: *mut GLint) -> ()
 }
 
+impl<'a> CaptureContext<'a> {
+    pub fn get_width(&self) -> GLsizei {
+        self.width
+    }
+    pub fn get_height(&self) -> GLsizei {
+        self.height
+    }
+}
+
 static mut cached_gl_functions: Option<Functions> = None;
 
 unsafe fn get_gl_functions<'a>(getProcAddress: GetProcAddress) -> &'a Functions {
@@ -100,6 +109,10 @@ unsafe fn get_gl_functions<'a>(getProcAddress: GetProcAddress) -> &'a Functions 
 }
 
 static mut cached_capture_context: Option<CaptureContext> = None;
+
+pub fn get_cached_capture_context<'a>() -> Option<&'static CaptureContext<'a>> {
+    unsafe { cached_capture_context.as_ref() }
+}
 
 pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'static mut CaptureContext<'a> {
     unsafe {

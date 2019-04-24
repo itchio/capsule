@@ -63,6 +63,13 @@ impl host::target::Server for TargetImpl {
             session: session_ref.clone(),
         };
 
+        let info = results.get().init_info();
+        if let Some(gl_ctx) = gl::get_cached_capture_context() {
+            let mut video = info.init_video();
+            video.set_width(gl_ctx.get_width() as u32);
+            video.set_height(gl_ctx.get_height() as u32);
+        }
+
         results.get().set_session(
             host::session::ToClient::new(session_impl).into_client::<::capnp_rpc::Server>(),
         );

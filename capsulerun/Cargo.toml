@@ -36,6 +36,12 @@ wincap = { path = "../wincap" }
 # unique identifiers
 "uuid" = { version = "0.7.4", features = ["v4"] }
 
+# encoding
+"ffrust" = { git = "https://github.com/fasterthanlime/ffrust", rev = "11ee2e56bb59907f8fe8b3ae95c89fbde222b38a" }
+
+# simple errors
+simple-error = "0.1.13"
+
 [dependencies.winapi]
 version = "0.3.7"
 features = ["tlhelp32", "handleapi", "memoryapi", "synchapi", "wow64apiset", "jobapi2"]
