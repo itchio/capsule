@@ -1,7 +1,6 @@
 #![cfg(target_os = "windows")]
 
 use const_cstr::const_cstr;
-use wincap::{assert_non_null,assert_non_zero,guard_handle,guard_library};
 use log::*;
 use std::mem;
 use std::os::windows::process::CommandExt;
@@ -12,6 +11,7 @@ use winapi::um::{
   handleapi, jobapi2, libloaderapi, memoryapi, processthreadsapi, synchapi, tlhelp32, winbase,
   winnt, wow64apiset,
 };
+use wincap::{assert_non_null, assert_non_zero, guard_handle, guard_library};
 
 use super::{Arch, Context};
 
@@ -21,11 +21,21 @@ impl Context {
       let mut cmd = Command::new(self.options.exec.clone());
       cmd.args(self.options.args.clone());
       cmd.creation_flags(winbase::CREATE_SUSPENDED);
+
+      // TODO: DRY with other runners
+      let capsule_port = format!("{}", self.options.port);
+      info!("Setting CAPSULE_PORT = {}", capsule_port);
+      std::env::set_var("CAPSULE_PORT", capsule_port.clone()); // needed for processes to inherit that?
+      cmd.env("CAPSULE_PORT", capsule_port);
+
       let mut child = cmd.spawn().expect("Command failed to start");
       info!("Created suspended process, pid = {}", child.id());
 
       if self.options.suspend {
-        warn!("Suspended, press enter to continue... (target PID = {})", child.id());
+        warn!(
+          "Suspended, press enter to continue... (target PID = {})",
+          child.id()
+        );
         let mut line = String::new();
         use std::io::BufRead;
         std::io::stdin().lock().read_line(&mut line).unwrap();
@@ -45,7 +55,11 @@ impl Context {
         wow64apiset::IsWow64Process(*process_handle, &mut is_wow64);
         is_wow64 == 1
       };
-      let target_arch = if target_is_32bit { Arch::I686 } else { Arch::X86_64 };
+      let target_arch = if target_is_32bit {
+        Arch::I686
+      } else {
+        Arch::X86_64
+      };
 
       let job_object = jobapi2::CreateJobObjectW(ptr::null_mut(), ptr::null_mut());
       assert_non_null!("CreateJobObjectW", job_object);
@@ -53,7 +67,8 @@ impl Context {
 
       {
         let mut job_object_info = mem::zeroed::<winnt::JOBOBJECT_EXTENDED_LIMIT_INFORMATION>();
-        job_object_info.BasicLimitInformation.LimitFlags = winnt::JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        job_object_info.BasicLimitInformation.LimitFlags =
+          winnt::JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
         let ret = jobapi2::SetInformationJobObject(
           *job_object,
           winnt::JobObjectExtendedLimitInformation,
@@ -77,9 +92,13 @@ impl Context {
       if self.options.arch != target_arch {
         // should use inject helper here,
         // see https://github.com/itchio/capsule/issues/59
-        panic!("capsulerun {} cannot inject into {} target", self.options.arch.as_str(), target_arch.as_str());
+        panic!(
+          "capsulerun {} cannot inject into {} target",
+          self.options.arch.as_str(),
+          target_arch.as_str()
+        );
       }
-    
+
       let lib = self.locate_lib("capsule.dll", target_arch).unwrap();
 
       let mut thread_id: Option<minwindef::DWORD> = None;

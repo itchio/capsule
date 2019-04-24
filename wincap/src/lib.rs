@@ -1,8 +1,5 @@
 #![cfg(windows)]
 
-#[macro_use]
-extern crate libc_print;
-
 use ::std::ptr;
 use ::winapi::shared::minwindef;
 use ::winapi::um::{errhandlingapi, processthreadsapi, psapi, winbase};
