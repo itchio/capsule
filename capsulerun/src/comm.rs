@@ -12,7 +12,6 @@ use std::sync::{Arc, Mutex};
 struct Sink {
   session: host::session::Client,
   encoder: Option<encoder::Context>,
-  count: u32,
 }
 
 struct SinkImpl {
@@ -37,17 +36,6 @@ impl host::sink::Server for SinkImpl {
       if let Some(encoder) = sink.encoder.as_mut() {
         encoder.write_frame(data, timestamp).unwrap();
       }
-    }
-
-    sink.count += 1;
-    if sink.count > 60 * 4 {
-      sink.encoder = None;
-
-      let req = sink.session.stop_request();
-      return Promise::from_future(req.send().promise.and_then(|_| {
-        info!("Stopped capture session!");
-        Promise::ok(())
-      }));
     }
     Promise::ok(())
   }
@@ -115,12 +103,18 @@ impl host::Server for HostImpl {
         let video = pry!(info.get_video());
         let (width, height) = (video.get_width(), video.get_height());
 
-        // TODO: don't unwrap
-        let sink = Sink {
-          session,
-          encoder: unsafe { Some(encoder::Context::new("capture.h264", width, height).unwrap()) },
-          count: 0,
+        let encoder = {
+          match unsafe { encoder::Context::new("capture.h264", width, height) } {
+            Ok(encoder) => Some(encoder),
+            Err(e) => {
+              return Promise::err(capnp::Error {
+                kind: capnp::ErrorKind::Failed,
+                description: format!("{}", e),
+              })
+            }
+          }
         };
+        let sink = Sink { session, encoder };
         *sink_ref.lock().unwrap() = Some(sink);
         Promise::ok(())
       }))
