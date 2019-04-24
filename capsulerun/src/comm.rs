@@ -27,7 +27,6 @@ impl host::sink::Server for SinkImpl {
   ) -> Promise<(), Error> {
     let params = pry!(params.get());
     let frame = pry!(params.get_frame());
-    let index = frame.get_index();
     let data = pry!(frame.get_data());
     let millis = pry!(frame.get_timestamp()).get_millis();
     let timestamp = std::time::Duration::from_millis(millis as u64);
@@ -35,7 +34,9 @@ impl host::sink::Server for SinkImpl {
     let mut guard = self.sink.lock().unwrap();
     let sink = guard.as_mut().unwrap();
 
-    sink.encoder.write_frame(data, timestamp).unwrap();
+    unsafe {
+      sink.encoder.write_frame(data, timestamp).unwrap();
+    }
 
     sink.count += 1;
     if sink.count > 60 * 4 {
