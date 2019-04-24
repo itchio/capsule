@@ -1,7 +1,11 @@
+use const_cstr::const_cstr;
+use libc;
 use log::*;
 use simple_error::SimpleError;
+use std::ffi::CStr;
 use std::ffi::CString;
 use std::fs::File;
+use std::ptr;
 
 pub struct Context {
   c: *mut ffrust::AVCodecContext,
@@ -29,7 +33,32 @@ impl Context {
       )));
     }
 
-    // TODO: set codec options
+    {
+      let c = &mut *c;
+
+      warn!("width = {}, height = {}", width, height);
+      c.width = width as i32;
+      c.height = height as i32;
+      c.time_base = ffrust::AVRational { num: 1, den: 1000 };
+      c.framerate = ffrust::AVRational { num: 1, den: 60 };
+      c.pix_fmt = ffrust::AVPixelFormat::AV_PIX_FMT_YUV420P;
+      ffrust::av_opt_set(
+        c.priv_data,
+        const_cstr!("preset").as_ptr(),
+        const_cstr!("ultrafast").as_ptr(),
+        0,
+      );
+    }
+
+    warn!("about to call avcodec_open2");
+    let ret = ffrust::avcodec_open2(c, codec, ptr::null_mut());
+    if ret < 0 {
+      warn!("ret = {}", ret);
+      return Err(Box::new(SimpleError::new(format!(
+        "Could not open codec: {}",
+        err2str(ret)
+      ))));
+    }
 
     let frame = ffrust::av_frame_alloc();
     if frame.is_null() {
@@ -57,5 +86,17 @@ impl Context {
   ) -> Result<(), Box<std::error::Error>> {
     info!("Should write frame");
     Ok(())
+  }
+}
+
+fn err2str(errnum: libc::c_int) -> String {
+  unsafe {
+    const BUFCAP: usize = 1024;
+    let mut buf = [0i8; BUFCAP];
+    ffrust::av_strerror(errnum, &mut buf[0], BUFCAP as usize) as usize;
+    CStr::from_ptr(&mut buf[0])
+      .to_string_lossy()
+      .to_owned()
+      .to_string()
   }
 }

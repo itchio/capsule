@@ -16,7 +16,7 @@ widestring = "0.4.0"
 # print without using Rust machinery, useful in a ctor
 libc-print = "0.1.7"
 # C types like c_char, c_void
-libc = "0.2.50"
+libc = "0.2.51"
 # C string literals
 const-cstr = "0.3.0"
 # logging
@@ -25,7 +25,10 @@ const-cstr = "0.3.0"
 "env_logger" = "0.6.1"
 
 # I/O probably
-"tokio" = "0.1.18"
+"tokio" = "0.1.19"
+# cf. https://github.com/tokio-rs/tokio/issues/1056
+"tokio-sync" = "0.1.5"
+
 # capsule protocol
 "proto" = { path = "../proto" }
 # capnproto serialization

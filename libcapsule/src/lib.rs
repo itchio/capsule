@@ -68,6 +68,11 @@ impl host::target::Server for TargetImpl {
             let mut video = info.init_video();
             video.set_width(gl_ctx.get_width() as u32);
             video.set_height(gl_ctx.get_height() as u32);
+        } else {
+            return Promise::err(capnp::Error {
+                kind: capnp::ErrorKind::Failed,
+                description: "No viable video context!".to_owned(),
+            });
         }
 
         results.get().set_session(
@@ -135,21 +140,6 @@ static ctor: extern "C" fn() = {
         #[cfg(target_os = "macos")]
         {
             macos_gl_hooks::initialize()
-        }
-
-        {
-            let target =
-                host::target::ToClient::new(TargetImpl::new()).into_client::<::capnp_rpc::Server>();
-            let mut req = get_host().register_target_request();
-            let mut info = req.get().init_info();
-            info.set_pid(std::process::id() as u64);
-            info.set_exe(std::env::current_exe().unwrap().to_string_lossy().as_ref());
-            req.get().set_target(target);
-            hope(req.send().promise.and_then(|response| {
-                pry!(response.get());
-                Promise::ok(())
-            }))
-            .unwrap();
         }
     };
     ctor

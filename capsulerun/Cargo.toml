@@ -21,13 +21,15 @@ wincap = { path = "../wincap" }
 "env_logger" = "0.6.1"
 # woo
 "lazy_static" = "1.3.0"
+# C types like c_char, c_void
+libc = "0.2.51"
 
 # I/O probably
-"tokio" = "0.1.18"
+"tokio" = "0.1.19"
 # capsule protocol
 "proto" = { path = "../proto" }
 # capnproto serialization
-"capnp" = "0.9.4"
+"capnp" = "0.9.5"
 # capnproto RPC
 "capnp-rpc" = "0.9.0"
 # async stuff
