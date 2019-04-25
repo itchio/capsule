@@ -68,6 +68,8 @@ impl host::target::Server for TargetImpl {
             let mut video = info.init_video();
             video.set_width(gl_ctx.get_width() as u32);
             video.set_height(gl_ctx.get_height() as u32);
+            video.set_pitch(gl_ctx.get_width() as u32 * 4u32);
+            video.set_vertical_flip(true);
         } else {
             return Promise::err(capnp::Error {
                 kind: capnp::ErrorKind::Failed,
