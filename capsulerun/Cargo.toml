@@ -39,7 +39,7 @@ libc = "0.2.51"
 "uuid" = { version = "0.7.4", features = ["v4"] }
 
 # encoding
-"ffrust" = { git = "https://github.com/fasterthanlime/ffrust", rev = "0aba78e8099750d1322f447c7af65b424b1437ad" }
+"ffrust" = { git = "https://github.com/fasterthanlime/ffrust", rev = "23de9b6b96489bc14a3338adc0bf9124a9f06a40" }
 
 # simple errors
 simple-error = "0.1.13"
