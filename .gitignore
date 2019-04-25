@@ -1,6 +1,7 @@
 /main
 /.multirust
 /.cargo
+/ffrust-deps*
 /rustup-init*
 /vendor_c
 *.raw
