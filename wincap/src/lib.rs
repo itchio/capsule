@@ -1,7 +1,7 @@
 #![cfg(windows)]
 
 use ::std::ptr;
-use ::winapi::shared::minwindef;
+use ::winapi::shared::{minwindef, ntdef};
 use ::winapi::um::{errhandlingapi, processthreadsapi, psapi, winbase};
 
 pub fn get_last_error_string() -> String {
@@ -73,6 +73,10 @@ pub fn get_module_if_loaded(name: &str) -> minwindef::HMODULE {
         }
         ptr::null_mut()
     }
+}
+
+pub fn succeeded(hr: ntdef::HRESULT) -> bool {
+    hr >= 0
 }
 
 #[macro_export]

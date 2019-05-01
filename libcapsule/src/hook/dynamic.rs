@@ -33,7 +33,7 @@ macro_rules! hook_dynamic {
                 }
 
                 #[allow(unused)]
-                fn next($($v: $t),*) -> $r {
+                pub fn next($($v: $t),*) -> $r {
                     unsafe {
                         let real: unsafe extern $convention fn ($($t),*) -> $r = {
                             ::std::mem::transmute(Self::get_detour().unwrap().trampoline())

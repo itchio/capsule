@@ -40,7 +40,7 @@ const-cstr = "0.3.0"
 
 [dependencies.winapi]
 version = "0.3.7"
-features = ["handleapi"]
+features = ["handleapi", "dxgi1_2", "unknwnbase"]
 
 [lib]
 # cdylibs don't depend on the "Rust runtime", they're just .so/.dylib/.dlls

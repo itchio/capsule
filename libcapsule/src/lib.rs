@@ -6,6 +6,7 @@ use log::*;
 mod hook;
 
 mod comm;
+mod dxgi;
 mod gl;
 mod linux_gl_hooks;
 mod macos_gl_hooks;
@@ -132,16 +133,17 @@ static ctor: extern "C" fn() = {
 
         #[cfg(target_os = "linux")]
         {
-            linux_gl_hooks::initialize()
+            linux_gl_hooks::initialize();
         }
 
         #[cfg(target_os = "windows")]
         {
-            windows_gl_hooks::initialize()
+            windows_gl_hooks::initialize();
+            dxgi::initialize();
         }
         #[cfg(target_os = "macos")]
         {
-            macos_gl_hooks::initialize()
+            macos_gl_hooks::initialize();
         }
     };
     ctor
