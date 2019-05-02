@@ -44,7 +44,6 @@ macro_rules! define_gl_functions_with_convention {
             width: GLint,
             height: GLint,
             frame_number: u64,
-            start_time: SystemTime,
             frame_buffer: Vec<u8>,
             pub funcs: &'a Functions,
         }
@@ -143,7 +142,6 @@ pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'static mut C
             cached_capture_context = Some(CaptureContext {
                 width: viewport.width,
                 height: viewport.height,
-                start_time: SystemTime::now(),
                 frame_number: 0,
                 frame_buffer,
                 funcs,
@@ -165,11 +163,11 @@ pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'static mut C
 impl<'a> CaptureContext<'a> {
     pub fn capture_frame(&mut self) {
         unsafe {
-            if let Some(session) = get_session_read() {
-                let mut req = session.read().unwrap().sink.send_video_frame_request();
+            if let Some(session) = get_session() {
+                let mut req = session.sink.send_video_frame_request();
                 let mut frame = req.get().init_frame();
                 let mut timestamp = frame.reborrow().init_timestamp();
-                let elapsed = self.start_time.elapsed().unwrap();
+                let elapsed = session.start_time.elapsed().unwrap();
                 timestamp.set_millis(elapsed.as_millis() as f64);
                 frame.set_index(self.frame_number);
 

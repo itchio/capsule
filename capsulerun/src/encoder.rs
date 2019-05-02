@@ -1,4 +1,4 @@
-use capnp::capability::Response;
+use capnp::capability::Params;
 use const_cstr::const_cstr;
 use libc;
 use log::*;
@@ -11,16 +11,16 @@ use std::io::Write;
 use std::ptr;
 use std::sync::Arc;
 
-pub struct Context {
+pub struct Encoder {
   c: *mut ffrust::AVCodecContext,
   frame: *mut ffrust::AVFrame,
   pkt: *mut ffrust::AVPacket,
   sws: *mut ffrust::SwsContext,
   file: File,
-  info: Arc<Response<host::target::start_capture_results::Owned>>,
+  options: Arc<Params<host::create_sink_params::Owned>>,
 }
 
-impl Drop for Context {
+impl Drop for Encoder {
   fn drop(&mut self) {
     info!("Dropping context");
     unsafe {
@@ -41,13 +41,13 @@ macro_rules! fferr {
   };
 }
 
-impl Context {
+impl Encoder {
   pub unsafe fn new(
     file_name: &str,
-    info: Arc<Response<host::target::start_capture_results::Owned>>,
+    options: Arc<Params<host::create_sink_params::Owned>>,
   ) -> Result<Self, Box<std::error::Error>> {
     let (width, height) = {
-      let v = info.get()?.get_info()?.get_video()?;
+      let v = options.get()?.get_options()?.get_video()?;
       (v.get_width(), v.get_height())
     };
 
@@ -127,18 +127,18 @@ impl Context {
     }
 
     let file = File::create(file_name)?;
-    Ok(Self {
+    Ok(Encoder {
       c,
       frame,
       pkt,
       sws,
       file,
-      info,
+      options,
     })
   }
 
-  fn video(&self) -> Result<host::session::info::video::Reader, Box<std::error::Error>> {
-    Ok(self.info.get()?.get_info()?.get_video()?)
+  fn video(&self) -> Result<host::sink::options::video::Reader, Box<std::error::Error>> {
+    Ok(self.options.get()?.get_options()?.get_video()?)
   }
 
   pub unsafe fn write_frame(

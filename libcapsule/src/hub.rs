@@ -4,6 +4,7 @@ use capnp_rpc::pry;
 use comm::*;
 use futures::Future;
 use log::*;
+use proto::host;
 use proto::host::*;
 use std::sync::{Arc, Mutex, RwLock};
 use tokio::runtime::current_thread::Runtime;
@@ -16,58 +17,56 @@ impl TargetImpl {
 }
 
 impl target::Server for TargetImpl {
-  fn start_capture(
+  fn start_session(
     &mut self,
-    params: target::StartCaptureParams,
-    mut results: target::StartCaptureResults,
+    _params: target::StartSessionParams,
+    mut results: target::StartSessionResults,
   ) -> Promise<(), Error> {
-    let params = pry!(params.get());
-    let sink = pry!(params.get_sink());
-
     info!("Starting capture into a sink!");
-    let session = comm::Session {
-      sink: sink,
-      alive: true,
-    };
-    let session_ref = Arc::new(RwLock::new(session));
-    let session_impl = comm::SessionImpl {
-      session: session_ref.clone(),
-    };
-
-    let info = results.get().init_info();
-
     if let Some(vs) = get_hub().get_video_source() {
-      let mut video = info.init_video();
+      let mut req = get_hub().host().create_sink_request();
+      let options = req.get().init_options();
+      let mut video = options.init_video();
       video.set_width(vs.width);
       video.set_height(vs.height);
       video.set_pitch(vs.pitch);
       video.set_vertical_flip(vs.vflip);
+
+      Promise::from_future(req.send().promise.and_then(move |res| {
+        let sink = pry!(pry!(res.get()).get_sink());
+        let session = comm::Session {
+          sink: sink,
+          alive: true,
+          start_time: std::time::SystemTime::now(),
+        };
+        let session_impl = comm::SessionImpl {};
+
+        results
+          .get()
+          .set_session(session::ToClient::new(session_impl).into_client::<::capnp_rpc::Server>());
+        comm::set_session(session);
+
+        Promise::ok(())
+      }))
     } else {
-      return Promise::err(capnp::Error {
+      Promise::err(capnp::Error {
         kind: capnp::ErrorKind::Failed,
         description: "No viable video context!".to_owned(),
-      });
+      })
     }
-
-    results
-      .get()
-      .set_session(session::ToClient::new(session_impl).into_client::<::capnp_rpc::Server>());
-
-    comm::set_session(session_ref);
-    Promise::ok(())
   }
 }
 
 pub struct GlobalHub {
   runtime: Mutex<Runtime>,
-  host: proto::host::Client,
+  host: host::Client,
   session: Option<Arc<RwLock<Session>>>,
 
   video: Option<VideoSource>,
   audio: Option<AudioSource>,
 }
 
-pub fn new_hub(runtime: Runtime, host: proto::host::Client) -> GlobalHub {
+pub fn new_hub(runtime: Runtime, host: host::Client) -> GlobalHub {
   GlobalHub {
     runtime: Mutex::new(runtime),
     host,
@@ -101,6 +100,10 @@ impl GlobalHub {
 impl Hub for GlobalHub {
   fn runtime<'a>(&'a mut self) -> &'a mut Mutex<Runtime> {
     &mut self.runtime
+  }
+
+  fn host(&self) -> &host::Client {
+    &self.host
   }
 
   fn session<'a>(&'a mut self) -> Option<&'a Arc<RwLock<Session>>> {
@@ -149,8 +152,8 @@ impl Hub for GlobalHub {
       .runtime()
       .lock()
       .unwrap()
-      .block_on(req.send().promise.and_then(|response| {
-        pry!(response.get());
+      .block_on(req.send().promise.and_then(|res| {
+        pry!(res.get());
         Promise::ok(())
       }))
       .unwrap();

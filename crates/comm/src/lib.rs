@@ -2,7 +2,6 @@
 
 use capnp::capability::Promise;
 use capnp::Error;
-use log::*;
 use proto::host;
 use std::sync::{Arc, Mutex, RwLock};
 use tokio::runtime::current_thread::Runtime;
@@ -28,36 +27,27 @@ pub fn get_hub<'a>() -> &'a mut Box<Hub> {
   }
 }
 
-static mut global_session: Option<Arc<RwLock<Session>>> = None;
+static mut global_session: Option<Session> = None;
 
-pub fn get_session_read<'a>() -> Option<&'a Arc<RwLock<Session>>> {
-  unsafe {
-    let res = global_session.as_ref();
-    if let Some(session) = res {
-      if session.read().unwrap().alive {
-        return Some(session);
-      } else {
-        info!("Capture session was stopped");
-        global_session = None;
-      }
-    }
-    None
-  }
+pub fn get_session<'a>() -> Option<&'a Session> {
+  unsafe { global_session.as_ref() }
 }
 
-pub fn set_session(session: Arc<RwLock<Session>>) {
+pub fn set_session(session: Session) {
   unsafe { global_session = Some(session) }
+}
+
+pub fn clear_session() {
+  unsafe { global_session = None }
 }
 
 pub struct Session {
   pub sink: host::sink::Client,
   pub alive: bool,
+  pub start_time: std::time::SystemTime,
 }
 
-pub struct SessionImpl {
-  pub session: Arc<RwLock<Session>>,
-}
-impl SessionImpl {}
+pub struct SessionImpl {}
 
 impl host::session::Server for SessionImpl {
   fn stop(
@@ -65,8 +55,7 @@ impl host::session::Server for SessionImpl {
     _params: host::session::StopParams,
     _results: host::session::StopResults,
   ) -> Promise<(), Error> {
-    let mut session = self.session.write().unwrap();
-    session.alive = false;
+    clear_session();
     Promise::ok(())
   }
 }
@@ -92,6 +81,7 @@ pub struct VideoSource {
 pub trait Hub {
   fn in_test(&self) -> bool;
   fn runtime<'a>(&'a mut self) -> &'a mut Mutex<Runtime>;
+  fn host(&self) -> &host::Client;
   fn session<'a>(&'a mut self) -> Option<&'a Arc<RwLock<Session>>>;
 
   fn set_video_source(&mut self, s: VideoSource);

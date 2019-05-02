@@ -9,13 +9,8 @@ use log::*;
 use std::fmt;
 use std::sync::{Arc, Mutex};
 
-struct Sink {
-  session: host::session::Client,
-  encoder: Option<encoder::Context>,
-}
-
 struct SinkImpl {
-  sink: Arc<Mutex<Option<Sink>>>,
+  encoder: encoder::Encoder,
 }
 
 impl host::sink::Server for SinkImpl {
@@ -30,12 +25,9 @@ impl host::sink::Server for SinkImpl {
     let millis = pry!(frame.get_timestamp()).get_millis();
     let timestamp = std::time::Duration::from_millis(millis as u64);
 
-    let mut guard = self.sink.lock().unwrap();
-    let sink = guard.as_mut().unwrap();
     unsafe {
-      if let Some(encoder) = sink.encoder.as_mut() {
-        encoder.write_frame(data, timestamp).unwrap();
-      }
+      // TODO: convert to RPC error instead
+      self.encoder.write_frame(data, timestamp).unwrap();
     }
     Promise::ok(())
   }
@@ -67,6 +59,25 @@ impl HostImpl {
 }
 
 impl host::Server for HostImpl {
+  fn create_sink(
+    &mut self,
+    params: host::CreateSinkParams,
+    mut results: host::CreateSinkResults,
+  ) -> Promise<(), Error> {
+    info!("Creating sink");
+
+    let params = Arc::new(params);
+    let sink = SinkImpl {
+      // TODO: convert error to RPC errors
+      encoder: unsafe { encoder::Encoder::new("capture.h264", params.clone()).unwrap() },
+    };
+    results
+      .get()
+      .set_sink(host::sink::ToClient::new(sink).into_client::<::capnp_rpc::Server>());
+
+    Promise::ok(())
+  }
+
   fn hotkey_pressed(
     &mut self,
     _params: host::HotkeyPressedParams,
@@ -87,14 +98,7 @@ impl host::Server for HostImpl {
       }
 
       info!("Starting session...");
-      let sink_impl = SinkImpl {
-        sink: Arc::new(Mutex::new(None)),
-      };
-      let sink_ref = sink_impl.sink.clone();
-      let mut req = target.client.start_capture_request();
-      req
-        .get()
-        .set_sink(host::sink::ToClient::new(sink_impl).into_client::<::capnp_rpc::Server>());
+      let req = target.client.start_session_request();
       Promise::from_future(req.send().promise.and_then(move |res| {
         info!("Started capture succesfully!");
         let res = Arc::new(res);
@@ -106,28 +110,6 @@ impl host::Server for HostImpl {
         if let Some(target) = target_ref.lock().unwrap().as_mut() {
           target.session = Some(session.clone());
         }
-
-        let encoder = {
-          match unsafe { encoder::Context::new("capture.h264", res.clone()) } {
-            Ok(encoder) => Some(encoder),
-            Err(e) => {
-              return Promise::err(capnp::Error {
-                kind: capnp::ErrorKind::Failed,
-                description: format!("{}", e),
-              })
-            }
-          }
-        };
-
-        {
-          let res = res.clone();
-          let info = pry!(pry!(res.get()).get_info());
-          let video = pry!(info.get_video());
-          info!("After arc: {}x{}", video.get_width(), video.get_height());
-        }
-
-        let sink = Sink { session, encoder };
-        *sink_ref.lock().unwrap() = Some(sink);
         Promise::ok(())
       }))
     } else {

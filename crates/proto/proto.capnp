@@ -1,11 +1,14 @@
 @0xaebd06712ae3dc6d;
 
 interface Host {
-  registerTarget @0 (info: Target.Info, target: Target);
+  registerTarget @0 (info :Target.Info, target :Target);
   # Called when we first detect OpenGL/Direct3D usage 
 
   hotkeyPressed @1 ();
   # Called when the hotkey is pressed
+
+  createSink @2 (options :Sink.Options) -> (sink :Sink);
+  # Called during session creation
 
   interface Target {
     struct Info {
@@ -16,12 +19,29 @@ interface Host {
       # Executable path of the target process
     }
 
-    startCapture @0 (sink :Sink) -> (info :Session.Info, session :Session);
-    # Ask the target to start capturing into sink.
+    startSession @0 () -> (session :Session);
+    # Ask the target to start a new capture session.
   }
 
   interface Session {
-    struct Info {
+    stop @0 ();
+    # Stop this session
+  }
+
+  struct VideoFrame {
+    timestamp @0 :Timestamp;
+    index @1 :UInt64;
+    data @2 :Data;
+  }
+
+  struct Timestamp {
+    millis @0 :Float64;
+    # Number of milliseconds since start of the session
+    # This might be a terrible way to measure time.
+  }
+
+  interface Sink {
+    struct Options {
       audio @0 :Audio;
       video @1 :Video;
 
@@ -52,23 +72,6 @@ interface Host {
       }
     }
 
-    stop @0 ();
-    # Stop capturing this session
-  }
-
-  struct VideoFrame {
-    timestamp @0 :Timestamp;
-    index @1 :UInt64;
-    data @2 :Data;
-  }
-
-  struct Timestamp {
-    millis @0 :Float64;
-    # Number of milliseconds since start of the session
-    # This might be a terrible way to measure time.
-  }
-
-  interface Sink {
     sendVideoFrame @0 (frame: VideoFrame);
     # Send a video frame
   }
