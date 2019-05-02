@@ -1,3 +1,5 @@
+#![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
 pub mod hooks;
 
 mod constants;
@@ -6,7 +8,7 @@ pub use self::constants::*;
 mod types;
 pub use self::types::*;
 
-use crate::comm::*;
+use comm::*;
 use log::*;
 use std::mem;
 use std::mem::transmute;
@@ -149,24 +151,7 @@ pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'static mut C
 
             info!("Registering target");
             {
-                use capnp::capability::Promise;
-                use capnp_rpc::pry;
-                use futures::Future;
-                use proto::proto_capnp::host;
-
-                // FIXME: this isn't the best place to do that
-                let target = host::target::ToClient::new(super::TargetImpl::new())
-                    .into_client::<::capnp_rpc::Server>();
-                let mut req = get_host().register_target_request();
-                let mut info = req.get().init_info();
-                info.set_pid(std::process::id() as u64);
-                info.set_exe(std::env::current_exe().unwrap().to_string_lossy().as_ref());
-                req.get().set_target(target);
-                hope(req.send().promise.and_then(|response| {
-                    pry!(response.get());
-                    Promise::ok(())
-                }))
-                .unwrap();
+                global_hub.as_ref().unwrap().register_target();
             }
         }
         cached_capture_context.as_mut().unwrap()

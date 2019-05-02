@@ -42,14 +42,14 @@ macro_rules! hook_dynamic {
                     }
                 }
 
-                fn get_detour() -> Option<&'static mut ::detour::RawDetour> {
+                fn get_detour() -> Option<&'static mut $crate::detour::RawDetour> {
                     use ::std::sync::{Once, ONCE_INIT};
-                    static mut DETOUR: Option<::detour::RawDetour> = None;
+                    static mut DETOUR: Option<$crate::detour::RawDetour> = None;
                     static mut ONCE: Once = ONCE_INIT;
 
                     unsafe {
                         ONCE.call_once(|| {
-                            let d = ::detour::RawDetour::new(
+                            let d = $crate::detour::RawDetour::new(
                                 $get_proc_address(stringify!($real_fn)) as *const (),
                                 Self::hook as *const()
                             ).expect(concat!("failed to detour ", stringify!($real_fn), " via ", stringify!($get_proc_address)));

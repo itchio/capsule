@@ -5,7 +5,8 @@ members = [
     "libcapsule",
     "crates/wincap",
     "crates/proto",
-    "crates/hook"
+    "crates/hook",
+    "crates/gl"
 ]
 
 exclude = [

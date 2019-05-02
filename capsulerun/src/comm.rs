@@ -2,7 +2,7 @@ use capnp::capability::Promise;
 use capnp::Error;
 use capnp_rpc::pry;
 use futures::Future;
-use proto::proto_capnp::host;
+use proto::host;
 
 use super::encoder;
 use log::*;

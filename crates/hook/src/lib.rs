@@ -1,3 +1,5 @@
+pub extern crate detour;
+
 #[macro_use]
 pub mod ld;
 

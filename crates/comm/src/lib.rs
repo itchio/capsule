@@ -1,7 +1,9 @@
+#![allow(non_upper_case_globals)]
+
 use capnp::capability::Promise;
 use capnp::Error;
 use futures::Future;
-use proto::proto_capnp::host;
+use proto::host;
 use std::sync::{Arc, Mutex, RwLock};
 use tokio::runtime::current_thread;
 
@@ -10,6 +12,7 @@ use tokio::runtime::current_thread;
 pub static mut global_runtime: Option<Mutex<current_thread::Runtime>> = None;
 pub static mut global_host: Option<host::Client> = None;
 pub static mut global_session: Option<Arc<RwLock<Session>>> = None;
+pub static mut global_hub: Option<Box<Hub>> = None;
 
 pub struct Session {
   pub sink: host::sink::Client,
@@ -53,4 +56,17 @@ pub fn get_runtime<'a>() -> &'a mut Mutex<current_thread::Runtime> {
 
 pub fn get_host<'a>() -> &'a host::Client {
   unsafe { global_host.as_ref().unwrap() }
+}
+
+pub fn set_hub(hub: Box<Hub>) {
+  unsafe { global_hub = Some(hub) }
+}
+
+pub fn get_hub<'a>() -> &'a Box<Hub> {
+  unsafe { global_hub.as_ref().expect("internal error: no hub registered yet") }
+}
+
+pub trait Hub {
+  fn in_test(&self) -> bool;
+  fn register_target(&self);
 }

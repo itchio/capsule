@@ -2,7 +2,7 @@ use capnp::capability::Response;
 use const_cstr::const_cstr;
 use libc;
 use log::*;
-use proto::proto_capnp::host;
+use proto::host;
 use simple_error::SimpleError;
 use std::ffi::CStr;
 use std::ffi::CString;

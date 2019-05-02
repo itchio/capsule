@@ -4,20 +4,14 @@ use log::*;
 
 #[macro_use]
 
-mod comm;
 mod dxgi;
-mod gl;
+mod hub;
 mod safe_env;
 
+use capnp_rpc::{rpc_twoparty_capnp, twoparty, RpcSystem};
 use comm::*;
-
-use capnp::capability::Promise;
-use capnp::Error;
-use capnp_rpc::{pry, rpc_twoparty_capnp, twoparty, RpcSystem};
 use futures::Future;
-use proto::proto_capnp::host;
 use std::net::SocketAddr;
-use std::sync::{Arc, RwLock};
 use tokio::io::AsyncRead;
 use tokio::runtime::current_thread;
 
@@ -32,57 +26,6 @@ lazy_static::lazy_static! {
             in_test: safe_env::get("CAPSULE_TEST").unwrap_or_default() == "1",
         }
     };
-}
-
-struct TargetImpl;
-impl TargetImpl {
-    fn new() -> Self {
-        Self {}
-    }
-}
-
-impl host::target::Server for TargetImpl {
-    fn start_capture(
-        &mut self,
-        params: host::target::StartCaptureParams,
-        mut results: host::target::StartCaptureResults,
-    ) -> Promise<(), Error> {
-        let params = pry!(params.get());
-        let sink = pry!(params.get_sink());
-
-        info!("Starting capture into a sink!");
-        let session = Session {
-            sink: sink,
-            alive: true,
-        };
-        let session_ref = Arc::new(RwLock::new(session));
-        let session_impl = SessionImpl {
-            session: session_ref.clone(),
-        };
-
-        let info = results.get().init_info();
-        if let Some(gl_ctx) = gl::get_cached_capture_context() {
-            let mut video = info.init_video();
-            video.set_width(gl_ctx.get_width() as u32);
-            video.set_height(gl_ctx.get_height() as u32);
-            video.set_pitch(gl_ctx.get_width() as u32 * 4u32);
-            video.set_vertical_flip(true);
-        } else {
-            return Promise::err(capnp::Error {
-                kind: capnp::ErrorKind::Failed,
-                description: "No viable video context!".to_owned(),
-            });
-        }
-
-        results.get().set_session(
-            host::session::ToClient::new(session_impl).into_client::<::capnp_rpc::Server>(),
-        );
-
-        unsafe {
-            global_session = Some(session_ref);
-        }
-        Promise::ok(())
-    }
 }
 
 #[used]
@@ -126,6 +69,9 @@ static ctor: extern "C" fn() = {
             }
             spawn(rpc_system.map_err(|e| warn!("RPC error: {:?}", e)));
         }
+
+        let hub = hub::Hub {};
+        set_hub(Box::new(hub));
 
         gl::hooks::initialize();
         dxgi::hooks::initialize();

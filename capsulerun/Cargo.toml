@@ -6,42 +6,42 @@ edition = "2018"
 
 [dependencies]
 # capsule protocol
-"proto" = { path = "../crates/proto" }
+proto = { path = "../crates/proto" }
 
 # windows utilities
 wincap = { path = "../crates/wincap" }
 
 # command-line arguments
-"clap" = "2.33.0"
+clap = "2.33.0"
 # RAII utilities
-"scopeguard" = "1.0.0"
+scopeguard = "1.0.0"
 # utf-16 string handling
-"widestring" = "0.4.0"
+widestring = "0.4.0"
 # utf-8 string literals
-"const-cstr" = "0.3.0"
+const-cstr = "0.3.0"
 # logging
-"log" = "0.4.6"
+log = "0.4.6"
 # logging handler
-"env_logger" = "0.6.1"
+env_logger = "0.6.1"
 # woo
-"lazy_static" = "1.3.0"
+lazy_static = "1.3.0"
 # C types like c_char, c_void
 libc = "0.2.51"
 
 # I/O probably
-"tokio" = "0.1.19"
+tokio = "0.1.19"
 # capnproto serialization
-"capnp" = "0.9.5"
+capnp = "0.9.5"
 # capnproto RPC
-"capnp-rpc" = "0.9.0"
+capnp-rpc = "0.9.0"
 # async stuff
-"futures" = "0.1.26"
+futures = "0.1.26"
 
 # unique identifiers
-"uuid" = { version = "0.7.4", features = ["v4"] }
+uuid = { version = "0.7.4", features = ["v4"] }
 
 # encoding
-"ffrust" = { git = "https://github.com/fasterthanlime/ffrust", rev = "23de9b6b96489bc14a3338adc0bf9124a9f06a40" }
+ffrust = { git = "https://github.com/fasterthanlime/ffrust", rev = "23de9b6b96489bc14a3338adc0bf9124a9f06a40" }
 
 # simple errors
 simple-error = "0.1.13"

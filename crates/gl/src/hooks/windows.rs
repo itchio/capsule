@@ -1,8 +1,9 @@
 #![cfg(target_os = "windows")]
 
+use crate as gl;
 use hook::hook_dynamic;
 
-use crate::gl;
+use comm::*;
 use const_cstr::const_cstr;
 use lazy_static::lazy_static;
 use libc::c_void;
@@ -10,16 +11,18 @@ use libc_print::libc_println;
 use log::*;
 use std::ffi::CString;
 use std::sync::Once;
-use winapi::shared::{minwindef, windef};
 use winapi::um::{libloaderapi, winnt};
 use wincap::assert_non_null;
+
+use winapi::shared::minwindef::{BOOL, HMODULE};
+use winapi::shared::windef::HDC;
 
 ///////////////////////////////////////////
 // lazily-opened opengl32.dll handle
 ///////////////////////////////////////////
 
 struct LibHandle {
-    module: minwindef::HMODULE,
+    module: HMODULE,
 }
 unsafe impl std::marker::Sync for LibHandle {}
 
@@ -72,10 +75,12 @@ unsafe fn get_wgl_proc_address(rust_name: &str) -> *const () {
     addr as *const ()
 }
 
+const DEAD_BEEF: HDC = 0xDEADBEEF as HDC;
+
 hook_dynamic! {
     extern "system" use get_opengl32_proc_address => {
-        fn wglSwapBuffers(hdc: windef::HDC) -> minwindef::BOOL {
-            if super::super::super::SETTINGS.in_test && hdc as usize == 0xDEADBEEF as usize {
+        fn wglSwapBuffers(hdc: HDC) -> BOOL {
+            if hdc == DEAD_BEEF && get_hub().in_test() {
                 libc_println!("caught dead beef");
                 std::process::exit(0);
             }
@@ -115,7 +120,7 @@ unsafe fn get_kernel32_proc_address(rust_name: &str) -> *const () {
 
 hook_dynamic! {
     extern "system" use get_kernel32_proc_address => {
-        fn LoadLibraryA(filename: winnt::LPCSTR) -> minwindef::HMODULE {
+        fn LoadLibraryA(filename: winnt::LPCSTR) -> HMODULE {
             let res = LoadLibraryA::next(filename);
             if !filename.is_null() {
                 let s = std::ffi::CStr::from_ptr(filename).to_string_lossy();
@@ -125,7 +130,7 @@ hook_dynamic! {
             res
         }
 
-        fn LoadLibraryW(filename: winnt::LPCWSTR) -> minwindef::HMODULE {
+        fn LoadLibraryW(filename: winnt::LPCWSTR) -> HMODULE {
             let res = LoadLibraryW::next(filename);
             if !filename.is_null() {
                 let s = widestring::U16CStr::from_ptr_str(filename).to_string_lossy();

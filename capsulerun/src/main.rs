@@ -106,7 +106,7 @@ fn setup_logging<'a>(matches: &clap::ArgMatches<'a>) {
 fn run_server(port_channel: futures::Complete<u16>) {
     use capnp_rpc::{rpc_twoparty_capnp, twoparty, RpcSystem};
     use futures::{Future, Stream};
-    use proto::proto_capnp::host;
+    use proto::host;
     use std::net::SocketAddr;
     use tokio::io::AsyncRead;
     use tokio::net::TcpListener;

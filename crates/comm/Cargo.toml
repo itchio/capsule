@@ -1,0 +1,17 @@
+[package]
+name = "comm"
+version = "0.1.0"
+authors = ["Amos Wenger <amoswenger@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+# capsule protocol
+proto = { path = "../proto" }
+# I/O probably
+tokio = "0.1.19"
+# capnproto serialization
+capnp = "0.9.5"
+# capnproto RPC
+capnp-rpc = "0.9.0"
+# async stuff
+futures = "0.1.26"

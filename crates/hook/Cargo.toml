@@ -5,3 +5,5 @@ authors = ["Amos Wenger <amoswenger@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+# hook any function, like glXSwapBuffers, etc.
+detour = { version = "0.6.0", default-features = false }
