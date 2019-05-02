@@ -1,4 +1,6 @@
 #![cfg(target_os = "windows")]
+#![allow(non_snake_case)]
+#![allow(non_upper_case_globals)]
 
 use hook::hook_dynamic;
 

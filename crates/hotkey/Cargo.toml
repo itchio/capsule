@@ -1,0 +1,17 @@
+[package]
+name = "hotkey"
+version = "0.1.0"
+authors = ["Amos Wenger <amoswenger@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+# windows utils
+wincap = { path = "../wincap" }
+# RPC comm
+comm = { path = "../comm" }
+# logging
+log = "0.4.6"
+
+[dependencies.winapi]
+version = "0.3.7"
+features = ["winuser"]

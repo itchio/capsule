@@ -77,10 +77,14 @@ unsafe fn get_wgl_proc_address(rust_name: &str) -> *const () {
 
 const DEAD_BEEF: HDC = 0xDEADBEEF as HDC;
 
+lazy_static! {
+    static ref in_test: bool = get_hub().in_test();
+}
+
 hook_dynamic! {
     extern "system" use get_opengl32_proc_address => {
         fn wglSwapBuffers(hdc: HDC) -> BOOL {
-            if hdc == DEAD_BEEF && get_hub().in_test() {
+            if hdc == DEAD_BEEF && *in_test {
                 libc_println!("caught dead beef");
                 std::process::exit(0);
             }

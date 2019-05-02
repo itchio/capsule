@@ -63,6 +63,15 @@ impl HostImpl {
 }
 
 impl host::Server for HostImpl {
+  fn hotkey_pressed(
+    &mut self,
+    _params: host::HotkeyPressedParams,
+    _results: host::HotkeyPressedResults,
+  ) -> Promise<(), Error> {
+    info!("Received hotkey press!");
+    Promise::ok(())
+  }
+
   fn register_target(
     &mut self,
     params: host::RegisterTargetParams,

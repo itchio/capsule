@@ -192,7 +192,12 @@ impl<'a> CaptureContext<'a> {
                 );
 
                 frame.set_data(&self.frame_buffer[..]);
-                get_hub().runtime().block_on(req.send().promise).unwrap();
+                get_hub()
+                    .runtime()
+                    .lock()
+                    .unwrap()
+                    .block_on(req.send().promise)
+                    .unwrap();
             }
         }
         self.frame_number += 1;

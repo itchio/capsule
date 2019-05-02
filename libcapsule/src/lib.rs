@@ -1,8 +1,4 @@
-#![allow(non_upper_case_globals, non_snake_case)]
-
 use log::*;
-
-#[macro_use]
 
 mod dxgi;
 mod hub;
@@ -68,6 +64,7 @@ static ctor: extern "C" fn() = {
             set_hub(Box::new(hub));
         }
 
+        hotkey::initialize();
         gl::hooks::initialize();
         dxgi::hooks::initialize();
     };

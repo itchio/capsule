@@ -4,6 +4,9 @@ interface Host {
   registerTarget @0 (info: Target.Info, target: Target);
   # Called when we first detect OpenGL/Direct3D usage 
 
+  hotkeyPressed @1 ();
+  # Called when the hotkey is pressed
+
   interface Target {
     struct Info {
       pid @0 :UInt64;

@@ -17,3 +17,5 @@ capnp-rpc = "0.9.0"
 futures = "0.1.26"
 # logging
 log = "0.4.6"
+# error handling
+error-chain = "0.12.0"

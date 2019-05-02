@@ -5,7 +5,7 @@ use comm::*;
 use futures::Future;
 use log::*;
 use proto::host::*;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use tokio::runtime::current_thread::Runtime;
 
 struct TargetImpl;
@@ -59,7 +59,7 @@ impl target::Server for TargetImpl {
 }
 
 pub struct GlobalHub {
-  runtime: Runtime,
+  runtime: Mutex<Runtime>,
   host: proto::host::Client,
   session: Option<Arc<RwLock<Session>>>,
 
@@ -69,7 +69,7 @@ pub struct GlobalHub {
 
 pub fn new_hub(runtime: Runtime, host: proto::host::Client) -> GlobalHub {
   GlobalHub {
-    runtime,
+    runtime: Mutex::new(runtime),
     host,
     session: None,
 
@@ -88,6 +88,8 @@ impl GlobalHub {
     req.get().set_target(target);
     self
       .runtime()
+      .lock()
+      .unwrap()
       .block_on(req.send().promise.and_then(|response| {
         pry!(response.get());
         Promise::ok(())
@@ -97,7 +99,7 @@ impl GlobalHub {
 }
 
 impl Hub for GlobalHub {
-  fn runtime<'a>(&'a mut self) -> &'a mut Runtime {
+  fn runtime<'a>(&'a mut self) -> &'a mut Mutex<Runtime> {
     &mut self.runtime
   }
 
@@ -139,5 +141,18 @@ impl Hub for GlobalHub {
 
   fn get_audio_source(&self) -> Option<&AudioSource> {
     self.audio.as_ref()
+  }
+
+  fn hotkey_pressed(&mut self) {
+    let req = self.host.hotkey_pressed_request();
+    self
+      .runtime()
+      .lock()
+      .unwrap()
+      .block_on(req.send().promise.and_then(|response| {
+        pry!(response.get());
+        Promise::ok(())
+      }))
+      .unwrap();
   }
 }

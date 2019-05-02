@@ -4,7 +4,7 @@ use capnp::capability::Promise;
 use capnp::Error;
 use log::*;
 use proto::host;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, Mutex, RwLock};
 use tokio::runtime::current_thread::Runtime;
 
 // Here be dragons ok?
@@ -16,6 +16,11 @@ pub fn set_hub(hub: Box<Hub>) {
 }
 
 pub fn get_hub<'a>() -> &'a mut Box<Hub> {
+  // warn!(
+  //   "get_hub called from thread {:?}: {:?}",
+  //   std::thread::current().id(),
+  //   error_chain::Backtrace::new()
+  // );
   unsafe {
     global_hub
       .as_mut()
@@ -86,7 +91,7 @@ pub struct VideoSource {
 
 pub trait Hub {
   fn in_test(&self) -> bool;
-  fn runtime<'a>(&'a mut self) -> &'a mut Runtime;
+  fn runtime<'a>(&'a mut self) -> &'a mut Mutex<Runtime>;
   fn session<'a>(&'a mut self) -> Option<&'a Arc<RwLock<Session>>>;
 
   fn set_video_source(&mut self, s: VideoSource);
@@ -94,4 +99,6 @@ pub trait Hub {
 
   fn get_video_source(&self) -> Option<&VideoSource>;
   fn get_audio_source(&self) -> Option<&AudioSource>;
+
+  fn hotkey_pressed(&mut self);
 }
