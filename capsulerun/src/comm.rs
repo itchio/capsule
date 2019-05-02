@@ -45,6 +45,7 @@ struct Target {
   pid: u64,
   exe: String,
   client: host::target::Client,
+  session: Option<host::session::Client>,
 }
 
 impl fmt::Display for Target {
@@ -54,12 +55,14 @@ impl fmt::Display for Target {
 }
 
 pub struct HostImpl {
-  target: Option<Target>,
+  target: Arc<Mutex<Option<Target>>>,
 }
 
 impl HostImpl {
   pub fn new() -> Self {
-    HostImpl { target: None }
+    HostImpl {
+      target: Arc::new(Mutex::new(None)),
+    }
   }
 }
 
@@ -71,9 +74,19 @@ impl host::Server for HostImpl {
   ) -> Promise<(), Error> {
     info!("Received hotkey press!");
 
-    if let Some(target) = self.target.as_ref() {
-      info!("Asking to start capture...");
+    let target_ref = self.target.clone();
+    if let Some(target) = self.target.lock().unwrap().as_mut() {
+      if let Some(session) = target.session.as_ref() {
+        let req = session.stop_request();
+        info!("Stopping session...");
+        return Promise::from_future(req.send().promise.and_then(move |_res| {
+          info!("Stopped session.");
+          target_ref.lock().unwrap().as_mut().unwrap().session = None;
+          Promise::ok(())
+        }));
+      }
 
+      info!("Starting session...");
       let sink_impl = SinkImpl {
         sink: Arc::new(Mutex::new(None)),
       };
@@ -90,6 +103,9 @@ impl host::Server for HostImpl {
           let res = pry!(res.get());
           pry!(res.get_session())
         };
+        if let Some(target) = target_ref.lock().unwrap().as_mut() {
+          target.session = Some(session.clone());
+        }
 
         let encoder = {
           match unsafe { encoder::Context::new("capture.h264", res.clone()) } {
@@ -135,9 +151,10 @@ impl host::Server for HostImpl {
         pid: pid,
         exe: exe.to_owned(),
         client: client,
+        session: None,
       };
       info!("Target registered: {}", target);
-      self.target = Some(target);
+      *self.target.lock().unwrap() = Some(target);
     }
     Promise::ok(())
   }
