@@ -4,7 +4,8 @@ members = [
     "capsulerun",
     "libcapsule",
     "crates/wincap",
-    "crates/proto"
+    "crates/proto",
+    "crates/hook"
 ]
 
 exclude = [

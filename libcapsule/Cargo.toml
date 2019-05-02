@@ -11,6 +11,9 @@ edition = "2018"
 # windows utilities
 "wincap" = { path = "../crates/wincap" }
 
+# hooking
+"hook" = { path = "../crates/hook" }
+
 # hook any function, like glXSwapBuffers, etc.
 detour = { version = "0.6.0", default-features = false }
 # work around some of the rules for Rust lifetimes

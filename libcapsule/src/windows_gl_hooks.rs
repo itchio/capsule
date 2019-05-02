@@ -1,5 +1,7 @@
 #![cfg(target_os = "windows")]
 
+use hook::hook_dynamic;
+
 use crate::gl;
 use const_cstr::const_cstr;
 use lazy_static::lazy_static;

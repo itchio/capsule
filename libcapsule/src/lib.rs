@@ -3,7 +3,6 @@
 use log::*;
 
 #[macro_use]
-mod hook;
 
 mod comm;
 mod dxgi;
