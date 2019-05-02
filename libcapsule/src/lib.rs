@@ -7,10 +7,7 @@ use log::*;
 mod comm;
 mod dxgi;
 mod gl;
-mod linux_gl_hooks;
-mod macos_gl_hooks;
 mod safe_env;
-mod windows_gl_hooks;
 
 use comm::*;
 
@@ -130,20 +127,8 @@ static ctor: extern "C" fn() = {
             spawn(rpc_system.map_err(|e| warn!("RPC error: {:?}", e)));
         }
 
-        #[cfg(target_os = "linux")]
-        {
-            linux_gl_hooks::initialize();
-        }
-
-        #[cfg(target_os = "windows")]
-        {
-            windows_gl_hooks::initialize();
-            dxgi::initialize();
-        }
-        #[cfg(target_os = "macos")]
-        {
-            macos_gl_hooks::initialize();
-        }
+        gl::hooks::initialize();
+        dxgi::hooks::initialize();
     };
     ctor
 };

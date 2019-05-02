@@ -75,7 +75,7 @@ unsafe fn get_wgl_proc_address(rust_name: &str) -> *const () {
 hook_dynamic! {
     extern "system" use get_opengl32_proc_address => {
         fn wglSwapBuffers(hdc: windef::HDC) -> minwindef::BOOL {
-            if super::SETTINGS.in_test && hdc as usize == 0xDEADBEEF as usize {
+            if super::super::super::SETTINGS.in_test && hdc as usize == 0xDEADBEEF as usize {
                 libc_println!("caught dead beef");
                 std::process::exit(0);
             }
