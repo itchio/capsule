@@ -2,17 +2,47 @@
 
 use capnp::capability::Promise;
 use capnp::Error;
-use futures::Future;
+use log::*;
 use proto::host;
-use std::sync::{Arc, Mutex, RwLock};
-use tokio::runtime::current_thread;
+use std::sync::{Arc, RwLock};
+use tokio::runtime::current_thread::Runtime;
 
 // Here be dragons ok?
 
-pub static mut global_runtime: Option<Mutex<current_thread::Runtime>> = None;
-pub static mut global_host: Option<host::Client> = None;
-pub static mut global_session: Option<Arc<RwLock<Session>>> = None;
-pub static mut global_hub: Option<Box<Hub>> = None;
+static mut global_hub: Option<Box<Hub>> = None;
+
+pub fn set_hub(hub: Box<Hub>) {
+  unsafe { global_hub = Some(hub) }
+}
+
+pub fn get_hub<'a>() -> &'a mut Box<Hub> {
+  unsafe {
+    global_hub
+      .as_mut()
+      .expect("internal error: no hub registered yet")
+  }
+}
+
+static mut global_session: Option<Arc<RwLock<Session>>> = None;
+
+pub fn get_session_read<'a>() -> Option<&'a Arc<RwLock<Session>>> {
+  unsafe {
+    let res = global_session.as_ref();
+    if let Some(session) = res {
+      if session.read().unwrap().alive {
+        return Some(session);
+      } else {
+        info!("Capture session was stopped");
+        global_session = None;
+      }
+    }
+    None
+  }
+}
+
+pub fn set_session(session: Arc<RwLock<Session>>) {
+  unsafe { global_session = Some(session) }
+}
 
 pub struct Session {
   pub sink: host::sink::Client,
@@ -36,37 +66,9 @@ impl host::session::Server for SessionImpl {
   }
 }
 
-pub fn hope<F, R, E>(future: F) -> Result<R, E>
-where
-  F: Future<Item = R, Error = E>,
-{
-  get_runtime().lock().unwrap().block_on(future)
-}
-
-pub fn spawn<F>(f: F)
-where
-  F: 'static + Future<Item = (), Error = ()>,
-{
-  get_runtime().lock().unwrap().spawn(f);
-}
-
-pub fn get_runtime<'a>() -> &'a mut Mutex<current_thread::Runtime> {
-  unsafe { global_runtime.as_mut().unwrap() }
-}
-
-pub fn get_host<'a>() -> &'a host::Client {
-  unsafe { global_host.as_ref().unwrap() }
-}
-
-pub fn set_hub(hub: Box<Hub>) {
-  unsafe { global_hub = Some(hub) }
-}
-
-pub fn get_hub<'a>() -> &'a Box<Hub> {
-  unsafe { global_hub.as_ref().expect("internal error: no hub registered yet") }
-}
-
 pub trait Hub {
   fn in_test(&self) -> bool;
-  fn register_target(&self);
+  fn register_target(&mut self);
+  fn runtime<'a>(&'a mut self) -> &'a mut Runtime;
+  fn session<'a>(&'a mut self) -> Option<&'a Arc<RwLock<Session>>>;
 }

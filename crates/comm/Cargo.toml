@@ -15,3 +15,5 @@ capnp = "0.9.5"
 capnp-rpc = "0.9.0"
 # async stuff
 futures = "0.1.26"
+# logging
+log = "0.4.6"

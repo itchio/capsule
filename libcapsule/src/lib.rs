@@ -38,12 +38,8 @@ static ctor: extern "C" fn() = {
         std::env::set_var("RUST_BACKTRACE", "1");
         env_logger::init();
 
-        unsafe {
-            global_runtime = Some({
-                let rt = current_thread::Runtime::new().expect("could not construct tokio runtime");
-                std::sync::Mutex::new(rt)
-            });
-        }
+        let mut runtime =
+            current_thread::Runtime::new().expect("could not construct tokio runtime");
 
         let port = safe_env::get("CAPSULE_PORT").expect("CAPSULE_PORT missing from environment");
         let port = port.parse::<u16>().expect("could not parse port");
@@ -53,7 +49,8 @@ static ctor: extern "C" fn() = {
             let addr = addr.parse::<SocketAddr>().unwrap();
 
             // TODO: timeouts
-            let stream = hope(::tokio::net::TcpStream::connect(&addr)).unwrap();
+            let connect_future = ::tokio::net::TcpStream::connect(&addr);
+            let stream = runtime.block_on(connect_future).unwrap();
             stream.set_nodelay(true).unwrap();
             let (reader, writer) = stream.split();
 
@@ -64,14 +61,12 @@ static ctor: extern "C" fn() = {
                 Default::default(),
             );
             let mut rpc_system = RpcSystem::new(Box::new(network), None);
-            unsafe {
-                global_host = Some(rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server));
-            }
-            spawn(rpc_system.map_err(|e| warn!("RPC error: {:?}", e)));
-        }
+            let host = rpc_system.bootstrap(rpc_twoparty_capnp::Side::Server);
+            runtime.spawn(rpc_system.map_err(|e| warn!("RPC error: {:?}", e)));
 
-        let hub = hub::Hub {};
-        set_hub(Box::new(hub));
+            let hub = hub::new_hub(runtime, host);
+            set_hub(Box::new(hub));
+        }
 
         gl::hooks::initialize();
         dxgi::hooks::initialize();

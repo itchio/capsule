@@ -150,9 +150,7 @@ pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'static mut C
             });
 
             info!("Registering target");
-            {
-                global_hub.as_ref().unwrap().register_target();
-            }
+            get_hub().register_target();
         }
         cached_capture_context.as_mut().unwrap()
     }
@@ -161,17 +159,8 @@ pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'static mut C
 impl<'a> CaptureContext<'a> {
     pub fn capture_frame(&mut self) {
         unsafe {
-            if let Some(session) = global_session.as_ref() {
-                let mut req = {
-                    let session = session.read().unwrap();
-                    if !session.alive {
-                        info!("Capture session was stopped");
-                        global_session = None;
-                        return;
-                    }
-
-                    session.sink.send_video_frame_request()
-                };
+            if let Some(session) = get_session_read() {
+                let mut req = session.read().unwrap().sink.send_video_frame_request();
                 let mut frame = req.get().init_frame();
                 let mut timestamp = frame.reborrow().init_timestamp();
                 let elapsed = self.start_time.elapsed().unwrap();
@@ -197,7 +186,7 @@ impl<'a> CaptureContext<'a> {
                 );
 
                 frame.set_data(&self.frame_buffer[..]);
-                hope(req.send().promise).unwrap();
+                get_hub().runtime().block_on(req.send().promise).unwrap();
             }
         }
         self.frame_number += 1;
