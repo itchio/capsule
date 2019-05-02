@@ -44,6 +44,7 @@ impl host::sink::Server for SinkImpl {
 struct Target {
   pid: u64,
   exe: String,
+  client: host::target::Client,
 }
 
 impl fmt::Display for Target {
@@ -69,36 +70,15 @@ impl host::Server for HostImpl {
     _results: host::HotkeyPressedResults,
   ) -> Promise<(), Error> {
     info!("Received hotkey press!");
-    Promise::ok(())
-  }
 
-  fn register_target(
-    &mut self,
-    params: host::RegisterTargetParams,
-    mut _results: host::RegisterTargetResults,
-  ) -> Promise<(), Error> {
-    let params = pry!(params.get());
-    let client = pry!(params.get_target());
-    let info = pry!(params.get_info());
-    {
-      let pid = info.get_pid();
-      let exe = info.get_exe().unwrap();
-      let target = Target {
-        pid: pid,
-        exe: exe.to_owned(),
-      };
-      info!("Target registered: {}", target);
-      self.target = Some(target);
-    }
-
-    {
+    if let Some(target) = self.target.as_ref() {
       info!("Asking to start capture...");
 
       let sink_impl = SinkImpl {
         sink: Arc::new(Mutex::new(None)),
       };
       let sink_ref = sink_impl.sink.clone();
-      let mut req = client.start_capture_request();
+      let mut req = target.client.start_capture_request();
       req
         .get()
         .set_sink(host::sink::ToClient::new(sink_impl).into_client::<::capnp_rpc::Server>());
@@ -134,6 +114,31 @@ impl host::Server for HostImpl {
         *sink_ref.lock().unwrap() = Some(sink);
         Promise::ok(())
       }))
+    } else {
+      info!("...but no target registered");
+      Promise::ok(())
     }
+  }
+
+  fn register_target(
+    &mut self,
+    params: host::RegisterTargetParams,
+    mut _results: host::RegisterTargetResults,
+  ) -> Promise<(), Error> {
+    let params = pry!(params.get());
+    let client = pry!(params.get_target());
+    let info = pry!(params.get_info());
+    {
+      let pid = info.get_pid();
+      let exe = info.get_exe().unwrap();
+      let target = Target {
+        pid: pid,
+        exe: exe.to_owned(),
+        client: client,
+      };
+      info!("Target registered: {}", target);
+      self.target = Some(target);
+    }
+    Promise::ok(())
   }
 }
