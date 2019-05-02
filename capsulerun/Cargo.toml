@@ -5,8 +5,12 @@ authors = ["Amos Wenger <amos@itch.io>"]
 edition = "2018"
 
 [dependencies]
+# capsule protocol
+"proto" = { path = "../crates/proto" }
+
 # windows utilities
-wincap = { path = "../wincap" }
+wincap = { path = "../crates/wincap" }
+
 # command-line arguments
 "clap" = "2.33.0"
 # RAII utilities
@@ -26,8 +30,6 @@ libc = "0.2.51"
 
 # I/O probably
 "tokio" = "0.1.19"
-# capsule protocol
-"proto" = { path = "../proto" }
 # capnproto serialization
 "capnp" = "0.9.5"
 # capnproto RPC

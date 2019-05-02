@@ -5,8 +5,12 @@ authors = ["Amos Wenger <amos@itch.io>"]
 edition = "2018"
 
 [dependencies]
+# capsule protocol
+"proto" = { path = "../crates/proto" }
+
 # windows utilities
-"wincap" = { path = "../wincap" }
+"wincap" = { path = "../crates/wincap" }
+
 # hook any function, like glXSwapBuffers, etc.
 detour = { version = "0.6.0", default-features = false }
 # work around some of the rules for Rust lifetimes
@@ -29,8 +33,6 @@ const-cstr = "0.3.0"
 # cf. https://github.com/tokio-rs/tokio/issues/1056
 "tokio-sync" = "0.1.5"
 
-# capsule protocol
-"proto" = { path = "../proto" }
 # capnproto serialization
 "capnp" = "0.9.4"
 # capnproto RPC
