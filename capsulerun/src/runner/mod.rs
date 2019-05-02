@@ -1,15 +1,15 @@
-pub mod windows_runner;
-pub mod macos_runner;
-pub mod linux_runner;
+pub mod windows;
+pub mod macos;
+pub mod linux;
 
 #[cfg(target_os = "windows")]
-pub use windows_runner::*;
+pub use windows::*;
 
 #[cfg(target_os = "linux")]
-pub use linux_runner::*;
+pub use linux::*;
 
 #[cfg(target_os = "macos")]
-pub use macos_runner::*;
+pub use macos::*;
 
 use log::*;
 
