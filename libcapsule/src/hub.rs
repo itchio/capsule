@@ -1,7 +1,7 @@
 use capnp::capability::Promise;
 use capnp::Error;
 use capnp_rpc::pry;
-use comm::{Hub, Session};
+use comm::*;
 use futures::Future;
 use log::*;
 use proto::host::*;
@@ -35,12 +35,13 @@ impl target::Server for TargetImpl {
     };
 
     let info = results.get().init_info();
-    if let Some(gl_ctx) = gl::get_cached_capture_context() {
+
+    if let Some(vs) = get_hub().get_video_source() {
       let mut video = info.init_video();
-      video.set_width(gl_ctx.get_width() as u32);
-      video.set_height(gl_ctx.get_height() as u32);
-      video.set_pitch(gl_ctx.get_width() as u32 * 4u32);
-      video.set_vertical_flip(true);
+      video.set_width(vs.width);
+      video.set_height(vs.height);
+      video.set_pitch(vs.pitch);
+      video.set_vertical_flip(vs.vflip);
     } else {
       return Promise::err(capnp::Error {
         kind: capnp::ErrorKind::Failed,
@@ -61,6 +62,9 @@ pub struct GlobalHub {
   runtime: Runtime,
   host: proto::host::Client,
   session: Option<Arc<RwLock<Session>>>,
+
+  video: Option<VideoSource>,
+  audio: Option<AudioSource>,
 }
 
 pub fn new_hub(runtime: Runtime, host: proto::host::Client) -> GlobalHub {
@@ -68,6 +72,27 @@ pub fn new_hub(runtime: Runtime, host: proto::host::Client) -> GlobalHub {
     runtime,
     host,
     session: None,
+
+    video: None,
+    audio: None,
+  }
+}
+
+impl GlobalHub {
+  fn register_target(&mut self) {
+    let target = target::ToClient::new(TargetImpl::new()).into_client::<::capnp_rpc::Server>();
+    let mut req = self.host.register_target_request();
+    let mut info = req.get().init_info();
+    info.set_pid(std::process::id() as u64);
+    info.set_exe(std::env::current_exe().unwrap().to_string_lossy().as_ref());
+    req.get().set_target(target);
+    self
+      .runtime()
+      .block_on(req.send().promise.and_then(|response| {
+        pry!(response.get());
+        Promise::ok(())
+      }))
+      .unwrap();
   }
 }
 
@@ -94,19 +119,25 @@ impl Hub for GlobalHub {
     super::SETTINGS.in_test
   }
 
-  fn register_target(&mut self) {
-    let target = target::ToClient::new(TargetImpl::new()).into_client::<::capnp_rpc::Server>();
-    let mut req = self.host.register_target_request();
-    let mut info = req.get().init_info();
-    info.set_pid(std::process::id() as u64);
-    info.set_exe(std::env::current_exe().unwrap().to_string_lossy().as_ref());
-    req.get().set_target(target);
-    self
-      .runtime()
-      .block_on(req.send().promise.and_then(|response| {
-        pry!(response.get());
-        Promise::ok(())
-      }))
-      .unwrap();
+  fn set_video_source(&mut self, s: VideoSource) {
+    info!(
+      "Acquired video source: {:#?}, {}x{} (pitch {}, vflip {})",
+      s.kind, s.width, s.height, s.pitch, s.vflip
+    );
+    if self.video.replace(s).is_none() {
+      self.register_target();
+    }
+  }
+
+  fn get_video_source(&self) -> Option<&VideoSource> {
+    self.video.as_ref()
+  }
+
+  fn set_audio_source(&mut self, s: AudioSource) {
+    self.audio = Some(s)
+  }
+
+  fn get_audio_source(&self) -> Option<&AudioSource> {
+    self.audio.as_ref()
   }
 }

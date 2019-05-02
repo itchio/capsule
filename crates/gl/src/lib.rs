@@ -149,8 +149,14 @@ pub fn get_capture_context<'a>(getProcAddress: GetProcAddress) -> &'static mut C
                 funcs,
             });
 
-            info!("Registering target");
-            get_hub().register_target();
+            info!("Registering video source");
+            get_hub().set_video_source(VideoSource {
+                kind: VideoSourceKind::OpenGL,
+                width: viewport.width as u32,
+                height: viewport.height as u32,
+                pitch: viewport.width as u32 * 4u32,
+                vflip: true,
+            });
         }
         cached_capture_context.as_mut().unwrap()
     }

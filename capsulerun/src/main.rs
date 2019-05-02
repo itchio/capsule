@@ -54,9 +54,9 @@ fn main() {
     // woo let's go
     std::thread::spawn(move || run_server(port_channel));
     let mut runtime = tokio::runtime::current_thread::Runtime::new().unwrap();
-    info!("Waiting on RPC thread to start listening...");
-    let port = runtime.block_on(port_receive).unwrap();
-    info!("Cool, it's listening on port {}", port);
+    let port = runtime
+        .block_on(port_receive)
+        .expect("Could not listen on local TCP socket");
 
     let options = build_options(matches, port);
     runner::new_context(options).run();

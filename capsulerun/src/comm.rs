@@ -85,7 +85,6 @@ impl host::Server for HostImpl {
     {
       info!("Asking to start capture...");
 
-      // creating a sink here, but it has a "None" session
       let sink_impl = SinkImpl {
         sink: Arc::new(Mutex::new(None)),
       };

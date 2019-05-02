@@ -66,9 +66,32 @@ impl host::session::Server for SessionImpl {
   }
 }
 
+pub struct AudioSource {
+  pub sample_rate: u32,
+}
+
+#[derive(Debug)]
+pub enum VideoSourceKind {
+  OpenGL,
+  DXGI,
+}
+
+pub struct VideoSource {
+  pub kind: VideoSourceKind,
+  pub width: u32,
+  pub height: u32,
+  pub pitch: u32,
+  pub vflip: bool,
+}
+
 pub trait Hub {
   fn in_test(&self) -> bool;
-  fn register_target(&mut self);
   fn runtime<'a>(&'a mut self) -> &'a mut Runtime;
   fn session<'a>(&'a mut self) -> Option<&'a Arc<RwLock<Session>>>;
+
+  fn set_video_source(&mut self, s: VideoSource);
+  fn set_audio_source(&mut self, s: AudioSource);
+
+  fn get_video_source(&self) -> Option<&VideoSource>;
+  fn get_audio_source(&self) -> Option<&AudioSource>;
 }

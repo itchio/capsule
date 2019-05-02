@@ -46,14 +46,9 @@ impl Context {
     file_name: &str,
     info: Arc<Response<host::target::start_capture_results::Owned>>,
   ) -> Result<Self, Box<std::error::Error>> {
-    let (width, height, pitch, pixel_format) = {
+    let (width, height) = {
       let v = info.get()?.get_info()?.get_video()?;
-      (
-        v.get_width(),
-        v.get_height(),
-        v.get_pitch(),
-        v.get_pixel_format(),
-      )
+      (v.get_width(), v.get_height())
     };
 
     let codec_name = "libx264";
@@ -161,7 +156,7 @@ impl Context {
       let mut sws_linesize: [libc::c_int; 1] = std::mem::zeroed();
       let mut sws_in: [*const u8; 1] = std::mem::zeroed();
       let (linesize, vflip) = {
-        let v = self.info.get()?.get_info()?.get_video()?;
+        let v = self.video()?;
         (v.get_pitch() as i32, v.get_vertical_flip())
       };
 
