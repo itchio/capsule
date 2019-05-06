@@ -7,3 +7,5 @@ edition = "2018"
 [dependencies]
 # hook any function, like glXSwapBuffers, etc.
 detour = { version = "0.6.0", default-features = false }
+# C types like c_char, c_void
+libc = "0.2.51"

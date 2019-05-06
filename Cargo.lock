@@ -346,6 +346,7 @@ name = "hook"
 version = "0.1.0"
 dependencies = [
  "detour 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.51 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

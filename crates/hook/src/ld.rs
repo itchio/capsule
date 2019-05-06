@@ -34,7 +34,7 @@ macro_rules! hook_ld {
               fn next($($v : $t),*) -> $r {
                 use ::std::sync::{Once, ONCE_INIT};
                 use ::std::mem::transmute;
-                use $crate::hook::ld::dlsym_next;
+                use $crate::ld::dlsym_next;
 
                 static mut NEXT: *const u8 = 0 as *const u8;
                 static mut ONCE: Once = ONCE_INIT;

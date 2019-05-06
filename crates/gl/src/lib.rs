@@ -12,7 +12,6 @@ use comm::*;
 use log::*;
 use std::mem;
 use std::mem::transmute;
-use std::time::SystemTime;
 
 type GetProcAddress = unsafe fn(gl_func_name: &str) -> *const ();
 

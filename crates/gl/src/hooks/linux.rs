@@ -3,7 +3,10 @@
 #[link(name = "dl")]
 extern "C" {}
 
-use crate::gl;
+use crate as gl;
+use hook::{hook_ld,hook_dynamic};
+
+use comm::*;
 use const_cstr::const_cstr;
 use lazy_static::lazy_static;
 use libc::{c_char, c_int, c_ulong, c_void};
@@ -96,11 +99,17 @@ hook_ld! {
 ///////////////////////////////////////////
 // glXSwapBuffers hook
 ///////////////////////////////////////////
+///
+lazy_static! {
+    static ref in_test: bool = get_hub().in_test();
+}
+
+const DEAD_BEEF: *const c_void = 0xDEADBEEF as *const c_void;
 
 hook_dynamic! {
     get_glx_proc_address => {
         fn glXSwapBuffers(display: *const c_void, drawable: c_ulong) -> () {
-            if super::SETTINGS.in_test && display == 0xDEADBEEF as *const c_void {
+            if display == DEAD_BEEF && *in_test {
                 libc_println!("caught dead beef");
                 std::process::exit(0);
             }
